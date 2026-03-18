@@ -7,6 +7,8 @@
 
 #include <queue>
 #include <QDebug>
+#include <QMutex>
+#include <QTime>
 
 std::queue<GrIP_Packet_t> q;
 
@@ -42,10 +44,10 @@ static char nibble2hex(const uint8_t b);
 static GrIP_PacketHeader_t TX_Header;
 
 // Transmit Buffer
-static uint8_t TX_Buffer[GRIP_BUFFER_SIZE*2 + GRIP_HEADER_SIZE];
+static uint8_t TX_Buffer[GRIP_BUFFER_SIZE*2 + GRIP_HEADER_SIZE*2 + 30];
 // Receive Data Array
 static GrIP_Packet_t RX_Buff = {};
-static uint8_t RxBuffer[GRIP_BUFFER_SIZE] = {};
+//static uint8_t RxBuffer[GRIP_BUFFER_SIZE] = {};
 
 static GrIP_States_e GrIP_Status = GrIP_State_Idle;
 static bool SendReponse = false;
@@ -55,10 +57,44 @@ static uint32_t BytesRead = 0u;
 static GrIP_ErrorFlags_t ErrorFlags;
 static int Response = -1;
 
-static QSerialPort *serPort;
+static QMutex qMutex;
+static QMutex mtxData;
+
+static QByteArray rx_queue;
+static QByteArray tx_queue;
 
 
-void GrIP_Init(QSerialPort &serial)
+qint64 write(const char *data, qint64 len)
+{
+    QMutexLocker lk(&mtxData);
+    tx_queue.append(data, len);
+
+    return len;
+}
+
+qint64 read(char *data, qint64 len)
+{
+    QMutexLocker lk(&mtxData);
+    len = (len > rx_queue.size()) ? rx_queue.size() : len;
+    if (len == 0)
+    {
+        return 0;
+    }
+
+    memcpy(data, rx_queue.constData(), len);
+    rx_queue.remove(0, len);
+
+    return len;
+}
+
+qint64 available()
+{
+    QMutexLocker lk(&mtxData);
+    return rx_queue.size();
+}
+
+
+void GrIP_Init()
 {
     // Initialize to default values
     GrIP_Status = GrIP_State_Idle;
@@ -67,13 +103,14 @@ void GrIP_Init(QSerialPort &serial)
     BytesRead = 0u;
     Response = -1;
 
-    serPort = &serial;
+    rx_queue.clear();
+    tx_queue.clear();
 
     memset(&TX_Header, 0u, sizeof(TX_Header));
-    memset(TX_Buffer, 0u, GRIP_BUFFER_SIZE*2 + GRIP_HEADER_SIZE);
+    memset(TX_Buffer, 0u, GRIP_BUFFER_SIZE*2 + GRIP_HEADER_SIZE*2 + 30);
     memset(&RX_Buff, 0u, sizeof(RX_Buff));
     memset(&ErrorFlags, 0u, sizeof(GrIP_ErrorFlags_t));
-    memset(RxBuffer, 0u, GRIP_BUFFER_SIZE);
+    //memset(RxBuffer, 0u, GRIP_BUFFER_SIZE);
 }
 
 
@@ -144,9 +181,12 @@ uint8_t GrIP_Transmit(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType, 
         TX_Buffer[idx++] = GRIP_EOT;
 
         // Transmit packet
-        int d = serPort->write((char*)TX_Buffer, idx);
-        serPort->flush();
+        write((char*)TX_Buffer, idx);
         //serPort->waitForBytesWritten(5);
+
+        // Clear memory
+        memset(&TX_Header, 0u, sizeof(TX_Header));
+        memset(TX_Buffer, 0u, GRIP_BUFFER_SIZE*2 + GRIP_HEADER_SIZE*2 + 30);
 
         return RET_OK;
     }
@@ -177,16 +217,19 @@ uint8_t GrIP_Transmit(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType, 
         TX_Buffer[idx++] = GRIP_EOT;
 
         // Transmit packet
-        int d = serPort->write((char*)TX_Buffer, idx);
-        serPort->flush();
+        write((char*)TX_Buffer, idx);
         //serPort->waitForBytesWritten(5);
+
+        // Clear memory
+        memset(&TX_Header, 0u, sizeof(TX_Header));
+        memset(TX_Buffer, 0u, GRIP_BUFFER_SIZE*2 + GRIP_HEADER_SIZE*2 + 30);
 
         return RET_OK;
     }
 
     // Clear memory
     memset(&TX_Header, 0u, sizeof(TX_Header));
-    memset(TX_Buffer, 0u, GRIP_BUFFER_SIZE*2 + GRIP_HEADER_SIZE);
+    memset(TX_Buffer, 0u, GRIP_BUFFER_SIZE*2 + GRIP_HEADER_SIZE*2 + 3);
 
     return RET_NOK;
 }
@@ -204,32 +247,32 @@ void GrIP_Update(void)
     {
     case GrIP_State_Idle:
         // Check if data is available
-        if(serPort->bytesAvailable())
+        if(available())
         {
             uint8_t magic = 0u;
 
             // Read start byte
-            serPort->read((char*)&magic, 1u);
+            read((char*)&magic, 1u);
 
             if(magic == GRIP_SOH)
             {
                 // Received valid packet
                 GrIP_Status = GrIP_State_RX_Header;
                 ErrorFlags.LastError = 0u;
-                memset(RxBuffer, 0u, GRIP_BUFFER_SIZE);
+                //memset(RxBuffer, 0u, GRIP_BUFFER_SIZE);
             }
         }
         break;
 
     case GrIP_State_RX_Header:
         // Check if header data is available
-        if(serPort->bytesAvailable() > static_cast<qint64>(GRIP_HEADER_SIZE*2u-1u))
+        if(available() > static_cast<qint64>(GRIP_HEADER_SIZE*2u-1u))
         {
             uint8_t head_buff[GRIP_HEADER_SIZE*2u] = {};
             uint8_t *pHeader = (uint8_t*)&RX_Buff.RX_Header;
 
             // Get header
-            serPort->read((char*)head_buff, GRIP_HEADER_SIZE*2u);
+            read((char*)head_buff, GRIP_HEADER_SIZE*2u);
 
             // Fill struct
             for(unsigned int i = 0u; i < GRIP_HEADER_SIZE; i++)
@@ -288,25 +331,26 @@ void GrIP_Update(void)
                 ErrorFlags.LastError = RET_OK;
 
                 ForwardPacket(&RX_Buff.RX_Header, RX_Buff.Data, RX_Buff.RX_Header.Length);
+                QMutexLocker lk(&qMutex);
                 q.push(RX_Buff);
             }
         }
         break;
 
     case GrIP_State_SOT:
-        if(serPort->bytesAvailable())
+        if(available())
         {
             uint8_t magic = 0u;
 
             // Read Magic byte
-            serPort->read((char*)&magic, 1u);
+            read((char*)&magic, 1u);
             if(magic == GRIP_SOT)
             {
                 // Start of text
                 GrIP_Status = GrIP_State_RX_Data;
                 MaxReadCount = MAX_READ_CNT;
                 BytesRead = 0u;
-                memset(RxBuffer, 0u, GRIP_BUFFER_SIZE);
+                //memset(RxBuffer, 0u, GRIP_BUFFER_SIZE);
             }
             if(magic == GRIP_EOT || (isxdigit(magic) != 0u))
             {
@@ -319,16 +363,20 @@ void GrIP_Update(void)
 
     case GrIP_State_RX_Data:
         // Check if data is available
-        while((serPort->bytesAvailable() > 1u) && MaxReadCount--)
+        while((available() > 1u) && MaxReadCount--)
         {
             uint8_t tmp[2u] = {};
+
             // Get payload
-            serPort->read((char*)tmp, 2u);
+            read((char*)tmp, 2u);
 
             if(isxdigit(tmp[0u]) && isxdigit(tmp[1u]))
             {
-                // Received valid hex character
-                RX_Buff.Data[BytesRead] = hex2dec((char*)tmp, 2u);
+                if (BytesRead < GRIP_BUFFER_SIZE)
+                {
+                    // Received valid hex character
+                    RX_Buff.Data[BytesRead] = hex2dec((char*)tmp, 2u);
+                }
             }
             else
             {
@@ -363,6 +411,7 @@ void GrIP_Update(void)
                     ErrorFlags.LastError = RET_OK;
 
                     ForwardPacket(&RX_Buff.RX_Header, RX_Buff.Data, RX_Buff.RX_Header.Length);
+                    QMutexLocker lk(&qMutex);
                     q.push(RX_Buff);
 
                     if((RX_Buff.RX_Header.MsgType != MSG_DATA_NO_RESPONSE) && (RX_Buff.RX_Header.MsgType != MSG_RESPONSE))
@@ -376,7 +425,7 @@ void GrIP_Update(void)
                     // Wrong CRC
                     ErrorFlags.LastError = RET_WRONG_CRC;
                     ErrorFlags.CRC_Error++;
-                    qDebug() << "Wrong CRC";
+                    qDebug() << "Wrong CRC Data";
                 }
 
                 // Leave loop after all bytes received
@@ -399,7 +448,8 @@ void GrIP_Update(void)
 
         // Read Magic byte
         uint8_t magic = 0u;
-        serPort->read((char*)&magic, 1u);
+        if (available())
+            read((char*)&magic, 1u);
         if(magic == GRIP_EOT)
         {
             // Received EOT
@@ -423,6 +473,8 @@ void GrIP_Update(void)
 
 bool GrIP_Receive(GrIP_Packet_t *p)
 {
+    QMutexLocker lk(&qMutex);
+
     if(q.size() > 0)
     {
         auto tmp = q.front();
@@ -457,6 +509,23 @@ int GrIP_GetLastResponse(void)
 }
 
 
+void GrIP_RxCallback(QByteArray data)
+{
+    QMutexLocker lk(&mtxData);
+    rx_queue.append(data);
+}
+
+
+QByteArray GrIP_GetTxData()
+{
+    QMutexLocker lk(&mtxData);
+    QByteArray ret;
+    ret.swap(tx_queue);
+
+    return ret;
+}
+
+
 static uint8_t CheckHeader(const GrIP_PacketHeader_t *paket)
 {
     // Check NULL
@@ -471,7 +540,7 @@ static uint8_t CheckHeader(const GrIP_PacketHeader_t *paket)
         return RET_WRONG_VERSION;
     }
 
-    if(paket->Length > GRIP_BUFFER_SIZE)
+    if(paket->Length > GRIP_BUFFER_SIZE-10)
     {
         qDebug() << "Wrong Data Len";
     }

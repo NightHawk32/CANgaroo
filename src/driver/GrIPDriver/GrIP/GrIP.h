@@ -6,6 +6,8 @@
 #include <stdbool.h>
 
 #include <QSerialPort>
+#include <QQueue>
+#include <QByteArray>
 
 
 // Current protocol version
@@ -93,7 +95,7 @@ typedef struct __attribute__((packed))
 typedef struct
 {
     GrIP_PacketHeader_t RX_Header;
-    uint8_t Data[GRIP_BUFFER_SIZE];
+    uint8_t Data[GRIP_BUFFER_SIZE+10];
 } GrIP_Packet_t;
 
 
@@ -122,7 +124,7 @@ typedef struct
 /**
   * Initialize the module
   */
-void GrIP_Init(QSerialPort &serial);
+void GrIP_Init();
 
 /**
   * Transmit a message over GrIP
@@ -152,6 +154,10 @@ void GrIP_GetError(GrIP_ErrorFlags_t *ef);
 bool GrIP_Receive(GrIP_Packet_t *p);
 
 int GrIP_GetLastResponse(void);
+
+void GrIP_RxCallback(QByteArray data);
+
+QByteArray GrIP_GetTxData();
 
 
 #endif // GRIP_H_INCLUDED

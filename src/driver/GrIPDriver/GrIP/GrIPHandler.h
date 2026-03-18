@@ -60,8 +60,10 @@ public:
 private:
     void ProcessData(GrIP_Packet_t &packet);
     void WorkerThread();
+    void handleSerialError(QSerialPort::SerialPortError error);
 
     QSerialPort *m_SerialPort;
+    QString m_PortName;
     mutable std::mutex m_MutexSerial;
     mutable std::mutex m_MutexData;
 

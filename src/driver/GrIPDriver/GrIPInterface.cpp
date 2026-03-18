@@ -43,7 +43,7 @@
 
 
 GrIPInterface::GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer)
-  : CanInterface((CanDriver *)driver),
+    : CanInterface((CanDriver *)driver),
     _manufacturer(manufacturer),
     _idx(index),
     _isOpen(false),
@@ -203,11 +203,11 @@ uint32_t GrIPInterface::getCapabilities()
         retval =
             CanInterface::capability_auto_restart |
             CanInterface::capability_listen_only;
-            // CanInterface::capability_config_os |
-            // CanInterface::capability_auto_restart |
-            //CanInterface::capability_listen_only |
-            //CanInterface::capability_custom_bitrate |
-            //CanInterface::capability_custom_canfd_bitrate;
+        // CanInterface::capability_config_os |
+        // CanInterface::capability_auto_restart |
+        //CanInterface::capability_listen_only |
+        //CanInterface::capability_custom_bitrate |
+        //CanInterface::capability_custom_canfd_bitrate;
     }
 
     if (supportsCanFD())
@@ -303,44 +303,44 @@ void GrIPInterface::open()
     if(_settings.isCustomBitrate())
     {
         QString _custombitrate = QString("%1").arg(_settings.customBitrate(), 6, 16,QLatin1Char('0')).toUpper();
-        m_GrIPHandler->CAN_SetBaudrate(_idx, _custombitrate.toInt());
+        m_GrIPHandler->CAN_SetBaudrate(_idx, _custombitrate.toInt(nullptr, 16));
     }
     else
     {
         // Set the classic CAN bitrate
         switch(_settings.bitrate())
         {
-            case 1000000:
-                m_GrIPHandler->CAN_SetBaudrate(_idx, 1000000);
-                break;
-            case 800000:
-                m_GrIPHandler->CAN_SetBaudrate(_idx, 800000);
-                break;
-            case 500000:
-                m_GrIPHandler->CAN_SetBaudrate(_idx, 500000);
-                break;
-            case 250000:
-                m_GrIPHandler->CAN_SetBaudrate(_idx, 250000);
-                break;
-            case 125000:
-                m_GrIPHandler->CAN_SetBaudrate(_idx, 125000);
-                break;
-            case 100000:
-                m_GrIPHandler->CAN_SetBaudrate(_idx, 100000);
-                break;
-            case 50000:
-                m_GrIPHandler->CAN_SetBaudrate(_idx, 50000);
-                break;
-            case 20000:
-                m_GrIPHandler->CAN_SetBaudrate(_idx, 20000);
-                break;
-            case 10000:
-                m_GrIPHandler->CAN_SetBaudrate(_idx, 10000);
-                break;
-            default:
-                // Default to 10k
-                m_GrIPHandler->CAN_SetBaudrate(_idx, 10000);
-                break;
+        case 1000000:
+            m_GrIPHandler->CAN_SetBaudrate(_idx, 1000000);
+            break;
+        case 800000:
+            m_GrIPHandler->CAN_SetBaudrate(_idx, 800000);
+            break;
+        case 500000:
+            m_GrIPHandler->CAN_SetBaudrate(_idx, 500000);
+            break;
+        case 250000:
+            m_GrIPHandler->CAN_SetBaudrate(_idx, 250000);
+            break;
+        case 125000:
+            m_GrIPHandler->CAN_SetBaudrate(_idx, 125000);
+            break;
+        case 100000:
+            m_GrIPHandler->CAN_SetBaudrate(_idx, 100000);
+            break;
+        case 50000:
+            m_GrIPHandler->CAN_SetBaudrate(_idx, 50000);
+            break;
+        case 20000:
+            m_GrIPHandler->CAN_SetBaudrate(_idx, 20000);
+            break;
+        case 10000:
+            m_GrIPHandler->CAN_SetBaudrate(_idx, 10000);
+            break;
+        default:
+            // Default to 10k
+            m_GrIPHandler->CAN_SetBaudrate(_idx, 10000);
+            break;
         }
     }
 
@@ -493,7 +493,7 @@ bool GrIPInterface::isOpen()
 
 void GrIPInterface::sendMessage(const CanMessage &msg)
 {
-    _serport_mutex.lock();
+    QMutexLocker locker(&_serport_mutex);
 
     if(m_GrIPHandler->CanTransmit(_idx, msg))
     {
@@ -504,8 +504,6 @@ void GrIPInterface::sendMessage(const CanMessage &msg)
         _status.tx_errors++;
         _status.can_state = state_tx_fail;
     }
-
-    _serport_mutex.unlock();
 }
 
 bool GrIPInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
@@ -560,7 +558,7 @@ bool GrIPInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout
     }
 
     // Don't saturate the thread. Read the buffer every 1ms.
-    QThread().msleep(1);
+    QThread::msleep(1);
 
     if(_isOffline == true)
     {

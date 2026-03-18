@@ -60,7 +60,7 @@ bool GrIPDriver::update()
         // fprintf(stderr, "   Description : %s \r\n", info.description().toStdString().c_str());
         // fprintf(stderr, "   Manufacturer: %s \r\n", info.manufacturer().toStdString().c_str());
 
-        if(info.vendorIdentifier() == 0x0403 && info.productIdentifier() == 0x6015)
+        if(info.vendorIdentifier() == 0x1A86 && info.productIdentifier() == 0x55D3)
         {
             std::cout << "   ++ CANIL detected" << std::endl;
 
@@ -73,7 +73,7 @@ bool GrIPDriver::update()
                 }
 
                 m_GrIPHandler->RequestVersion();
-                QThread().msleep(15);
+                QThread::msleep(15);
             }
 
             // Create new CANIL interface

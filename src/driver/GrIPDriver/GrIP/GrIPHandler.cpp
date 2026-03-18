@@ -4,6 +4,9 @@
 #include <chrono>
 #include <cstring>
 #include "qapplication.h"
+#include <QThread>
+#include <QSerialPort>
+
 
 
 #define SYSTEM_REPORT_INFO      0u
@@ -62,25 +65,29 @@ typedef struct __attribute__((packed))
     uint8_t Data[64];
 } Protocol_CanFrame_t;
 
+typedef struct __attribute__((packed))
+{
+    Protocol_SystemHeader_t Header;
+
+    uint8_t Channel;
+    uint8_t ID;
+    uint8_t DLC;
+    uint8_t Direction;
+    uint8_t Delay;
+    uint8_t Flags;
+    uint32_t Time;
+    uint8_t Data[8];
+} Protocol_LinFrame_t;
+
 
 GrIPHandler::GrIPHandler(const QString &name)
 {
     m_Exit = false;
     m_ChannelsCAN = 0;
     m_ChannelsCANFD = 0;
+    m_PortName = name;
 
     CRC_Init();
-
-    m_SerialPort = new QSerialPort();
-    m_SerialPort->setPortName(name);
-    m_SerialPort->setBaudRate(1000000);
-    m_SerialPort->setDataBits(QSerialPort::Data8);
-    m_SerialPort->setParity(QSerialPort::NoParity);
-    m_SerialPort->setStopBits(QSerialPort::OneStop);
-    m_SerialPort->setFlowControl(QSerialPort::NoFlowControl);
-    m_SerialPort->setReadBufferSize(4096);
-
-    GrIP_Init(*m_SerialPort);
 }
 
 
@@ -95,17 +102,10 @@ bool GrIPHandler::Start()
 {
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
-    if(!m_SerialPort->open(QIODevice::ReadWrite))
-    {
-        perror("Serport connect failed!");
-        return false;
-    }
-
-    m_SerialPort->flush();
-    m_SerialPort->clear();
-
     m_Exit = false;
     m_pWorkerThread = std::make_unique<std::thread>(std::thread(&GrIPHandler::WorkerThread, this));
+
+    QThread::msleep(900);
 
     return true;
 }
@@ -115,18 +115,18 @@ void GrIPHandler::Stop()
 {
     m_Exit = true;
 
-    std::unique_lock<std::mutex> lck(m_MutexSerial);
-
     if(m_pWorkerThread->joinable())
     {
         m_pWorkerThread->join();
     }
     m_pWorkerThread.reset();
 
+    std::unique_lock<std::mutex> lck(m_MutexSerial);
+
     if (m_SerialPort->isOpen())
     {
         m_SerialPort->waitForBytesWritten(20);
-        m_SerialPort->waitForReadyRead(10);
+        //m_SerialPort->waitForReadyRead(10);
         m_SerialPort->clear();
         m_SerialPort->close();
     }
@@ -197,7 +197,8 @@ void GrIPHandler::RequestVersion()
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
     GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
-    m_SerialPort->waitForReadyRead(10);
+    //m_SerialPort->waitForReadyRead(10);
+    QThread::msleep(10);
 }
 
 
@@ -299,7 +300,8 @@ void GrIPHandler::CAN_SetBaudrate(uint8_t ch, uint32_t baud)
 
     GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 
-    m_SerialPort->waitForBytesWritten(5);
+    //m_SerialPort->waitForBytesWritten(5);
+    QThread::msleep(5);
 }
 
 
@@ -405,6 +407,7 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet)
 
             char date[128] = {};
             strncpy(date, (char*)&packet.Data[9], 120);
+            date[127] = '\0';
 
             char buffer[256]{};
             sprintf(buffer, "%d.%d-<%s>", major, minor, date);
@@ -529,6 +532,10 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet)
 
         case 253u: // DATA_REPORT_LIN_MSG
         {
+            Protocol_LinFrame_t frame;
+
+            memcpy(&frame, packet.Data, sizeof(Protocol_LinFrame_t));
+
             /*uint8_t ch = packet.Data[1] + 1;
 
             uint32_t time = packet.Data[2]<<24 | packet.Data[3]<<16 | packet.Data[4]<<8 | packet.Data[5];
@@ -550,6 +557,7 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet)
             }*/
 
             fprintf(stderr, "LIN MSG\n");
+            fprintf(stderr, "ID: %d, DLC: %d, Alive: %d, Valid: %d\n", frame.ID, frame.DLC, frame.Flags&0x1, frame.Flags&0x2>>1);
             break;
         }
 
@@ -581,24 +589,130 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet)
 
 void GrIPHandler::WorkerThread()
 {
+    m_SerialPort = new QSerialPort();
+    m_SerialPort->setPortName(m_PortName);
+    m_SerialPort->setBaudRate(1000000);
+    m_SerialPort->setDataBits(QSerialPort::Data8);
+    m_SerialPort->setParity(QSerialPort::NoParity);
+    m_SerialPort->setStopBits(QSerialPort::OneStop);
+    m_SerialPort->setFlowControl(QSerialPort::NoFlowControl);
+    m_SerialPort->setReadBufferSize(1024 * 8);
+
+    GrIP_Init();
+
+    if(!m_SerialPort->open(QIODevice::ReadWrite))
+    {
+        perror("Serport connect failed!");
+        delete m_SerialPort;
+        m_SerialPort = nullptr;
+        return;
+    }
+
+    qRegisterMetaType<QSerialPort::SerialPortError>("SerialThread");
+    connect(m_SerialPort, &QSerialPort::errorOccurred, this, &GrIPHandler::handleSerialError);
+
+    m_SerialPort->flush();
+    m_SerialPort->clear();
+
+    m_SerialPort->waitForReadyRead(50);
+
     while(!m_Exit)
     {
+        m_SerialPort->waitForReadyRead(1);
+        if (m_SerialPort->bytesAvailable())
+        {
+            //qDebug() << "LEN " << m_SerialPort->bytesAvailable() << " bytes";
+            QByteArray data = m_SerialPort->readAll();
+            if(!data.isEmpty()) {
+                //qDebug() << "RX " << data.size() << " bytes";
+                GrIP_RxCallback(data);
+            }
+        }
+        auto tx = GrIP_GetTxData();
+        if (tx.size())
+        {
+            m_SerialPort->write(tx);
+            m_SerialPort->flush();
+        }
+
         // Update GrIP
-        for(int i = 0; i < 128; i++)
+        for(int i = 0; i < 256; i++)
         {
             GrIP_Update();
         }
 
         // Check for new packet
-        for(int i = 0; i < 16; i++)
+        for(int i = 0; i < 32; i++)
         {
             GrIP_Packet_t dat = {};
             if(GrIP_Receive(&dat))
             {
                 ProcessData(dat);
             }
+            else
+            {
+                break;
+            }
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        QThread::msleep(2);
     }
+}
+
+void GrIPHandler::handleSerialError(QSerialPort::SerialPortError error)
+{
+    if (error == QSerialPort::ResourceError)
+    {
+        perror("error");
+    }
+
+    QString  ERRORString = "";
+    switch (error) {
+    case QSerialPort::NoError:
+        ERRORString=  "No Error";
+        break;
+    case QSerialPort::DeviceNotFoundError:
+        ERRORString= "Device Not Found";
+        break;
+    case QSerialPort::PermissionError:
+        ERRORString= "Permission Denied";
+        break;
+    case QSerialPort::OpenError:
+        ERRORString= "Open Error";
+        break;
+    /*case QSerialPort::ParityError:
+        ERRORString= "Parity Error";
+        break;
+    case QSerialPort::FramingError:
+        ERRORString= "Framing Error";
+        break;
+    case QSerialPort::BreakConditionError:
+        ERRORString= "Break Condition";
+        break;*/
+    case QSerialPort::WriteError:
+        ERRORString= "Write Error";
+        break;
+    case QSerialPort::ReadError:
+        ERRORString= "Read Error";
+        break;
+    case QSerialPort::ResourceError:
+        ERRORString= "Resource Error";
+        break;
+    case QSerialPort::UnsupportedOperationError:
+        ERRORString= "Unsupported Operation";
+        break;
+    case QSerialPort::UnknownError:
+        ERRORString= "Unknown Error";
+        break;
+    case QSerialPort::TimeoutError:
+        //ERRORString= "Timeout Error";
+        break;
+    case QSerialPort::NotOpenError:
+        ERRORString= "Not Open Error";
+        break;
+    default:
+        ERRORString= "Other Error";
+    }
+    if(ERRORString.size())
+        qDebug() << "SerialPortWorker::errorOccurred  ,info is  " << QString::fromStdString(ERRORString.toStdString());
 }
