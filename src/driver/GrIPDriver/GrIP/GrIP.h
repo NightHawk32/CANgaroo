@@ -1,31 +1,23 @@
 #ifndef GRIP_H_INCLUDED
 #define GRIP_H_INCLUDED
 
-
 #include <stdint.h>
 #include <stdbool.h>
-
-#include <QSerialPort>
-#include <QQueue>
 #include <QByteArray>
 
-
 // Current protocol version
-#define GRIP_VERSION            4u
+#define GRIP_VERSION        4u
 
 // Transmit/Receive buffer size - Do not exceed (GRIP_BUFFER_SIZE - 10)
-#define GRIP_BUFFER_SIZE        128u
-
+#define GRIP_BUFFER_SIZE    128u
 
 typedef enum
 {
     PROT_GrIP = 0, PROT_BoOTA
 } GrIP_ProtocolType_e;
 
-
 /**
   * Available message types.
-  *
   */
 typedef enum
 {
@@ -40,23 +32,20 @@ typedef enum
     MSG_MAX_NUM             = 8u
 } GrIP_MessageType_e;
 
-
 /**
   * Return Types.
-  *
   */
 typedef enum
 {
-    RET_OK                  = 0,
-    RET_NOK                 = 1,
-    RET_WRONG_VERSION       = 2,
-    RET_WRONG_CRC           = 3,
-    RET_WRONG_MAGIC         = 4,
-    RET_WRONG_PARAM         = 5,
-    RET_WRONG_TYPE          = 6,
-    RET_WRONG_LEN           = 7,
+    RET_OK              = 0,
+    RET_NOK             = 1,
+    RET_WRONG_VERSION   = 2,
+    RET_WRONG_CRC       = 3,
+    RET_WRONG_MAGIC     = 4,
+    RET_WRONG_PARAM     = 5,
+    RET_WRONG_TYPE      = 6,
+    RET_WRONG_LEN       = 7,
 } GrIP_ReturnType_e;
-
 
 /**
   * GrIP Packet Header
@@ -64,30 +53,14 @@ typedef enum
   */
 typedef struct __attribute__((packed))
 {
-    uint8_t Version;
-    uint8_t Protocol;
-    uint8_t MsgType;
-    uint8_t ReturnCode;
+    uint8_t  Version;
+    uint8_t  Protocol;
+    uint8_t  MsgType;
+    uint8_t  ReturnCode;
     uint16_t Length;
-    uint8_t CRC_Header;
-    uint8_t CRC_Data;
+    uint8_t  CRC_Header;
+    uint8_t  CRC_Data;
 } GrIP_PacketHeader_t;
-
-/*typedef union __attribute__((packed))
-{
-    uint8_t raw[8];
-    struct
-    {
-        uint8_t Version;
-        uint8_t Protocol;
-        uint8_t MsgType;
-        uint8_t ReturnCode;
-        uint16_t Length;
-        uint8_t CRC8;
-        uint8_t Counter;
-    };
-} GrIP_PacketHeader_t;*/
-
 
 /**
   * GrIP Receive Packet
@@ -95,9 +68,8 @@ typedef struct __attribute__((packed))
 typedef struct
 {
     GrIP_PacketHeader_t RX_Header;
-    uint8_t Data[GRIP_BUFFER_SIZE+10];
+    uint8_t             Data[GRIP_BUFFER_SIZE];
 } GrIP_Packet_t;
-
 
 /**
   * Data struct.
@@ -106,20 +78,17 @@ typedef struct
   */
 typedef struct
 {
-    uint8_t *Data;
-    uint16_t Length;
+    const uint8_t  *Data;
+    uint16_t  Length;
 } GrIP_Pdu_t;
-
 
 typedef struct
 {
-    uint8_t LastError;
-
+    uint8_t  LastError;
     uint16_t CRC_Error;
     uint16_t Len_Error;
     uint16_t Param_Error;
 } GrIP_ErrorFlags_t;
-
 
 /**
   * Initialize the module
@@ -129,17 +98,17 @@ void GrIP_Init();
 /**
   * Transmit a message over GrIP
   */
-uint8_t GrIP_TransmitArray(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType, GrIP_ReturnType_e ReturnCode, const uint8_t *data, uint16_t len);
+[[nodiscard]] uint8_t GrIP_TransmitArray(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType, GrIP_ReturnType_e ReturnCode, const uint8_t *data, uint16_t len);
 
 /**
   * Transmit a message over GrIP
   */
-uint8_t GrIP_Transmit(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType, GrIP_ReturnType_e ReturnCode, const GrIP_Pdu_t *pdu);
+[[nodiscard]] uint8_t GrIP_Transmit(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType, GrIP_ReturnType_e ReturnCode, const GrIP_Pdu_t *pdu);
 
 /**
   * Sync protocol flow
   */
-uint8_t GrIP_SendSync(void);
+[[nodiscard]] uint8_t GrIP_SendSync(void);
 
 /**
   * Continuously call this function to process RX messages
@@ -151,13 +120,11 @@ void GrIP_Update(void);
   */
 void GrIP_GetError(GrIP_ErrorFlags_t *ef);
 
-bool GrIP_Receive(GrIP_Packet_t *p);
+[[nodiscard]] bool GrIP_Receive(GrIP_Packet_t *p);
 
 int GrIP_GetLastResponse(void);
 
-void GrIP_RxCallback(QByteArray data);
-
+void       GrIP_RxCallback(const QByteArray &data);
 QByteArray GrIP_GetTxData();
-
 
 #endif // GRIP_H_INCLUDED

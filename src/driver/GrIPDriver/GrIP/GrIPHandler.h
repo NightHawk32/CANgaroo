@@ -11,6 +11,7 @@
 #include <memory>
 #include <cstdint>
 #include "core/CanMessage.h"
+#include <QSerialPort>
 
 
 typedef struct

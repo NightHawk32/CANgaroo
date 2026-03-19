@@ -636,7 +636,7 @@ void GrIPHandler::WorkerThread()
         }
 
         // Update GrIP
-        for(int i = 0; i < 256; i++)
+        for(int i = 0; i < 512; i++)
         {
             GrIP_Update();
         }
@@ -655,7 +655,7 @@ void GrIPHandler::WorkerThread()
             }
         }
 
-        QThread::msleep(2);
+        QThread::msleep(1);
     }
 }
 

@@ -1,624 +1,568 @@
 #include "GrIP.h"
 #include "CRC.h"
-#include <string.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
 
+#include <cstring>
+#include <cctype>
 #include <queue>
+
 #include <QDebug>
 #include <QMutex>
-#include <QTime>
+#include <QMutexLocker>
 
-std::queue<GrIP_Packet_t> q;
+// ═════════════════════════════════════════════════════════════════════════════
+// Internal constants
+// ═════════════════════════════════════════════════════════════════════════════
 
-// Magic byte - Marks start of transmission
-#define GRIP_SOH                0x01
-#define GRIP_SOT                0x02
-#define GRIP_EOT                0x03
+static constexpr uint8_t  GRIP_SOH          = 0x01; ///< Start of header
+static constexpr uint8_t  GRIP_SOT          = 0x02; ///< Start of text (payload)
+static constexpr uint8_t  GRIP_EOT          = 0x03; ///< End of transmission
 
+static constexpr uint8_t  MAX_READ_PER_TICK = 128u;
+static constexpr uint16_t GRIP_HEADER_SIZE  = sizeof(GrIP_PacketHeader_t);
 
-// Size of header packet
-#define GRIP_HEADER_SIZE        (sizeof(GrIP_PacketHeader_t))
+/// Wire buffer: header hex-encoded (×2) + SOH/SOT/EOT + payload hex-encoded (×2)
+static constexpr size_t TX_BUF_SIZE =
+    1u                    // SOH
+    + GRIP_HEADER_SIZE * 2u
+    + 1u                  // SOT
+    + GRIP_BUFFER_SIZE * 2u
+    + 1u                  // EOT
+    + 4u;                 // safety margin
 
-#define MAX_READ_CNT            128u
+// ═════════════════════════════════════════════════════════════════════════════
+// State machine
+// ═════════════════════════════════════════════════════════════════════════════
 
-
-// GrIP states
-typedef enum
+enum class GrIPState : uint8_t
 {
-    GrIP_State_Idle = 0, GrIP_State_RX_Header, GrIP_State_SOT, GrIP_State_RX_Data, GrIP_State_Finish
-} GrIP_States_e;
+    Idle,
+    RxHeader,
+    WaitSOT,
+    RxData,
+    Finish,
+};
 
+// ═════════════════════════════════════════════════════════════════════════════
+// Context — replaces all former file-scope globals
+// ═════════════════════════════════════════════════════════════════════════════
 
-// Local Prototypes
-static uint8_t CheckHeader(const GrIP_PacketHeader_t *paket);
-static void ForwardPacket(const GrIP_PacketHeader_t *header, const uint8_t *data, uint16_t len);
-
-static uint8_t hex2digit(char c);
-static uint32_t hex2dec(const char *str, uint8_t len);
-static char nibble2hex(const uint8_t b);
-
-
-// Local Variables
-static GrIP_PacketHeader_t TX_Header;
-
-// Transmit Buffer
-static uint8_t TX_Buffer[GRIP_BUFFER_SIZE*2 + GRIP_HEADER_SIZE*2 + 30];
-// Receive Data Array
-static GrIP_Packet_t RX_Buff = {};
-//static uint8_t RxBuffer[GRIP_BUFFER_SIZE] = {};
-
-static GrIP_States_e GrIP_Status = GrIP_State_Idle;
-static bool SendReponse = false;
-static uint8_t MaxReadCount = MAX_READ_CNT;
-static uint32_t BytesRead = 0u;
-
-static GrIP_ErrorFlags_t ErrorFlags;
-static int Response = -1;
-
-static QMutex qMutex;
-static QMutex mtxData;
-
-static QByteArray rx_queue;
-static QByteArray tx_queue;
-
-
-qint64 write(const char *data, qint64 len)
+struct GrIPContext
 {
-    QMutexLocker lk(&mtxData);
-    tx_queue.append(data, len);
+    // State machine
+    GrIPState state        = GrIPState::Idle;
+    bool      sendResponse = false;
+    uint8_t   maxReadLeft  = MAX_READ_PER_TICK;
+    uint32_t  bytesRead    = 0u;
+    int       lastResponse = -1;
 
-    return len;
+    // In-progress receive packet
+    GrIP_Packet_t rxPacket = {};
+
+    // Transmit scratch buffer (not shared across threads)
+    uint8_t txBuf[TX_BUF_SIZE] = {};
+
+    // Error counters
+    GrIP_ErrorFlags_t errors = {};
+
+    // Thread-safe byte streams
+    QByteArray rxStream;   ///< data arriving from the serial port
+    QByteArray txStream;   ///< data waiting to be written to the serial port
+    QMutex     streamMtx;
+
+    // Completed-packet queue (consumed by GrIP_Receive)
+    std::queue<GrIP_Packet_t> packetQueue;
+    QMutex                    queueMtx;
+};
+
+/// Single module-level instance — construction is zero-initialised by default.
+static GrIPContext ctx;
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Private helpers — encoding / decoding
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// Map a nibble (0–15) to its uppercase hex character.
+static inline char nibbleToHex(uint8_t nibble) noexcept
+{
+    static constexpr char kHexTable[] = "0123456789ABCDEF";
+    return kHexTable[nibble & 0x0Fu];
 }
 
-qint64 read(char *data, qint64 len)
+/// Convert a single hex character to its value (0–15).
+/// Behaviour is undefined for non-hex characters.
+static inline uint8_t hexDigitToVal(char c) noexcept
 {
-    QMutexLocker lk(&mtxData);
-    len = (len > rx_queue.size()) ? rx_queue.size() : len;
-    if (len == 0)
-    {
-        return 0;
-    }
-
-    memcpy(data, rx_queue.constData(), len);
-    rx_queue.remove(0, len);
-
-    return len;
+    if (c >= '0' && c <= '9') return static_cast<uint8_t>(c - '0');
+    if (c >= 'A' && c <= 'F') return static_cast<uint8_t>(c - 'A' + 10);
+    if (c >= 'a' && c <= 'f') return static_cast<uint8_t>(c - 'a' + 10);
+    return 0u;
 }
 
-qint64 available()
-{
-    QMutexLocker lk(&mtxData);
-    return rx_queue.size();
-}
-
-
-void GrIP_Init()
-{
-    // Initialize to default values
-    GrIP_Status = GrIP_State_Idle;
-    SendReponse = false;
-    MaxReadCount = MAX_READ_CNT;
-    BytesRead = 0u;
-    Response = -1;
-
-    rx_queue.clear();
-    tx_queue.clear();
-
-    memset(&TX_Header, 0u, sizeof(TX_Header));
-    memset(TX_Buffer, 0u, GRIP_BUFFER_SIZE*2 + GRIP_HEADER_SIZE*2 + 30);
-    memset(&RX_Buff, 0u, sizeof(RX_Buff));
-    memset(&ErrorFlags, 0u, sizeof(GrIP_ErrorFlags_t));
-    //memset(RxBuffer, 0u, GRIP_BUFFER_SIZE);
-}
-
-
-uint8_t GrIP_TransmitArray(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType, GrIP_ReturnType_e ReturnCode, const uint8_t *data, uint16_t len)
-{
-    GrIP_Pdu_t pdu = {(uint8_t*)data, len};
-
-    return GrIP_Transmit(ProtType, MsgType, ReturnCode, &pdu);
-}
-
-
-uint8_t GrIP_Transmit(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType, GrIP_ReturnType_e ReturnCode, const GrIP_Pdu_t *data)
-{
-    TX_Header.Version = GRIP_VERSION;
-    TX_Header.Protocol = ProtType;
-    TX_Header.MsgType = MsgType;
-    TX_Header.ReturnCode = ReturnCode;
-
-    if(data)
-    {
-        // Convert length to network order
-        TX_Header.Length = data->Length;
-
-        // Calculate header CRC without CRC fields
-        TX_Header.CRC_Header = CRC_CalculateCRC8((uint8_t*)&TX_Header, GRIP_HEADER_SIZE-2u);
-
-        // Check if data fits into transmit buffer
-        if(data->Length > GRIP_BUFFER_SIZE)
-        {
-            return RET_NOK;
-        }
-        else if(data->Length > 0u)
-        {
-            // Calculate CRC of data
-            TX_Header.CRC_Data = CRC_CalculateCRC8(data->Data, data->Length);
-        }
-        else
-        {
-            // No data, no CRC
-            TX_Header.CRC_Data = 0u;
-        }
-
-        // Prepare transmit buffer
-        unsigned int idx = 0u;
-        uint8_t *pHeader = (uint8_t*)&TX_Header;
-
-        // Start of header
-        TX_Buffer[idx++] = GRIP_SOH;
-
-        for(uint8_t i = 0; i < GRIP_HEADER_SIZE; i++)
-        {
-            // Serialize header
-            TX_Buffer[idx++] = nibble2hex(pHeader[i]>>4);
-            TX_Buffer[idx++] = nibble2hex(pHeader[i]);
-        }
-
-        // Start of text
-        TX_Buffer[idx++] = GRIP_SOT;
-
-        for(uint8_t i = 0; i < data->Length && i < GRIP_BUFFER_SIZE; i++)
-        {
-            // Serialize data
-            TX_Buffer[idx++] = nibble2hex(data->Data[i]>>4);
-            TX_Buffer[idx++] = nibble2hex(data->Data[i]);
-        }
-
-        // End of transmission
-        TX_Buffer[idx++] = GRIP_EOT;
-
-        // Transmit packet
-        write((char*)TX_Buffer, idx);
-        //serPort->waitForBytesWritten(5);
-
-        // Clear memory
-        memset(&TX_Header, 0u, sizeof(TX_Header));
-        memset(TX_Buffer, 0u, GRIP_BUFFER_SIZE*2 + GRIP_HEADER_SIZE*2 + 30);
-
-        return RET_OK;
-    }
-    else
-    {
-        // No data available -> Response, Sync
-        // No data to transmit, only header
-        TX_Header.Length = 0u;
-        TX_Header.CRC_Data = 0u;
-
-        // Calculate header CRC without CRC fields
-        TX_Header.CRC_Header = CRC_CalculateCRC8((uint8_t*)&TX_Header, GRIP_HEADER_SIZE-2u);
-
-        unsigned int idx = 0u;
-        const uint8_t *pHeader = (uint8_t*)&TX_Header;
-
-        // Start of header
-        TX_Buffer[idx++] = GRIP_SOH;
-
-        for(uint8_t i = 0; i < GRIP_HEADER_SIZE; i++)
-        {
-            // Serialize header
-            TX_Buffer[idx++] = nibble2hex(pHeader[i]>>4);
-            TX_Buffer[idx++] = nibble2hex(pHeader[i]);
-        }
-
-        // End of transmission
-        TX_Buffer[idx++] = GRIP_EOT;
-
-        // Transmit packet
-        write((char*)TX_Buffer, idx);
-        //serPort->waitForBytesWritten(5);
-
-        // Clear memory
-        memset(&TX_Header, 0u, sizeof(TX_Header));
-        memset(TX_Buffer, 0u, GRIP_BUFFER_SIZE*2 + GRIP_HEADER_SIZE*2 + 30);
-
-        return RET_OK;
-    }
-
-    // Clear memory
-    memset(&TX_Header, 0u, sizeof(TX_Header));
-    memset(TX_Buffer, 0u, GRIP_BUFFER_SIZE*2 + GRIP_HEADER_SIZE*2 + 3);
-
-    return RET_NOK;
-}
-
-
-uint8_t GrIP_SendSync(void)
-{
-    return GrIP_Transmit(PROT_GrIP, MSG_SYNC, RET_OK, 0);
-}
-
-
-void GrIP_Update(void)
-{
-    switch(GrIP_Status)
-    {
-    case GrIP_State_Idle:
-        // Check if data is available
-        if(available())
-        {
-            uint8_t magic = 0u;
-
-            // Read start byte
-            read((char*)&magic, 1u);
-
-            if(magic == GRIP_SOH)
-            {
-                // Received valid packet
-                GrIP_Status = GrIP_State_RX_Header;
-                ErrorFlags.LastError = 0u;
-                //memset(RxBuffer, 0u, GRIP_BUFFER_SIZE);
-            }
-        }
-        break;
-
-    case GrIP_State_RX_Header:
-        // Check if header data is available
-        if(available() > static_cast<qint64>(GRIP_HEADER_SIZE*2u-1u))
-        {
-            uint8_t head_buff[GRIP_HEADER_SIZE*2u] = {};
-            uint8_t *pHeader = (uint8_t*)&RX_Buff.RX_Header;
-
-            // Get header
-            read((char*)head_buff, GRIP_HEADER_SIZE*2u);
-
-            // Fill struct
-            for(unsigned int i = 0u; i < GRIP_HEADER_SIZE; i++)
-            {
-                pHeader[i] = hex2dec((char*)&head_buff[i*2u], 2u);
-            }
-
-            // Check if header is valid
-            uint8_t ret = CheckHeader(&RX_Buff.RX_Header);
-            if(ret != RET_OK)
-            {
-                // Header is invalid
-                GrIP_Status = GrIP_State_Finish;
-                // Send NOK
-                ErrorFlags.LastError = ret;
-                //printf("Wrong header: %d\n", ret);
-                qDebug() << "Wrong header: " << ret;
-                break;
-            }
-            if(RX_Buff.RX_Header.Length > GRIP_BUFFER_SIZE)
-            {
-                // Payload too big
-                GrIP_Status = GrIP_State_Finish;
-                // Send NOK
-                ErrorFlags.LastError = RET_WRONG_LEN;
-                ErrorFlags.Len_Error++;
-                //printf("Payload exceeds limit: %d\n", RX_Buff[GrIP_idx].RX_Header.Length);
-                qDebug() << "Payload exceeds limit: " << RX_Buff.RX_Header.Length;
-                break;
-            }
-
-            // If response received
-            if(RX_Buff.RX_Header.MsgType == MSG_RESPONSE || RX_Buff.RX_Header.MsgType == MSG_SYNC)
-            {
-                GrIP_Status = GrIP_State_Finish;
-                SendReponse = false;
-                // check response
-                //printf("Received resp cnt: %d\n", GrIP_ResponseCnt);
-                if(RX_Buff.RX_Header.ReturnCode != RET_OK)
-                {
-                    // Response not OK
-                    qDebug() << "Response: " << RX_Buff.RX_Header.ReturnCode;
-                    Response = RX_Buff.RX_Header.ReturnCode;
-                }
-            }
-            else if(RX_Buff.RX_Header.Length > 0u)
-            {
-                // Payload is available
-                GrIP_Status = GrIP_State_SOT;
-            }
-            else
-            {
-                // No payload
-                GrIP_Status = GrIP_State_Finish;
-                // Send OK
-                ErrorFlags.LastError = RET_OK;
-
-                ForwardPacket(&RX_Buff.RX_Header, RX_Buff.Data, RX_Buff.RX_Header.Length);
-                QMutexLocker lk(&qMutex);
-                q.push(RX_Buff);
-            }
-        }
-        break;
-
-    case GrIP_State_SOT:
-        if(available())
-        {
-            uint8_t magic = 0u;
-
-            // Read Magic byte
-            read((char*)&magic, 1u);
-            if(magic == GRIP_SOT)
-            {
-                // Start of text
-                GrIP_Status = GrIP_State_RX_Data;
-                MaxReadCount = MAX_READ_CNT;
-                BytesRead = 0u;
-                //memset(RxBuffer, 0u, GRIP_BUFFER_SIZE);
-            }
-            if(magic == GRIP_EOT || (isxdigit(magic) != 0u))
-            {
-                // Something went wrong, go back to idle
-                GrIP_Status = GrIP_State_Idle;
-                qDebug() << "SOT failed";
-            }
-        }
-        break;
-
-    case GrIP_State_RX_Data:
-        // Check if data is available
-        while((available() > 1u) && MaxReadCount--)
-        {
-            uint8_t tmp[2u] = {};
-
-            // Get payload
-            read((char*)tmp, 2u);
-
-            if(isxdigit(tmp[0u]) && isxdigit(tmp[1u]))
-            {
-                if (BytesRead < GRIP_BUFFER_SIZE)
-                {
-                    // Received valid hex character
-                    RX_Buff.Data[BytesRead] = hex2dec((char*)tmp, 2u);
-                }
-            }
-            else
-            {
-                // Received non-hex character; exit
-                ErrorFlags.LastError = RET_WRONG_PARAM;
-                GrIP_Status = GrIP_State_Finish;
-                qDebug() << "Rec non-hex char";
-
-                if(RX_Buff.RX_Header.MsgType != MSG_RESPONSE)
-                {
-                    SendReponse = true;
-                }
-
-                if(tmp[0u] == GRIP_EOT || tmp[1u] == GRIP_EOT)
-                {
-                    GrIP_Status = GrIP_State_Idle;
-                }
-
-                break;
-            }
-
-            BytesRead++;
-
-            if(BytesRead >= RX_Buff.RX_Header.Length || BytesRead >= GRIP_BUFFER_SIZE)
-            {
-                GrIP_Status = GrIP_State_Finish;
-                //qDebug() << "BytesRead: " << BytesRead;
-
-                // Check CRC
-                if(RX_Buff.RX_Header.CRC_Data == CRC_CalculateCRC8(RX_Buff.Data, RX_Buff.RX_Header.Length))
-                {
-                    ErrorFlags.LastError = RET_OK;
-
-                    ForwardPacket(&RX_Buff.RX_Header, RX_Buff.Data, RX_Buff.RX_Header.Length);
-                    QMutexLocker lk(&qMutex);
-                    q.push(RX_Buff);
-
-                    if((RX_Buff.RX_Header.MsgType != MSG_DATA_NO_RESPONSE) && (RX_Buff.RX_Header.MsgType != MSG_RESPONSE))
-                    {
-                        // Send OK
-                        SendReponse = true;
-                    }
-                }
-                else
-                {
-                    // Wrong CRC
-                    ErrorFlags.LastError = RET_WRONG_CRC;
-                    ErrorFlags.CRC_Error++;
-                    qDebug() << "Wrong CRC Data";
-                }
-
-                // Leave loop after all bytes received
-                break;
-            }
-        }
-        // Reset counter for next round
-        MaxReadCount = MAX_READ_CNT;
-
-        break;
-
-    case GrIP_State_Finish:
-    {
-        if(SendReponse)
-        {
-            // Send response
-            GrIP_Transmit(PROT_GrIP, MSG_RESPONSE, (GrIP_ReturnType_e)ErrorFlags.LastError, 0u);
-            SendReponse = false;
-        }
-
-        // Read Magic byte
-        uint8_t magic = 0u;
-        if (available())
-            read((char*)&magic, 1u);
-        if(magic == GRIP_EOT)
-        {
-            // Received EOT
-        }
-        else
-        {
-            qDebug() << "EOT failed";
-        }
-
-        GrIP_Status = GrIP_State_Idle;
-        break;
-    }
-
-    default:
-        // Unknown state, go back to idle
-        GrIP_Status = GrIP_State_Idle;
-        break;
-    }
-}
-
-
-bool GrIP_Receive(GrIP_Packet_t *p)
-{
-    QMutexLocker lk(&qMutex);
-
-    if(q.size() > 0)
-    {
-        auto tmp = q.front();
-        memcpy(p, &tmp, sizeof(GrIP_Packet_t));
-        q.pop();
-        return true;
-    }
-
-    return false;
-}
-
-
-void GrIP_GetError(GrIP_ErrorFlags_t *ef)
-{
-    if(ef)
-    {
-        memcpy(ef, &ErrorFlags, sizeof(GrIP_ErrorFlags_t));
-    }
-}
-
-
-int GrIP_GetLastResponse(void)
-{
-    if(Response != -1)
-    {
-        int tmp = Response;
-        Response = -1;
-        return tmp;
-    }
-
-    return -1;
-}
-
-
-void GrIP_RxCallback(QByteArray data)
-{
-    QMutexLocker lk(&mtxData);
-    rx_queue.append(data);
-}
-
-
-QByteArray GrIP_GetTxData()
-{
-    QMutexLocker lk(&mtxData);
-    QByteArray ret;
-    ret.swap(tx_queue);
-
-    return ret;
-}
-
-
-static uint8_t CheckHeader(const GrIP_PacketHeader_t *paket)
-{
-    // Check NULL
-    if(paket == NULL)
-    {
-        return RET_WRONG_PARAM;
-    }
-
-    if(paket->Version != GRIP_VERSION)
-    {
-        // Wrong version
-        return RET_WRONG_VERSION;
-    }
-
-    if(paket->Length > GRIP_BUFFER_SIZE-10)
-    {
-        qDebug() << "Wrong Data Len";
-    }
-
-    if(paket->MsgType >= MSG_MAX_NUM)
-    {
-        // Wrong message type
-        return RET_WRONG_TYPE;
-    }
-
-    if(paket->CRC_Header != CRC_CalculateCRC8((uint8_t*)paket, GRIP_HEADER_SIZE-2u))
-    {
-        ErrorFlags.CRC_Error++;
-        // Header CRC wrong
-        return RET_WRONG_CRC;
-    }
-
-    // OK
-    return RET_OK;
-}
-
-
-static void ForwardPacket(const GrIP_PacketHeader_t *header, const uint8_t *data, uint16_t len)
-{
-    switch(header->Protocol)
-    {
-    case PROT_GrIP:
-        //Protocol_ProcessMsg(data, len);
-        break;
-
-    case PROT_BoOTA:
-
-        break;
-
-    default:
-        // Unknown protocol
-        break;
-    }
-}
-
-
-// Convert single hex char to decimal
-static uint8_t hex2digit(char c)
-{
-    if (c >= 'A' && c <= 'F')
-    {
-        return c - 'A' + 0xA;
-    }
-    else if (c >= 'a' && c <= 'f')
-    {
-        return c - 'a' + 0xa;
-    }
-
-    return (c - '0') & 0xF;
-}
-
-
-// Convert hex string do decimal e.g.: "FF" -> len 2 = 255
-static uint32_t hex2dec(const char *str, uint8_t len)
+/// Decode a fixed-length hex string to an unsigned integer (big-endian nibble order).
+static uint32_t hexStringToUint(const char *str, uint8_t len) noexcept
 {
     uint32_t val = 0u;
-
-    if(str)
-    {
-        for(uint8_t i = 0u; i < len; i++)
-        {
-            val = (val << 4u) | hex2digit(str[i]);
-        }
-    }
-
+    for (uint8_t i = 0; i < len; ++i)
+        val = (val << 4u) | hexDigitToVal(str[i]);
     return val;
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// Private helpers — stream I/O (all require streamMtx to be held by caller)
+// ═════════════════════════════════════════════════════════════════════════════
 
-// Convert half-byte (4bit) to single hex char
-static char nibble2hex(const uint8_t b)
+/// Enqueue bytes into the TX stream.
+static void streamWrite(const uint8_t *data, qint64 len)
 {
-    static const char *hex_tbl = "0123456789ABCDEF";
+    ctx.txStream.append(reinterpret_cast<const char *>(data), len);
+}
 
-    return hex_tbl[b & 0x0F];
+/// Dequeue up to `len` bytes from the RX stream into `dest`.
+/// Returns the number of bytes actually read.
+static qint64 streamRead(uint8_t *dest, qint64 len)
+{
+    const qint64 available = ctx.rxStream.size();
+    len = qMin(len, available);
+    if (len == 0) return 0;
+
+    std::memcpy(dest, ctx.rxStream.constData(), static_cast<size_t>(len));
+    ctx.rxStream.remove(0, static_cast<int>(len));
+    return len;
+}
+
+/// Returns the number of bytes currently in the RX stream.
+static qint64 streamAvailable() noexcept
+{
+    return ctx.rxStream.size();
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Private helpers — packet handling
+// ═════════════════════════════════════════════════════════════════════════════
+
+static uint8_t validateHeader(const GrIP_PacketHeader_t &hdr)
+{
+    if (hdr.Version != GRIP_VERSION)
+        return RET_WRONG_VERSION;
+
+    if (hdr.MsgType >= MSG_MAX_NUM)
+        return RET_WRONG_TYPE;
+
+    const uint8_t expectedCRC = CRC_CalculateCRC8(
+        reinterpret_cast<const uint8_t *>(&hdr), GRIP_HEADER_SIZE - 2u);
+
+    if (hdr.CRC_Header != expectedCRC)
+    {
+        ++ctx.errors.CRC_Error;
+        return RET_WRONG_CRC;
+    }
+
+    return RET_OK;
+}
+
+/// Called when a well-formed packet is ready; pushes it into the queue.
+static void dispatchPacket(const GrIP_Packet_t &pkt)
+{
+    switch (pkt.RX_Header.Protocol)
+    {
+    case PROT_GrIP:  /* TODO: Protocol_ProcessMsg(pkt) */ break;
+    case PROT_BoOTA: /* TODO: BoOTA handler            */ break;
+    default:
+        qWarning() << "GrIP: unknown protocol" << pkt.RX_Header.Protocol;
+        break;
+    }
+
+    QMutexLocker lk(&ctx.queueMtx);
+    ctx.packetQueue.push(pkt);
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Private helpers — wire encoding
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// Serialise a header struct into the TX buffer starting at `idx`.
+/// Returns the updated index.
+static unsigned int encodeHeader(const GrIP_PacketHeader_t &hdr, uint8_t *buf, unsigned int idx)
+{
+    buf[idx++] = GRIP_SOH;
+    const auto *raw = reinterpret_cast<const uint8_t *>(&hdr);
+    for (uint16_t i = 0; i < GRIP_HEADER_SIZE; ++i)
+    {
+        buf[idx++] = static_cast<uint8_t>(nibbleToHex(raw[i] >> 4u));
+        buf[idx++] = static_cast<uint8_t>(nibbleToHex(raw[i]));
+    }
+    return idx;
+}
+
+/// Serialise a payload into the TX buffer starting at `idx`.
+/// Returns the updated index.
+static unsigned int encodePayload(const uint8_t *data, uint16_t len, uint8_t *buf, unsigned int idx)
+{
+    buf[idx++] = GRIP_SOT;
+    for (uint16_t i = 0; i < len && i < GRIP_BUFFER_SIZE; ++i)
+    {
+        buf[idx++] = static_cast<uint8_t>(nibbleToHex(data[i] >> 4u));
+        buf[idx++] = static_cast<uint8_t>(nibbleToHex(data[i]));
+    }
+    return idx;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Public API
+// ═════════════════════════════════════════════════════════════════════════════
+
+void GrIP_Init()
+{
+    // Reset state machine
+    ctx.state        = GrIPState::Idle;
+    ctx.sendResponse = false;
+    ctx.maxReadLeft  = MAX_READ_PER_TICK;
+    ctx.bytesRead    = 0u;
+    ctx.lastResponse = -1;
+
+    // Clear buffers (mutexes stay in place)
+    {
+        QMutexLocker lk(&ctx.streamMtx);
+        ctx.rxStream.clear();
+        ctx.txStream.clear();
+    }
+    {
+        QMutexLocker lk(&ctx.queueMtx);
+        ctx.packetQueue = {};
+    }
+
+    // Clear packet and error state
+    ctx.rxPacket = {};
+    ctx.errors   = {};
+    std::memset(ctx.txBuf, 0, sizeof(ctx.txBuf));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+uint8_t GrIP_TransmitArray(GrIP_ProtocolType_e prot,
+                           GrIP_MessageType_e  msg,
+                           GrIP_ReturnType_e   ret,
+                           const uint8_t      *data,
+                           uint16_t            len)
+{
+    GrIP_Pdu_t pdu{ data, len };
+    return GrIP_Transmit(prot, msg, ret, &pdu);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+uint8_t GrIP_Transmit(GrIP_ProtocolType_e prot,
+                      GrIP_MessageType_e  msg,
+                      GrIP_ReturnType_e   retCode,
+                      const GrIP_Pdu_t   *pdu)
+{
+    GrIP_PacketHeader_t hdr{};
+    hdr.Version    = GRIP_VERSION;
+    hdr.Protocol   = prot;
+    hdr.MsgType    = msg;
+    hdr.ReturnCode = retCode;
+
+    if (pdu)
+    {
+        if (pdu->Length > GRIP_BUFFER_SIZE)
+        {
+            qWarning() << "GrIP_Transmit: payload too large" << pdu->Length;
+            return RET_NOK;
+        }
+
+        hdr.Length   = pdu->Length;
+        hdr.CRC_Data = (pdu->Length > 0u)
+                           ? CRC_CalculateCRC8(pdu->Data, pdu->Length)
+                           : 0u;
+    }
+    else
+    {
+        hdr.Length   = 0u;
+        hdr.CRC_Data = 0u;
+    }
+
+    hdr.CRC_Header = CRC_CalculateCRC8(reinterpret_cast<const uint8_t *>(&hdr), GRIP_HEADER_SIZE - 2u);
+
+    // Build wire frame
+    unsigned int idx = encodeHeader(hdr, ctx.txBuf, 0u);
+
+    if (pdu && pdu->Length > 0u)
+        idx = encodePayload(pdu->Data, pdu->Length, ctx.txBuf, idx);
+
+    ctx.txBuf[idx++] = GRIP_EOT;
+
+    // Push to TX stream (thread-safe)
+    {
+        QMutexLocker lk(&ctx.streamMtx);
+        streamWrite(ctx.txBuf, static_cast<qint64>(idx));
+    }
+
+    return RET_OK;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+uint8_t GrIP_SendSync()
+{
+    return GrIP_Transmit(PROT_GrIP, MSG_SYNC, RET_OK, nullptr);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+void GrIP_Update()
+{
+    QMutexLocker lk(&ctx.streamMtx);
+
+    switch (ctx.state)
+    {
+    // ── Idle: wait for start-of-header byte ──────────────────────────────────
+    case GrIPState::Idle:
+    {
+        if (streamAvailable() < 1) break;
+
+        uint8_t magic = 0u;
+        streamRead(&magic, 1);
+
+        if (magic == GRIP_SOH)
+        {
+            ctx.state            = GrIPState::RxHeader;
+            ctx.errors.LastError = RET_OK;
+        }
+        // Any other byte is silently discarded
+        break;
+    }
+
+        // ── RxHeader: accumulate and decode the fixed-size header ─────────────────
+    case GrIPState::RxHeader:
+    {
+        const qint64 needed = static_cast<qint64>(GRIP_HEADER_SIZE) * 2;
+        if (streamAvailable() < needed) break;
+
+        uint8_t rawHex[GRIP_HEADER_SIZE * 2u] = {};
+        streamRead(rawHex, needed);
+
+        auto *dst = reinterpret_cast<uint8_t *>(&ctx.rxPacket.RX_Header);
+        for (uint16_t i = 0; i < GRIP_HEADER_SIZE; ++i)
+            dst[i] = static_cast<uint8_t>(hexStringToUint(
+                reinterpret_cast<const char *>(&rawHex[i * 2u]), 2u));
+
+        const uint8_t hdrResult = validateHeader(ctx.rxPacket.RX_Header);
+        if (hdrResult != RET_OK)
+        {
+            qDebug() << "GrIP: bad header, error=" << hdrResult;
+            ctx.errors.LastError = hdrResult;
+            ctx.state            = GrIPState::Finish;
+            break;
+        }
+
+        if (ctx.rxPacket.RX_Header.Length > GRIP_BUFFER_SIZE)
+        {
+            qWarning() << "GrIP: payload too large" << ctx.rxPacket.RX_Header.Length;
+            ctx.errors.LastError = RET_WRONG_LEN;
+            ++ctx.errors.Len_Error;
+            ctx.state = GrIPState::Finish;
+            break;
+        }
+
+        const bool isResponseOrSync =
+            (ctx.rxPacket.RX_Header.MsgType == MSG_RESPONSE) ||
+            (ctx.rxPacket.RX_Header.MsgType == MSG_SYNC)     ||
+            (ctx.rxPacket.RX_Header.MsgType == MSG_ERROR);
+
+        if (isResponseOrSync)
+        {
+            ctx.sendResponse = false;
+            if (ctx.rxPacket.RX_Header.ReturnCode != RET_OK)
+            {
+                qDebug() << "GrIP: response code=" << ctx.rxPacket.RX_Header.ReturnCode;
+                ctx.lastResponse = ctx.rxPacket.RX_Header.ReturnCode;
+            }
+            ctx.state = GrIPState::Finish;
+        }
+        else if (ctx.rxPacket.RX_Header.Length > 0u)
+        {
+            ctx.state = GrIPState::WaitSOT;
+        }
+        else
+        {
+            // Header-only packet (no payload)
+            ctx.errors.LastError = RET_OK;
+            dispatchPacket(ctx.rxPacket);
+            ctx.state = GrIPState::Finish;
+        }
+        break;
+    }
+
+        // ── WaitSOT: consume the start-of-text marker ─────────────────────────────
+    case GrIPState::WaitSOT:
+    {
+        if (streamAvailable() < 1) break;
+
+        uint8_t magic = 0u;
+        streamRead(&magic, 1);
+
+        if (magic == GRIP_SOT)
+        {
+            ctx.state       = GrIPState::RxData;
+            ctx.maxReadLeft = MAX_READ_PER_TICK;
+            ctx.bytesRead   = 0u;
+        }
+        else
+        {
+            // Unexpected byte — resynchronise
+            qDebug() << "GrIP: expected SOT, got" << Qt::hex << magic;
+            ctx.state = GrIPState::Idle;
+        }
+        break;
+    }
+
+        // ── RxData: decode hex-encoded payload bytes ──────────────────────────────
+    case GrIPState::RxData:
+    {
+        while (streamAvailable() > 1 && ctx.maxReadLeft > 0)
+        {
+            --ctx.maxReadLeft;
+
+            uint8_t hexPair[2u] = {};
+            streamRead(hexPair, 2);
+
+            if (!std::isxdigit(hexPair[0]) || !std::isxdigit(hexPair[1]))
+            {
+                qDebug() << "GrIP: non-hex bytes in payload";
+                ctx.errors.LastError = RET_WRONG_PARAM;
+                ctx.sendResponse     = (ctx.rxPacket.RX_Header.MsgType != MSG_RESPONSE);
+                ctx.state            = GrIPState::Finish;
+
+                // If one of those bytes was actually EOT, skip the Finish EOT read
+                if (hexPair[0] == GRIP_EOT || hexPair[1] == GRIP_EOT)
+                    ctx.state = GrIPState::Idle;
+
+                break;
+            }
+
+            if (ctx.bytesRead < GRIP_BUFFER_SIZE)
+            {
+                ctx.rxPacket.Data[ctx.bytesRead] =
+                    static_cast<uint8_t>(hexStringToUint(reinterpret_cast<const char *>(hexPair), 2u));
+            }
+            ++ctx.bytesRead;
+
+            const bool allReceived = (ctx.bytesRead >= ctx.rxPacket.RX_Header.Length) ||
+                                     (ctx.bytesRead >= GRIP_BUFFER_SIZE);
+            if (allReceived)
+            {
+                const uint8_t computedCRC =
+                    CRC_CalculateCRC8(ctx.rxPacket.Data, ctx.rxPacket.RX_Header.Length);
+
+                if (ctx.rxPacket.RX_Header.CRC_Data == computedCRC)
+                {
+                    ctx.errors.LastError = RET_OK;
+                    dispatchPacket(ctx.rxPacket);
+
+                    const bool needsAck =
+                        (ctx.rxPacket.RX_Header.MsgType != MSG_DATA_NO_RESPONSE) &&
+                        (ctx.rxPacket.RX_Header.MsgType != MSG_RESPONSE);
+                    ctx.sendResponse = needsAck;
+                }
+                else
+                {
+                    qDebug() << "GrIP: CRC mismatch on payload";
+                    ctx.errors.LastError = RET_WRONG_CRC;
+                    ++ctx.errors.CRC_Error;
+                }
+
+                ctx.state = GrIPState::Finish;
+                break;
+            }
+        }
+
+        // Reset per-tick budget regardless of early exit
+        ctx.maxReadLeft = MAX_READ_PER_TICK;
+        break;
+    }
+
+        // ── Finish: send ACK/NAK if required, consume trailing EOT ───────────────
+    case GrIPState::Finish:
+    {
+        if (ctx.sendResponse)
+        {
+            // Temporarily release the stream lock while transmitting
+            // (GrIP_Transmit re-acquires it)
+            lk.unlock();
+            GrIP_Transmit(PROT_GrIP, MSG_RESPONSE,
+                          static_cast<GrIP_ReturnType_e>(ctx.errors.LastError), nullptr);
+            lk.relock();
+            ctx.sendResponse = false;
+        }
+
+        if (streamAvailable() > 0)
+        {
+            uint8_t eot = 0u;
+            streamRead(&eot, 1);
+            if (eot != GRIP_EOT)
+                qDebug() << "GrIP: expected EOT, got" << Qt::hex << eot;
+        }
+
+        ctx.state = GrIPState::Idle;
+        break;
+    }
+
+    default:
+        qWarning() << "GrIP: unexpected state, resetting";
+        ctx.state = GrIPState::Idle;
+        break;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+bool GrIP_Receive(GrIP_Packet_t *out)
+{
+    Q_ASSERT(out);
+    QMutexLocker lk(&ctx.queueMtx);
+
+    if (ctx.packetQueue.empty()) return false;
+
+    *out = ctx.packetQueue.front();
+    ctx.packetQueue.pop();
+    return true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+void GrIP_GetError(GrIP_ErrorFlags_t *out)
+{
+    if (out)
+        std::memcpy(out, &ctx.errors, sizeof(GrIP_ErrorFlags_t));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+int GrIP_GetLastResponse()
+{
+    if (ctx.lastResponse != -1)
+    {
+        const int tmp = ctx.lastResponse;
+        ctx.lastResponse = -1;
+        return tmp;
+    }
+    return -1;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+void GrIP_RxCallback(const QByteArray &data)
+{
+    QMutexLocker lk(&ctx.streamMtx);
+    ctx.rxStream.append(data);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+QByteArray GrIP_GetTxData()
+{
+    QMutexLocker lk(&ctx.streamMtx);
+    QByteArray out;
+    out.swap(ctx.txStream);
+    return out;
 }

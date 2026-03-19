@@ -33,7 +33,7 @@
       <widget class="QComboBox" name="comboBoxInterface">
        <property name="minimumSize">
         <size>
-         <width>250</width>
+         <width>300</width>
          <height>0</height>
         </size>
        </property>
@@ -280,11 +280,11 @@
       <layout class="QVBoxLayout" name="verticalLayoutActive">
        <item>
         <widget class="QTreeWidget" name="treeActive">
-         <property name="selectionMode">
-          <enum>QAbstractItemView::ExtendedSelection</enum>
-         </property>
          <property name="editTriggers">
           <set>QAbstractItemView::NoEditTriggers</set>
+         </property>
+         <property name="selectionMode">
+          <enum>QAbstractItemView::ExtendedSelection</enum>
          </property>
          <column>
           <property name="text">
