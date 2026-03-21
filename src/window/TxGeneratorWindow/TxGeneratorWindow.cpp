@@ -30,21 +30,21 @@ TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :
 
     connect(ui->btnBulkRun, SIGNAL(clicked()), this, SLOT(on_btnBulkRun_clicked()));
     connect(ui->btnBulkStop, SIGNAL(clicked()), this, SLOT(on_btnBulkStop_clicked()));
-    
+
     // Initial styling
     ui->btnBulkRun->setStyleSheet("QPushButton { font-weight: bold; } QPushButton:checked { background-color: #28a745; color: white; border: 1px solid #218838; }");
     ui->btnBulkStop->setStyleSheet("QPushButton { font-weight: bold; } QPushButton:checked { background-color: #dc3545; color: white; border: 1px solid #c82333; }");
-    
+
     connect(ui->treeActive, SIGNAL(itemChanged(QTreeWidgetItem*,int)), this, SLOT(on_treeActive_itemChanged(QTreeWidgetItem*,int)));
     connect(ui->treeAvailable, SIGNAL(itemSelectionChanged()), this, SLOT(on_treeAvailable_itemSelectionChanged()));
 
     _bitMatrixWidget = new BitMatrixWidget(this);
     // REMOVED redundant addWidget to verticalLayoutTabLayout
-    
+
     // Configure Scroll Area
     ui->scrollAreaLayout->setWidgetResizable(false);
     ui->scrollAreaLayout->setWidget(_bitMatrixWidget);
-    
+
     // Initialize Layout View controls
     ui->sliderLayoutZoom->setRange(30, 120);
     ui->sliderLayoutZoom->setValue(50);
@@ -65,7 +65,7 @@ TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :
     ui->treeAvailable->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     // Add Random Payload button programmatically
-    _btnRandomPayload = new QPushButton(tr("🎲 Randomize Payload"), this);
+    _btnRandomPayload = new QPushButton(tr("Randomize Payload"), this);
     _btnRandomPayload->setToolTip(tr("Randomize data bytes for selected messages"));
     _btnRandomPayload->setStyleSheet("QPushButton { font-weight: bold; background: #6f42c1; color: white; border-radius: 4px; padding: 4px 8px; } QPushButton:hover { background: #5a32a3; }");
     ui->horizontalLayoutActiveControls->insertWidget(2, _btnRandomPayload); // Insert next to Run/Stop
@@ -94,20 +94,110 @@ bool TxGeneratorWindow::saveXML(Backend &backend, QDomDocument &xml, QDomElement
 {
     if (!ConfigurableWidget::saveXML(backend, xml, root)) { return false; }
     root.setAttribute("type", "TxGeneratorWindow");
+
+    for (const CyclicMessage &cm : _cyclicMessages)
+    {
+        // Resolve the display name of the selected interface from the combo box.
+        QString ifName;
+        for (int i = 0; i < ui->comboBoxInterface->count(); i++)
+        {
+            if ((CanInterfaceId)ui->comboBoxInterface->itemData(i).toUInt() == cm.interfaceId)
+            {
+                ifName = ui->comboBoxInterface->itemText(i);
+                break;
+            }
+        }
+
+        // Encode payload as space-separated uppercase hex bytes.
+        QString dataStr;
+        for (int i = 0; i < cm.msg.getLength(); i++)
+        {
+            if (i > 0) { dataStr += ' '; }
+            dataStr += QString("%1").arg(cm.msg.getByte(i), 2, 16, QChar('0')).toUpper();
+        }
+
+        QDomElement frameEl = xml.createElement("frame");
+        frameEl.setAttribute("id",       QString("0x%1").arg(cm.msg.getId(), 0, 16).toUpper());
+        frameEl.setAttribute("name",     cm.name);
+        frameEl.setAttribute("dlc",      cm.msg.getLength());
+        frameEl.setAttribute("extended", cm.msg.isExtended() ? 1 : 0);
+        frameEl.setAttribute("fd",       cm.msg.isFD()       ? 1 : 0);
+        frameEl.setAttribute("brs",      cm.msg.isBRS()      ? 1 : 0);
+        frameEl.setAttribute("interval", cm.interval);
+        frameEl.setAttribute("interface", ifName);
+        frameEl.setAttribute("data",     dataStr);
+        root.appendChild(frameEl);
+    }
+
     return true;
 }
 
 bool TxGeneratorWindow::loadXML(Backend &backend, QDomElement &el)
 {
     if (!ConfigurableWidget::loadXML(backend, el)) { return false; }
+
+    _cyclicMessages.clear();
+
+    QDomNodeList frames = el.elementsByTagName("frame");
+    for (int i = 0; i < frames.count(); i++)
+    {
+        QDomElement frameEl = frames.at(i).toElement();
+
+        CyclicMessage cm;
+        cm.msg.setId(frameEl.attribute("id").toUInt(nullptr, 16));
+        const int dlc = frameEl.attribute("dlc").toInt();
+        cm.msg.setLength(static_cast<uint8_t>(dlc));
+        cm.msg.setExtended(frameEl.attribute("extended").toInt() != 0);
+        cm.msg.setFD(      frameEl.attribute("fd").toInt()       != 0);
+        cm.msg.setBRS(     frameEl.attribute("brs").toInt()      != 0);
+        cm.name          = frameEl.attribute("name");
+        cm.interval      = frameEl.attribute("interval", "100").toInt();
+        cm.enabled       = false; // Never auto-start on load
+        cm.lastSent      = 0;
+        cm.interfaceId   = 0;
+        cm.dbMsg         = nullptr;
+        cm.interfaceName = frameEl.attribute("interface");
+
+        // Decode space-separated hex payload.
+        const QStringList bytes = frameEl.attribute("data").split(' ', Qt::SkipEmptyParts);
+        for (int j = 0; j < bytes.size() && j < dlc; j++)
+        {
+            cm.msg.setDataAt(static_cast<uint8_t>(j),
+                             static_cast<uint8_t>(bytes[j].toUInt(nullptr, 16)));
+        }
+
+        _cyclicMessages.append(cm);
+    }
+
+    // Interface IDs are runtime-assigned; try to resolve them now (may be a
+    // no-op if the setup hasn't been loaded yet — resolveInterfaceNames() is
+    // also called from refreshInterfaces() once the setup is applied).
+    resolveInterfaceNames();
+    updateActiveList();
     return true;
+}
+
+void TxGeneratorWindow::resolveInterfaceNames()
+{
+    for (CyclicMessage &cm : _cyclicMessages)
+    {
+        if (cm.interfaceName.isEmpty()) { continue; }
+        for (int i = 0; i < ui->comboBoxInterface->count(); i++)
+        {
+            if (ui->comboBoxInterface->itemText(i) == cm.interfaceName)
+            {
+                cm.interfaceId = (CanInterfaceId)ui->comboBoxInterface->itemData(i).toUInt();
+                break;
+            }
+        }
+    }
 }
 
 void TxGeneratorWindow::refreshInterfaces()
 {
     ui->comboBoxInterface->blockSignals(true);
     ui->comboBoxInterface->clear();
-    
+
     MeasurementSetup &setup = _backend.getSetup();
     foreach (MeasurementNetwork *network, setup.getNetworks()) {
         foreach (MeasurementInterface *mi, network->interfaces()) {
@@ -123,19 +213,22 @@ void TxGeneratorWindow::refreshInterfaces()
         ui->comboBoxInterface->setCurrentIndex(0);
     }
     ui->comboBoxInterface->blockSignals(false);
+
+    // Re-resolve interface names in case frames were loaded before the setup existed.
+    resolveInterfaceNames();
     populateDbcMessages();
 }
 
 void TxGeneratorWindow::populateDbcMessages()
 {
     ui->treeAvailable->clear();
-    
+
     CanInterfaceId currentId = (CanInterfaceId)ui->comboBoxInterface->currentData().toUInt();
     MeasurementSetup &setup = _backend.getSetup();
 
     foreach (MeasurementNetwork *network, setup.getNetworks()) {
-        // Only show DBCs associated with the current interface if possible, 
-        // but currently networks map to interfaces. 
+        // Only show DBCs associated with the current interface if possible,
+        // but currently networks map to interfaces.
         // Let's find if this network is using our interface.
         bool interfaceMatches = false;
         foreach (MeasurementInterface *mi, network->interfaces()) {
@@ -322,7 +415,7 @@ void TxGeneratorWindow::on_btnBulkRun_clicked()
             updateRowUI(row);
         }
     }
-    
+
     ui->btnBulkRun->setChecked(true);
     ui->btnBulkStop->setChecked(false);
 }
@@ -346,7 +439,7 @@ void TxGeneratorWindow::on_btnBulkStop_clicked()
             }
         }
     }
-    
+
     ui->btnBulkRun->setChecked(false);
     ui->btnBulkStop->setChecked(true);
 }
@@ -393,18 +486,18 @@ void TxGeneratorWindow::on_treeActive_itemSelectionChanged()
         int row = ui->treeActive->indexOfTopLevelItem(selected.first());
         if (row >= 0 && row < _cyclicMessages.size()) {
             const CyclicMessage &cm = _cyclicMessages[row];
-            
+
             ui->btnBulkRun->blockSignals(true);
             ui->btnBulkStop->blockSignals(true);
             ui->btnBulkRun->setChecked(cm.enabled);
             ui->btnBulkStop->setChecked(!cm.enabled);
             ui->btnBulkRun->blockSignals(false);
             ui->btnBulkStop->blockSignals(false);
-            
+
             ui->spinInterval->blockSignals(true);
             ui->spinInterval->setValue(cm.interval);
             ui->spinInterval->blockSignals(false);
-            
+
             emit messageSelected(cm.msg, cm.name, cm.interfaceId, cm.dbMsg);
         }
     } else {
@@ -417,11 +510,11 @@ void TxGeneratorWindow::on_treeActive_itemSelectionChanged()
             ui->btnBulkStop->setChecked(!cm.enabled);
             ui->btnBulkRun->blockSignals(false);
             ui->btnBulkStop->blockSignals(false);
-            
+
             ui->spinInterval->blockSignals(true);
             ui->spinInterval->setValue(cm.interval);
             ui->spinInterval->blockSignals(false);
-            
+
             emit messageSelected(cm.msg, cm.name, cm.interfaceId, cm.dbMsg);
         }
     }
@@ -437,7 +530,7 @@ void TxGeneratorWindow::on_treeActive_itemChanged(QTreeWidgetItem *item, int col
             int interval = item->text(5).toInt(&ok);
             if (ok && interval > 0 && _cyclicMessages[row].interval != interval) {
                 _cyclicMessages[row].interval = interval;
-                
+
                 // If this item is part of a selection, apply to all selected items
                 if (item->isSelected()) {
                     foreach (QTreeWidgetItem *selItem, ui->treeActive->selectedItems()) {
@@ -477,7 +570,7 @@ void TxGeneratorWindow::onStatusButtonClicked()
     int row = ui->treeActive->indexOfTopLevelItem(item);
     if (row >= 0 && row < _cyclicMessages.size()) {
         bool targetState = !_cyclicMessages[row].enabled;
-        
+
         // If this item is part of a selection, apply to all selected items
         if (item->isSelected()) {
             foreach (QTreeWidgetItem *selItem, ui->treeActive->selectedItems()) {
@@ -560,10 +653,10 @@ void TxGeneratorWindow::updateActiveList()
     for (int i = 0; i < _cyclicMessages.size(); ++i) {
         const CyclicMessage &cm = _cyclicMessages[i];
         QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeActive);
-        
+
         item->setFlags(item->flags() | Qt::ItemIsEditable);
         item->setFlags(item->flags() & ~Qt::ItemIsUserCheckable); // Explicitly remove checkbox
-        
+
         // Create Status Button
         QPushButton *btnStatus = new QPushButton(cm.enabled ? "⏹" : "▶");
         btnStatus->setToolTip(cm.enabled ? "Stop" : "Start");
@@ -573,10 +666,10 @@ void TxGeneratorWindow::updateActiveList()
         } else {
             btnStatus->setStyleSheet("QPushButton { color: #28a745; font-weight: bold; background: transparent; border: 1px solid #28a745; border-radius: 3px; } QPushButton:hover { background: #28a745; color: white; }");
         }
-        
+
         connect(btnStatus, &QPushButton::clicked, this, &TxGeneratorWindow::onStatusButtonClicked);
         ui->treeActive->setItemWidget(item, 0, btnStatus);
-        
+
         item->setText(1, "0x" + QString("%1").arg(cm.msg.getId(), 3, 16, QChar('0')).toUpper());
         item->setText(2, cm.name);
         CanInterface *intf = _backend.getInterfaceById(cm.interfaceId);
@@ -601,9 +694,9 @@ void TxGeneratorWindow::updateRowUI(int row)
     if (!item) return;
 
     const CyclicMessage &cm = _cyclicMessages[row];
-    
+
     ui->treeActive->blockSignals(true);
-    
+
     // Update button in column 0
     QPushButton *btnStatus = qobject_cast<QPushButton*>(ui->treeActive->itemWidget(item, 0));
     if (btnStatus) {
@@ -615,7 +708,7 @@ void TxGeneratorWindow::updateRowUI(int row)
             btnStatus->setStyleSheet("QPushButton { color: #28a745; font-weight: bold; background: transparent; border: 1px solid #28a745; border-radius: 3px; } QPushButton:hover { background: #28a745; color: white; }");
         }
     }
-    
+
     item->setText(1, "0x" + QString("%1").arg(cm.msg.getId(), 3, 16, QChar('0')).toUpper());
     item->setText(2, cm.name);
     CanInterface *intf = _backend.getInterfaceById(cm.interfaceId);
@@ -676,7 +769,7 @@ void TxGeneratorWindow::onRandomPayloadReleased()
                 cm.msg.setDataAt(i, (uint8_t)(rand() % 256));
             }
             updateRowUI(row);
-            
+
             // If this is the currently focused message in the bit matrix, update it
             if (item == ui->treeActive->currentItem()) {
                 emit messageSelected(cm.msg, cm.name, cm.interfaceId, cm.dbMsg);

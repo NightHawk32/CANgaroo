@@ -22,27 +22,17 @@
 #pragma once
 
 #include "../CanInterface.h"
-#include "qdatetime.h"
 #include <core/MeasurementInterface.h>
 #include <QtSerialPort/QSerialPort>
-#include <QtSerialPort/QSerialPortInfo>
 #include <QMutex>
 
 #include "GrIP/GrIPHandler.h"
 
 
-// Maximum rx buffer len
-#define GRIP_MTU           (1 + 8 + 1 + 128 + 1) // canfd 64 frame plus \r plus some padding
-#define GRIP_STD_ID_LEN    3
-#define GRIP_EXT_ID_LEN    8
-
-#define RXCIRBUF_LEN        8192 // Buffer for received serial data, serviced at 1ms intervals
-
-
 class GrIPDriver;
 
 
-typedef struct
+struct can_config_t
 {
     bool supports_canfd;
     bool supports_timing;
@@ -51,10 +41,10 @@ typedef struct
     uint32_t sample_point;
     uint32_t ctrl_mode;
     uint32_t restart_ms;
-} can_config_t;
+};
 
 
-typedef struct
+struct can_status_t
 {
     uint32_t can_state;
 
@@ -65,103 +55,83 @@ typedef struct
     uint64_t tx_count;
     int tx_errors;
     uint64_t tx_dropped;
-} can_status_t;
+};
 
 
-typedef struct
-{
-    char buf[GRIP_MTU+1];
-    qint64 length;
-} can_msg_t;
-
-
-class GrIPInterface: public CanInterface
+class GrIPInterface : public CanInterface
 {
     Q_OBJECT
+
 public:
     enum
     {
         CANIL
     };
 
-public:
     GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer);
-    virtual ~GrIPInterface();
+    ~GrIPInterface() override;
 
     QString getDetailsStr() const;
-    virtual QString getName() const;
+    QString getName() const override;
     void setName(QString name);
 
-    virtual QList<CanTiming> getAvailableBitrates();
+    QList<CanTiming> getAvailableBitrates() override;
 
-    virtual void applyConfig(const MeasurementInterface &mi);
-    virtual bool readConfig();
-    virtual bool readConfigFromLink(struct rtnl_link *link);
+    void applyConfig(const MeasurementInterface &mi) override;
+    bool readConfig();
+    bool readConfigFromLink(struct rtnl_link *link);
 
     bool supportsTimingConfiguration();
     bool supportsCanFD();
     bool supportsTripleSampling();
 
-    virtual unsigned getBitrate();
-    virtual uint32_t getCapabilities();
+    unsigned getBitrate() override;
+    uint32_t getCapabilities() override;
 
-	virtual void open();
-    virtual void close();
-    virtual bool isOpen();
+    void open() override;
+    void close() override;
+    bool isOpen() override;
 
-    virtual void sendMessage(const CanMessage &msg);
-    virtual bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms);
+    void sendMessage(const CanMessage &msg) override;
+    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
 
-    virtual bool updateStatistics();
-    virtual uint32_t getState();
-    virtual int getNumRxFrames();
-    virtual int getNumRxErrors();
-    virtual int getNumRxOverruns();
+    bool updateStatistics() override;
+    uint32_t getState() override;
+    int getNumRxFrames() override;
+    int getNumRxErrors() override;
+    int getNumRxOverruns() override;
 
-    virtual int getNumTxFrames();
-    virtual int getNumTxErrors();
-    virtual int getNumTxDropped();
+    int getNumTxFrames() override;
+    int getNumTxErrors() override;
+    int getNumTxDropped() override;
 
-    virtual QString getVersion();
-    virtual bool ShowTxMsg() {return false;}
+    QString getVersion() override;
+    bool ShowTxMsg() override { return false; }
 
     int getIfIndex();
 
 private:
-    typedef enum
-    {
-        ts_mode_SIOCSHWTSTAMP,
-        ts_mode_SIOCGSTAMPNS,
-        ts_mode_SIOCGSTAMP
-    } ts_mode_t;
-
     uint32_t _manufacturer;
     QString _version;
 
     int _idx;
     bool _isOpen;
     bool _isOffline;
-    QSerialPort* _serport;
     QMutex _serport_mutex;
     QString _name;
 
-    QMutex _rxbuf_mutex;
     MeasurementInterface _settings;
 
     can_config_t _config;
     can_status_t _status;
-    ts_mode_t _ts_mode;
 
-    QDateTime  _readMessage_datetime;
-    QDateTime  _readMessage_datetime_run;
+    qint64 _lastStateMsec;  ///< Timestamp of last open(); used to auto-clear error state after 3 s.
+    qint64 _lastReadMsec;   ///< Timestamp of last readMessage() execution; used for rate-limiting.
 
     GrIPHandler *m_GrIPHandler;
-    QList<CanMessage> m_TxFrames;
 
     bool updateStatus();
-    bool parseMessage(CanMessage &msg);
 
 private slots:
     void handleSerialError(QSerialPort::SerialPortError error);
-
 };

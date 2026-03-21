@@ -1,6 +1,6 @@
 /*
 
-  Copyright (c) 2022 Ethan Zonca
+  Copyright (c) 2025-2026 Schildkroet
 
   This file is part of cangaroo.
 
@@ -20,23 +20,15 @@
 */
 
 #include "GrIPInterface.h"
-#include "qapplication.h"
-#include "qdebug.h"
+#include <QDebug>
+#include <QDateTime>
 
 #include <core/Backend.h>
 #include <core/MeasurementInterface.h>
 #include <core/CanMessage.h>
 
-#include <iostream>
-#include <stdio.h>
-#include <unistd.h>
-#include <time.h>
-#include <fcntl.h>
 #include <QString>
 #include <QStringList>
-#include <QProcess>
-#include <QtSerialPort/QSerialPort>
-#include <QtSerialPort/QSerialPortInfo>
 #include <QThread>
 
 #include "GrIP/GrIPHandler.h"
@@ -48,19 +40,16 @@ GrIPInterface::GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QS
     _idx(index),
     _isOpen(false),
     _isOffline(false),
-    _serport(NULL),
     _name(name),
-    _ts_mode(ts_mode_SIOCSHWTSTAMP),
     m_GrIPHandler(hdl)
 {
-    // Set defaults
     _settings.setBitrate(500000);
     _settings.setSamplePoint(875);
 
     _config.supports_canfd = fd_support;
     _config.supports_timing = false;
 
-    if(fd_support)
+    if (fd_support)
     {
         _settings.setFdBitrate(2000000);
         _settings.setFdSamplePoint(750);
@@ -74,11 +63,8 @@ GrIPInterface::GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QS
     _status.tx_errors = 0;
     _status.tx_dropped = 0;
 
-    _readMessage_datetime = QDateTime::currentDateTime();
-
-    _readMessage_datetime_run = QDateTime::currentDateTime();
-
-    m_TxFrames.clear();
+    _lastStateMsec = QDateTime::currentMSecsSinceEpoch();
+    _lastReadMsec = QDateTime::currentMSecsSinceEpoch();
 }
 
 GrIPInterface::~GrIPInterface()
@@ -87,22 +73,15 @@ GrIPInterface::~GrIPInterface()
 
 QString GrIPInterface::getDetailsStr() const
 {
-    if(_manufacturer == CANIL)
+    if (_manufacturer == CANIL)
     {
-        if(_config.supports_canfd)
-        {
-            return tr("CANIL with CANFD support");
-        }
-        else
-        {
-            return tr("CANIL with standard CAN support");
-        }
+        return _config.supports_canfd
+            ? tr("CANIL with CANFD support")
+            : tr("CANIL with standard CAN support");
     }
-    else
-    {
-        return tr("Not Supported");
-    }
+    return tr("Not Supported");
 }
+
 
 QString GrIPInterface::getName() const
 {
@@ -117,33 +96,27 @@ void GrIPInterface::setName(QString name)
 QList<CanTiming> GrIPInterface::getAvailableBitrates()
 {
     QList<CanTiming> retval;
-    QList<unsigned> bitrates;
-    QList<unsigned> bitrates_fd;
 
-    QList<unsigned> samplePoints;
-    QList<unsigned> samplePoints_fd;
-
-    if(_manufacturer == GrIPInterface::CANIL)
+    if (_manufacturer != GrIPInterface::CANIL)
     {
-        bitrates.append({10000, 20000, 50000, 100000, 125000, 250000, 500000, 800000, 1000000});
-        bitrates_fd.append({2000000, 5000000});
-        samplePoints.append({875});
-        samplePoints_fd.append({750});
+        return retval;
     }
-    /*else if(_manufacturer == WeActStudio)
-    {
-    }*/
+
+    const QList<unsigned> bitrates = {10000, 20000, 50000, 100000, 125000, 250000, 500000, 800000, 1000000};
+    const QList<unsigned> bitrates_fd = {2000000, 5000000};
+    const QList<unsigned> samplePoints = {875};
+    const QList<unsigned> samplePoints_fd = {750};
 
     unsigned i = 0;
-    foreach (unsigned br, bitrates)
+    for (unsigned br : bitrates)
     {
-        foreach(unsigned br_fd, bitrates_fd)
+        for (unsigned br_fd : bitrates_fd)
         {
-            foreach (unsigned sp, samplePoints)
+            for (unsigned sp : samplePoints)
             {
-                foreach (unsigned sp_fd, samplePoints_fd)
+                for (unsigned sp_fd : samplePoints_fd)
                 {
-                    retval << CanTiming(i++, br, br_fd, sp,sp_fd);
+                    retval << CanTiming(i++, br, br_fd, sp, sp_fd);
                 }
             }
         }
@@ -154,7 +127,6 @@ QList<CanTiming> GrIPInterface::getAvailableBitrates()
 
 void GrIPInterface::applyConfig(const MeasurementInterface &mi)
 {
-    // Save settings for port configuration
     _settings = mi;
 }
 
@@ -198,16 +170,11 @@ uint32_t GrIPInterface::getCapabilities()
 {
     uint32_t retval = 0;
 
-    if(_manufacturer == GrIPInterface::CANIL)
+    if (_manufacturer == GrIPInterface::CANIL)
     {
         retval =
             CanInterface::capability_auto_restart |
             CanInterface::capability_listen_only;
-        // CanInterface::capability_config_os |
-        // CanInterface::capability_auto_restart |
-        //CanInterface::capability_listen_only |
-        //CanInterface::capability_custom_bitrate |
-        //CanInterface::capability_custom_canfd_bitrate;
     }
 
     if (supportsCanFD())
@@ -275,133 +242,40 @@ QString GrIPInterface::getVersion()
 
 void GrIPInterface::open()
 {
-    if(m_GrIPHandler == nullptr)
+    if (m_GrIPHandler == nullptr)
     {
         _isOpen = false;
         _isOffline = true;
         return;
     }
 
-    // Get Version
-    for(int i = 0; i < 15; i++)
+    // Poll for the firmware version string populated by GrIPHandler after
+    // connecting. Typically available within one or two iterations.
+    for (int i = 0; i < 15; i++)
     {
         _version = QString::fromStdString(m_GrIPHandler->GetVersion());
-        if(_version.size() == 0)
-        {
-            QThread::msleep(2);
-        }
-        else
+        if (!_version.isEmpty())
         {
             break;
         }
+        QThread::msleep(2);
     }
 
-    // Close CAN port
+    // Disable the channel before reconfiguring to avoid spurious traffic.
     m_GrIPHandler->EnableChannel(_idx, false);
     QThread::msleep(2);
 
-    if(_settings.isCustomBitrate())
-    {
-        QString _custombitrate = QString("%1").arg(_settings.customBitrate(), 6, 16,QLatin1Char('0')).toUpper();
-        m_GrIPHandler->CAN_SetBaudrate(_idx, _custombitrate.toInt(nullptr, 16));
-    }
-    else
-    {
-        // Set the classic CAN bitrate
-        switch(_settings.bitrate())
-        {
-        case 1000000:
-            m_GrIPHandler->CAN_SetBaudrate(_idx, 1000000);
-            break;
-        case 800000:
-            m_GrIPHandler->CAN_SetBaudrate(_idx, 800000);
-            break;
-        case 500000:
-            m_GrIPHandler->CAN_SetBaudrate(_idx, 500000);
-            break;
-        case 250000:
-            m_GrIPHandler->CAN_SetBaudrate(_idx, 250000);
-            break;
-        case 125000:
-            m_GrIPHandler->CAN_SetBaudrate(_idx, 125000);
-            break;
-        case 100000:
-            m_GrIPHandler->CAN_SetBaudrate(_idx, 100000);
-            break;
-        case 50000:
-            m_GrIPHandler->CAN_SetBaudrate(_idx, 50000);
-            break;
-        case 20000:
-            m_GrIPHandler->CAN_SetBaudrate(_idx, 20000);
-            break;
-        case 10000:
-            m_GrIPHandler->CAN_SetBaudrate(_idx, 10000);
-            break;
-        default:
-            // Default to 10k
-            m_GrIPHandler->CAN_SetBaudrate(_idx, 10000);
-            break;
-        }
-    }
+    // Apply bit rate — use custom value if set, otherwise use the selected preset.
+    const uint32_t baud = _settings.isCustomBitrate()
+        ? _settings.customBitrate()
+        : _settings.bitrate();
+    m_GrIPHandler->CAN_SetBaudrate(_idx, baud > 0 ? baud : 10000);
 
-    //_serport->waitForBytesWritten(20);
-
-    // Set configured BRS rate
-    /*if(_config.supports_canfd)
-    {
-        if(_settings.isCustomFdBitrate())
-        {
-            QString _customfdbitrate = QString("%1").arg(_settings.customFdBitrate(), 6, 16,QLatin1Char('0')).toUpper();
-            std::string _customfdbitrate_std= 'Y' + _customfdbitrate.toStdString() + '\r';
-            _serport->write(_customfdbitrate_std.c_str(), _customfdbitrate_std.length());
-            _serport->flush();
-        }
-        else
-        {
-            switch(_settings.fdBitrate())
-            {
-                case 1000000:
-                    _serport->write("Y1\r", 3);
-                    _serport->flush();
-                    break;
-                case 2000000:
-                    _serport->write("Y2\r", 3);
-                    _serport->flush();
-                    break;
-                case 3000000:
-                    _serport->write("Y3\r", 3);
-                    _serport->flush();
-                    break;
-                case 4000000:
-                    _serport->write("Y4\r", 3);
-                    _serport->flush();
-                    break;
-                case 5000000:
-                    _serport->write("Y5\r", 3);
-                    _serport->flush();
-                    break;
-            }
-        }
-    }
-    _serport->waitForBytesWritten(20);*/
-
-    // Set Listen Only Mode
-    if(_settings.isListenOnlyMode())
-    {
-        m_GrIPHandler->Mode(_idx, true);
-    }
-    else
-    {
-        m_GrIPHandler->Mode(_idx, false);
-    }
-    /*_serport->waitForBytesWritten(100);*/
+    m_GrIPHandler->Mode(_idx, _settings.isListenOnlyMode());
 
     m_GrIPHandler->SetStatus(true);
-
     m_GrIPHandler->SetEchoTx(true);
-
     m_GrIPHandler->EnableChannel(_idx, true);
-    m_TxFrames.clear();
 
     _isOpen = true;
     _isOffline = false;
@@ -418,60 +292,43 @@ void GrIPInterface::handleSerialError(QSerialPort::SerialPortError error)
 {
     if (error == QSerialPort::ResourceError)
     {
-        perror("error");
-
         _isOffline = true;
     }
 
-    QString  ERRORString = "";
-    switch (error) {
-    case QSerialPort::NoError:
-        ERRORString=  "No Error";
-        break;
-    case QSerialPort::DeviceNotFoundError:
-        ERRORString= "Device Not Found";
-        break;
-    case QSerialPort::PermissionError:
-        ERRORString= "Permission Denied";
-        break;
-    case QSerialPort::OpenError:
-        ERRORString= "Open Error";
-        break;
-    /*case QSerialPort::ParityError:
-        ERRORString= "Parity Error";
-        break;
-    case QSerialPort::FramingError:
-        ERRORString= "Framing Error";
-        break;
-    case QSerialPort::BreakConditionError:
-        ERRORString= "Break Condition";
-        break;
-    case QSerialPort::WriteError:
-        ERRORString= "Write Error";
-        break;*/
-    case QSerialPort::ReadError:
-        ERRORString= "Read Error";
-        break;
-    case QSerialPort::ResourceError:
-        ERRORString= "Resource Error";
-        break;
-    case QSerialPort::UnsupportedOperationError:
-        ERRORString= "Unsupported Operation";
-        break;
-    case QSerialPort::UnknownError:
-        ERRORString= "Unknown Error";
-        break;
-    case QSerialPort::TimeoutError:
-        //ERRORString= "Timeout Error";
-        break;
-    case QSerialPort::NotOpenError:
-        ERRORString= "Not Open Error";
-        break;
-    default:
-        ERRORString= "Other Error";
+    static const auto toErrorString = [](QSerialPort::SerialPortError err) -> QString
+    {
+        switch (err)
+        {
+        case QSerialPort::NoError:
+            return {};
+        case QSerialPort::DeviceNotFoundError:
+            return QStringLiteral("Device not found");
+        case QSerialPort::PermissionError:
+            return QStringLiteral("Permission denied");
+        case QSerialPort::OpenError:
+            return QStringLiteral("Open error");
+        case QSerialPort::WriteError:
+            return QStringLiteral("Write error");
+        case QSerialPort::ReadError:
+            return QStringLiteral("Read error");
+        case QSerialPort::ResourceError:
+            return QStringLiteral("Resource error");
+        case QSerialPort::UnsupportedOperationError:
+            return QStringLiteral("Unsupported operation");
+        case QSerialPort::TimeoutError:
+            return {};
+        case QSerialPort::NotOpenError:
+            return QStringLiteral("Not open error");
+        default:
+            return QStringLiteral("Unknown error");
+        }
+    };
+
+    const QString msg = toErrorString(error);
+    if (!msg.isEmpty())
+    {
+        qWarning() << "Serial port error:" << msg;
     }
-    if(ERRORString.size())
-        std::cout << "SerialPortWorker::errorOccurred  ,info is  " << ERRORString.toStdString() << std::endl;
 }
 
 void GrIPInterface::close()
@@ -480,10 +337,7 @@ void GrIPInterface::close()
     _status.can_state = state_bus_off;
 
     m_GrIPHandler->EnableChannel(_idx, false);
-
     m_GrIPHandler->SetStatus(false);
-
-    m_TxFrames.clear();
 }
 
 bool GrIPInterface::isOpen()
@@ -495,11 +349,7 @@ void GrIPInterface::sendMessage(const CanMessage &msg)
 {
     QMutexLocker locker(&_serport_mutex);
 
-    if(m_GrIPHandler->CanTransmit(_idx, msg))
-    {
-
-    }
-    else
+    if (!m_GrIPHandler->CanTransmit(_idx, msg))
     {
         _status.tx_errors++;
         _status.can_state = state_tx_fail;
@@ -508,32 +358,27 @@ void GrIPInterface::sendMessage(const CanMessage &msg)
 
 bool GrIPInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
 {
-    QDateTime datetime;
-
     Q_UNUSED(timeout_ms);
 
-    datetime = QDateTime::currentDateTime();
-    if(datetime.toMSecsSinceEpoch() - _readMessage_datetime_run.toMSecsSinceEpoch() >= 1)
-    {
-        _readMessage_datetime_run = QDateTime::currentDateTime().addMSecs(1);
-    }
-    else
+    // Rate-limit processing to roughly once every 2 ms.
+    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    if (now - _lastReadMsec < 1)
     {
         return false;
     }
+    _lastReadMsec = now + 1;
 
-    // Read all RX frames
-    while(m_GrIPHandler->CanAvailable(_idx))
+    while (m_GrIPHandler->CanAvailable(_idx))
     {
         auto msg = m_GrIPHandler->ReceiveCan(_idx);
-        if(msg.getId() != 0)
+        if (msg.getId() != 0)
         {
-            // Defaults
             msg.setInterfaceId(getId());
 
-            if(msg.isRX() == false)
+            if (!msg.isRX())
             {
-                if(msg.isErrorFrame() == false)
+                // TX echo frame
+                if (!msg.isErrorFrame())
                 {
                     _status.tx_count++;
                     _status.can_state = state_tx_success;
@@ -544,7 +389,7 @@ bool GrIPInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout
                     _status.can_state = state_tx_fail;
                 }
 
-                if(msg.isShow())
+                if (msg.isShow())
                 {
                     msglist.append(msg);
                 }
@@ -557,32 +402,22 @@ bool GrIPInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout
         }
     }
 
-    // Don't saturate the thread. Read the buffer every 1ms.
     QThread::msleep(1);
 
-    if(_isOffline == true)
+    if (_isOffline)
     {
-        if(_isOpen)
+        if (_isOpen)
+        {
             close();
-
+        }
         return false;
     }
-    else
-    {
-        datetime = QDateTime::currentDateTime();
-        if(datetime.toMSecsSinceEpoch() - _readMessage_datetime.toMSecsSinceEpoch() > 3000)
-        {
-            _status.can_state = state_ok;
-        }
-    }
 
-    // RX doesn't work on windows unless we call this for some reason
-    //_rxbuf_mutex.lock();
-    /*if(_serport->waitForReadyRead(0))
+    // Clear any error state after 3 seconds of stable operation.
+    if (QDateTime::currentMSecsSinceEpoch() - _lastStateMsec > 3000)
     {
-        qApp->processEvents();
-    }*/
-    //_rxbuf_mutex.unlock();
+        _status.can_state = state_ok;
+    }
 
     return true;
 }

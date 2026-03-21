@@ -1,84 +1,103 @@
 #include "GrIPHandler.h"
 #include "CRC.h"
-//#include "Protocol.h"
 #include <chrono>
 #include <cstring>
-#include "qapplication.h"
+#include <format>
 #include <QThread>
 #include <QSerialPort>
 
 
+// ---------------------------------------------------------------------------
+// System command IDs — sent in Protocol_SystemHeader_t::Command
+// ---------------------------------------------------------------------------
+#define SYSTEM_REPORT_INFO      0u  // Request firmware version and channel info
+#define SYSTEM_SET_STATUS       1u  // Notify device of host open/close state
 
-#define SYSTEM_REPORT_INFO      0u
-#define SYSTEM_SET_STATUS       1u
+#define SYSTEM_SEND_CAN_CFG     20u // Configure CAN channel bit rate
+#define SYSTEM_SEND_LIN_CFG     21u // Configure LIN channel
+#define SYSTEM_START_CAN        22u // Enable/disable CAN channels
+#define SYSTEM_START_LIN        23u // Enable/disable LIN channels
+#define SYSTEM_ADD_CAN_FRAME    24u // Add CAN frame to schedule
+#define SYSTEM_ADD_LIN_FRAME    25u // Add LIN frame to schedule
+#define SYSTEM_CAN_MODE         26u // Set CAN channel operating mode
+#define SYSTEM_CAN_TXECHO       27u // Enable/disable TX echo
+#define SYSTEM_SEND_CAN_FRAME   30u // Transmit a CAN frame immediately
 
-#define SYSTEM_SEND_CAN_CFG     20u
-#define SYSTEM_SEND_LIN_CFG     21u
-#define SYSTEM_START_CAN        22u
-#define SYSTEM_START_LIN        23u
-#define SYSTEM_ADD_CAN_FRAME    24u
-#define SYSTEM_ADD_LIN_FRAME    25u
-#define SYSTEM_CAN_MODE         26u
-#define SYSTEM_CAN_TXECHO       27u
-#define SYSTEM_SEND_CAN_FRAME   30u
-
-// CAN Msg flags
-#define CAN_FLAGS_EXT_ID            0x01
-#define CAN_FLAGS_FD                0x02
-#define CAN_FLAGS_RTR               0x04
-#define CAN_FLAGS_BRS               0x08
-#define CAN_FLAGS_TX                0x80
+// ---------------------------------------------------------------------------
+// CAN frame flag bits — stored in Protocol_CanFrame_t::Flags
+// ---------------------------------------------------------------------------
+#define CAN_FLAGS_EXT_ID        0x01 // Extended (29-bit) CAN identifier
+#define CAN_FLAGS_FD            0x02 // CAN-FD frame
+#define CAN_FLAGS_RTR           0x04 // Remote Transmission Request
+#define CAN_FLAGS_BRS           0x08 // Bit Rate Switch (CAN-FD only)
+#define CAN_FLAGS_TX            0x80 // Frame originated from the host (TX echo)
 
 
+// ---------------------------------------------------------------------------
+// Wire protocol structures
+//
+// All structs are packed to match the exact byte layout expected by the
+// firmware. Fields are in the order they appear on the wire.
+// ---------------------------------------------------------------------------
+
+// Common header prepended to every system command payload.
 typedef struct __attribute__((packed))
 {
-    uint8_t Version;
-    uint8_t Command;
-    uint8_t Length;
-    uint8_t Data;
+    uint8_t Version; // Protocol version — always 1
+    uint8_t Command; // SYSTEM_* command identifier
+    uint8_t Length;  // Payload length in bytes following this header
+    uint8_t Data;    // First payload byte (command-specific)
 } Protocol_SystemHeader_t;
 
+// Payload for SYSTEM_START_CAN — carries the enable state for both channels.
 typedef struct __attribute__((packed))
 {
     Protocol_SystemHeader_t Header;
-    uint8_t Channel1;
-    uint8_t Channel2;
+    uint8_t Channel1; // Enable state for channel 0 (0 = off, 1 = on)
+    uint8_t Channel2; // Enable state for channel 1 (0 = off, 1 = on)
 } Protocol_ChannelStatus_t;
 
+// Payload for SYSTEM_CAN_MODE — sets listen-only or normal mode.
 typedef struct __attribute__((packed))
 {
     Protocol_SystemHeader_t Header;
-    uint8_t Channel;
-    uint8_t Mode;
+    uint8_t Channel; // Zero-based channel index
+    uint8_t Mode;    // 0 = normal, 1 = listen-only
 } Protocol_ChannelMode_t;
 
+// Payload for SYSTEM_SEND_CAN_FRAME and incoming DATA_REPORT_CAN_MSG (254).
 typedef struct __attribute__((packed))
 {
     Protocol_SystemHeader_t Header;
 
-    uint8_t Channel;
-    uint32_t ID;
-    uint8_t DLC;
-    uint8_t Flags;
-    uint8_t ErrFlags;
-    uint32_t Time;
-    uint8_t Data[64];
+    uint8_t  Channel;   // Zero-based channel index
+    uint32_t ID;        // CAN identifier (11-bit or 29-bit depending on Flags)
+    uint8_t  DLC;       // Data length code (0-8 classic, 0-64 FD)
+    uint8_t  Flags;     // Bitfield of CAN_FLAGS_* values
+    uint8_t  ErrFlags;  // Non-zero if the device detected a bus error
+    uint32_t Time;      // Device timestamp (µs, wraps around)
+    uint8_t  Data[64];  // Payload bytes — valid range is Data[0..DLC-1]
 } Protocol_CanFrame_t;
 
+// Payload for incoming DATA_REPORT_LIN_MSG (253).
 typedef struct __attribute__((packed))
 {
     Protocol_SystemHeader_t Header;
 
-    uint8_t Channel;
-    uint8_t ID;
-    uint8_t DLC;
-    uint8_t Direction;
-    uint8_t Delay;
-    uint8_t Flags;
-    uint32_t Time;
-    uint8_t Data[8];
+    uint8_t  Channel;   // Zero-based LIN channel index
+    uint8_t  ID;        // LIN frame identifier (0-63)
+    uint8_t  DLC;       // Number of data bytes
+    uint8_t  Direction; // 0 = subscriber, 1 = publisher
+    uint8_t  Delay;     // Inter-frame delay in ms
+    uint8_t  Flags;     // Bit 0: alive, bit 1: valid checksum
+    uint32_t Time;      // Device timestamp (µs, wraps around)
+    uint8_t  Data[8];   // LIN payload bytes
 } Protocol_LinFrame_t;
 
+
+// ---------------------------------------------------------------------------
+// Lifecycle
+// ---------------------------------------------------------------------------
 
 GrIPHandler::GrIPHandler(const QString &name)
 {
@@ -100,38 +119,48 @@ GrIPHandler::~GrIPHandler()
 
 bool GrIPHandler::Start()
 {
-    std::unique_lock<std::mutex> lck(m_MutexSerial);
-
     m_Exit = false;
-    m_pWorkerThread = std::make_unique<std::thread>(std::thread(&GrIPHandler::WorkerThread, this));
+    m_WorkerReady = false;
 
-    QThread::msleep(900);
+    m_pWorkerThread = std::make_unique<std::thread>(&GrIPHandler::WorkerThread, this);
 
-    return true;
+    // Block until the worker thread signals that the port open attempt has completed.
+    {
+        std::unique_lock<std::mutex> lck(m_MutexReady);
+        m_CvReady.wait(lck, [this] { return m_WorkerReady; });
+    }
+
+    // m_SerialPort is nullptr if the port failed to open.
+    return m_SerialPort != nullptr;
 }
 
 
 void GrIPHandler::Stop()
 {
+    // Signal the worker loop to exit, then block until it does.
     m_Exit = true;
 
-    if(m_pWorkerThread->joinable())
+    if (m_pWorkerThread && m_pWorkerThread->joinable())
     {
         m_pWorkerThread->join();
     }
     m_pWorkerThread.reset();
 
+    // The worker thread has exited — it is now safe to close the port.
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
-    if (m_SerialPort->isOpen())
+    if (m_SerialPort && m_SerialPort->isOpen())
     {
-        m_SerialPort->waitForBytesWritten(20);
-        //m_SerialPort->waitForReadyRead(10);
+        m_SerialPort->waitForBytesWritten(20); // Flush any pending TX bytes
         m_SerialPort->clear();
         m_SerialPort->close();
     }
 }
 
+
+// ---------------------------------------------------------------------------
+// Device configuration commands
+// ---------------------------------------------------------------------------
 
 void GrIPHandler::SetStatus(bool open)
 {
@@ -140,14 +169,9 @@ void GrIPHandler::SetStatus(bool open)
     header.Version = 1;
     header.Command = SYSTEM_SET_STATUS;
     header.Length = 0;
-    header.Data = 1;
+    header.Data = open ? 2 : 1; // 1 = closed, 2 = open
 
-    GrIP_Pdu_t p = {reinterpret_cast<uint8_t*>(&header), sizeof(Protocol_SystemHeader_t)};
-
-    if(open)
-    {
-        header.Data = 2;
-    }
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&header), sizeof(Protocol_SystemHeader_t)};
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
@@ -162,14 +186,9 @@ void GrIPHandler::SetEchoTx(bool enable)
     header.Version = 1;
     header.Command = SYSTEM_CAN_TXECHO;
     header.Length = 0;
-    header.Data = 0;
+    header.Data = enable ? 1 : 0;
 
-    GrIP_Pdu_t p = {reinterpret_cast<uint8_t*>(&header), sizeof(Protocol_SystemHeader_t)};
-
-    if(enable)
-    {
-        header.Data = 1;
-    }
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&header), sizeof(Protocol_SystemHeader_t)};
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
@@ -186,21 +205,27 @@ void GrIPHandler::RequestVersion()
     header.Length = 0;
     header.Data = 0;
 
-    GrIP_Pdu_t p = {reinterpret_cast<uint8_t*>(&header), sizeof(Protocol_SystemHeader_t)};
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&header), sizeof(Protocol_SystemHeader_t)};
 
-    // Clear previous version
+    // Reset cached state — it will be repopulated when the reply arrives in
+    // ProcessData() (MSG_SYSTEM_CMD / sub-command 0).
     m_Version.clear();
-
     m_ChannelsCAN = 0;
     m_ChannelsCANFD = 0;
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
     GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
-    //m_SerialPort->waitForReadyRead(10);
+
+    // Brief wait for the reply to arrive and be processed before returning,
+    // so the caller can read GetVersion() immediately afterwards.
     QThread::msleep(10);
 }
 
+
+// ---------------------------------------------------------------------------
+// Device state accessors (thread-safe reads)
+// ---------------------------------------------------------------------------
 
 std::string GrIPHandler::GetVersion() const
 {
@@ -223,6 +248,10 @@ int GrIPHandler::Channels_CANFD() const
 }
 
 
+// ---------------------------------------------------------------------------
+// Low-level send helpers
+// ---------------------------------------------------------------------------
+
 void GrIPHandler::Send(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType, GrIP_ReturnType_e ReturnCode, const GrIP_Pdu_t *pdu)
 {
     std::unique_lock<std::mutex> lck(m_MutexSerial);
@@ -232,10 +261,16 @@ void GrIPHandler::Send(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType,
 
 void GrIPHandler::Send(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType, GrIP_ReturnType_e ReturnCode, const uint8_t *data, uint16_t len)
 {
-    GrIP_Pdu_t pdu = {(uint8_t*)data, len};
+    // GrIP_Pdu_t holds a non-const pointer; the cast is safe because GrIP
+    // only reads the buffer for TX purposes.
+    GrIP_Pdu_t pdu = {const_cast<uint8_t *>(data), len};
     Send(ProtType, MsgType, ReturnCode, &pdu);
 }
 
+
+// ---------------------------------------------------------------------------
+// CAN channel control
+// ---------------------------------------------------------------------------
 
 void GrIPHandler::EnableChannel(uint8_t ch, bool enable)
 {
@@ -246,10 +281,13 @@ void GrIPHandler::EnableChannel(uint8_t ch, bool enable)
     status.Header.Length = 2;
     status.Header.Data = 0;
 
-    GrIP_Pdu_t p = {reinterpret_cast<uint8_t*>(&status), sizeof(Protocol_ChannelStatus_t)};
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&status), sizeof(Protocol_ChannelStatus_t)};
 
-    if(ch < m_Channel_StatusCAN.size())
+    if (ch < m_Channel_StatusCAN.size())
     {
+        // Update local shadow and rebuild the full channel state word.
+        // The firmware expects the enable state of all channels at once,
+        // not just the one being changed.
         m_Channel_StatusCAN[ch] = enable;
         status.Channel1 = m_Channel_StatusCAN[0];
         status.Channel2 = m_Channel_StatusCAN[1];
@@ -270,10 +308,10 @@ void GrIPHandler::Mode(uint8_t ch, bool listen_only)
     mode.Header.Length = 2;
     mode.Header.Data = 0;
 
-    GrIP_Pdu_t p = {reinterpret_cast<uint8_t*>(&mode), sizeof(Protocol_ChannelMode_t)};
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&mode), sizeof(Protocol_ChannelMode_t)};
 
     mode.Channel = ch;
-    mode.Mode = (uint8_t)listen_only;
+    mode.Mode = static_cast<uint8_t>(listen_only);
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
@@ -285,33 +323,37 @@ void GrIPHandler::CAN_SetBaudrate(uint8_t ch, uint32_t baud)
 {
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
+    // Message layout: [cmd][channel][baud MSB .. baud LSB][reserved x3]
     uint8_t msg[9] = {};
     GrIP_Pdu_t p = {msg, 9};
 
-    // Set cmd
     msg[0] = SYSTEM_SEND_CAN_CFG;
-
     msg[1] = ch;
-
-    msg[2] = (baud >> 24) & 0xFF;
-    msg[3] = (baud >> 16) & 0xFF;
-    msg[4] = (baud >> 8) & 0xFF;
-    msg[5] = (baud) & 0xFF;
+    // Baud rate encoded big-endian across bytes 2-5
+    msg[2] = static_cast<uint8_t>((baud >> 24) & 0xFF);
+    msg[3] = static_cast<uint8_t>((baud >> 16) & 0xFF);
+    msg[4] = static_cast<uint8_t>((baud >> 8) & 0xFF);
+    msg[5] = static_cast<uint8_t>((baud) & 0xFF);
 
     GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 
-    //m_SerialPort->waitForBytesWritten(5);
+    // Allow the device time to reconfigure its CAN hardware before the next
+    // command arrives.
     QThread::msleep(5);
 }
 
+
+// ---------------------------------------------------------------------------
+// CAN receive queue access
+// ---------------------------------------------------------------------------
 
 bool GrIPHandler::CanAvailable(uint8_t ch) const
 {
     std::unique_lock<std::mutex> lck(m_MutexData);
 
-    if(m_ReceiveQueue.size() > ch)
+    if (ch < m_ReceiveQueue.size())
     {
-        return (m_ReceiveQueue[ch].size() > 0);
+        return !m_ReceiveQueue[ch].empty();
     }
 
     return false;
@@ -322,123 +364,114 @@ CanMessage GrIPHandler::ReceiveCan(uint8_t ch)
 {
     std::unique_lock<std::mutex> lck(m_MutexData);
 
-    if(m_ReceiveQueue.size() > ch)
+    if (ch < m_ReceiveQueue.size() && !m_ReceiveQueue[ch].empty())
     {
-        if(m_ReceiveQueue[ch].size())
-        {
-            auto front = m_ReceiveQueue[ch].front();
-            m_ReceiveQueue[ch].pop();
-            return front;
-        }
+        auto front = m_ReceiveQueue[ch].front();
+        m_ReceiveQueue[ch].pop();
+        return front;
     }
 
     return CanMessage();
 }
 
 
+// ---------------------------------------------------------------------------
+// CAN transmit
+// ---------------------------------------------------------------------------
+
 bool GrIPHandler::CanTransmit(uint8_t ch, const CanMessage &msg)
 {
-    Protocol_CanFrame_t frame;
+    Protocol_CanFrame_t frame = {};
 
     frame.Header.Version = 1;
     frame.Header.Command = SYSTEM_SEND_CAN_FRAME;
     frame.Header.Length = sizeof(Protocol_CanFrame_t) - sizeof(Protocol_SystemHeader_t);
     frame.Header.Data = 0;
 
-    GrIP_Pdu_t p = {reinterpret_cast<uint8_t*>(&frame), sizeof(Protocol_CanFrame_t)};
-
-    uint32_t ID = msg.getId();
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&frame), sizeof(Protocol_CanFrame_t)};
 
     frame.Channel = ch;
-
-    frame.ID = ID;
-
+    frame.ID = msg.getId();
     frame.DLC = msg.getLength();
     frame.ErrFlags = 0;
+    frame.Time = 0; // Device ignores timestamp on TX frames
 
+    // Build flags from the CanMessage properties
     frame.Flags = 0;
-    if(msg.isExtended())
+    if (msg.isExtended())
     {
         frame.Flags |= CAN_FLAGS_EXT_ID;
     }
-    if(msg.isFD())
+    if (msg.isFD())
     {
         frame.Flags |= CAN_FLAGS_FD;
     }
-    if(msg.isRTR())
+    if (msg.isRTR())
     {
         frame.Flags |= CAN_FLAGS_RTR;
     }
 
-    frame.Time = 0;
-
-    for(int i = 0; i < msg.getLength(); i++)
+    for (int i = 0; i < msg.getLength(); i++)
     {
         frame.Data[i] = msg.getByte(i);
     }
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
-    return (GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p) == 0);
+    // GrIP_Transmit returns 0 on success
+    return GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p) == 0;
 }
 
+
+// ---------------------------------------------------------------------------
+// Packet dispatcher (called from WorkerThread, holds m_MutexData)
+// ---------------------------------------------------------------------------
 
 void GrIPHandler::ProcessData(GrIP_Packet_t &packet)
 {
     std::unique_lock<std::mutex> lck(m_MutexData);
 
-    switch(packet.RX_Header.MsgType)
+    switch (packet.RX_Header.MsgType)
     {
     case MSG_SYSTEM_CMD:
-        switch(packet.Data[0])
+        switch (packet.Data[0])
         {
-        case 0:
+        case 0: // SYSTEM_REPORT_INFO reply
         {
-            // System info
+            // Payload layout:
+            //   [0]  sub-command (0)
+            //   [1]  firmware major version
+            //   [2]  firmware minor version
+            //   [3]  hardware revision (unused here)
+            //   [4]  number of classic CAN channels
+            //   [5]  number of CAN-FD channels
+            //   [6]  number of LIN channels  (unused here)
+            //   [7]  number of ADC channels  (unused here)
+            //   [8]  number of GPIO channels (unused here)
+            //   [9+] null-terminated build date string
             uint8_t major = packet.Data[1];
             uint8_t minor = packet.Data[2];
-            //uint8_t hw = packet.Data[3];
-
             uint8_t can = packet.Data[4];
             uint8_t canfd = packet.Data[5];
-            /*uint8_t lin = packet.Data[6];
-            uint8_t adc = packet.Data[7];
-            uint8_t gpio = packet.Data[8];*/
 
             char date[128] = {};
-            strncpy(date, (char*)&packet.Data[9], 120);
-            date[127] = '\0';
+            std::strncpy(date, reinterpret_cast<char *>(&packet.Data[9]), sizeof(date) - 1);
 
-            char buffer[256]{};
-            sprintf(buffer, "%d.%d-<%s>", major, minor, date);
-            m_Version = buffer;
-
+            m_Version = std::format("{}.{}-<{}>", major, minor, date);
             m_ChannelsCAN = can;
             m_ChannelsCANFD = canfd;
 
+            // Rebuild per-channel queues to match the reported channel count.
+            // CAN-FD channels follow classic CAN channels in the same vectors.
             m_ReceiveQueue.clear();
-            //m_Channel_StatusCAN.clear();
 
-            for(int i = 0; i < can; i++)
+            for (int i = 0; i < can + canfd; i++)
             {
                 m_Channel_StatusCAN.push_back(false);
                 m_ReceiveQueue.push_back({});
             }
-            for(int i = 0; i < canfd; i++)
-            {
-                m_Channel_StatusCAN.push_back(false);
-                m_ReceiveQueue.push_back({});
-            }
-
-            //fprintf(stderr, "SYS INFO: %s\n", m_Version.c_str());
             break;
         }
-
-        case 1:
-            break;
-
-        case 2:
-            break;
 
         default:
             break;
@@ -450,79 +483,72 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet)
 
     case MSG_DATA:
     case MSG_DATA_NO_RESPONSE:
+    {
+        // The sub-command is encoded in the header that precedes the frame data.
         Protocol_SystemHeader_t header;
-        memcpy(&header, packet.Data, sizeof(Protocol_SystemHeader_t));
+        std::memcpy(&header, packet.Data, sizeof(Protocol_SystemHeader_t));
 
-        switch(header.Command)
+        switch (header.Command)
         {
-        case 254u: // DATA_REPORT_CAN_MSG
+        case 254u: // DATA_REPORT_CAN_MSG — incoming CAN frame from the bus
         {
             Protocol_CanFrame_t frame;
+            std::memcpy(&frame, packet.Data, sizeof(Protocol_CanFrame_t));
 
-            memcpy(&frame, packet.Data, sizeof(Protocol_CanFrame_t));
-
-            /*uint8_t ch = packet.Data[1];
-
-            //uint32_t time = packet.Data[2]<<24 | packet.Data[3]<<16 | packet.Data[4]<<8 | packet.Data[5];
-
-            uint32_t id = packet.Data[6]<<24 | packet.Data[7]<<16 | packet.Data[8]<<8 | packet.Data[9];
-
-            uint8_t dlc = packet.Data[10];
-            uint8_t flags = packet.Data[11];
-
-            uint8_t data[8] = {};
-            memcpy(data, &packet.Data[12], dlc);*/
-
-            qint64 msec = QDateTime::currentMSecsSinceEpoch();
+            // Use the host wall-clock time as the receive timestamp because the
+            // device timestamp wraps and is not synchronised to the host clock.
+            const qint64 msec = QDateTime::currentMSecsSinceEpoch();
 
             CanMessage msg(frame.ID);
 
-            // Defaults
+            // Initialise all flags to false; set individually from frame.Flags below.
             msg.setErrorFrame(false);
             msg.setRTR(false);
             msg.setFD(false);
             msg.setBRS(false);
-
             msg.setLength(frame.DLC);
             msg.setRX(true);
-            msg.setTimestamp({
-                static_cast<long>(msec / 1000),        // Seconds
-                static_cast<long>((msec % 1000) * 1000) // Microseconds
+            msg.setTimestamp(
+            {
+                static_cast<long>(msec / 1000),          // Whole seconds
+                static_cast<long>((msec % 1000) * 1000)  // Remainder in µs
             });
 
-            if(frame.Flags & CAN_FLAGS_EXT_ID)
+            if (frame.Flags & CAN_FLAGS_EXT_ID)
             {
                 msg.setExtended(true);
             }
-            if(frame.Flags & CAN_FLAGS_FD)
+            if (frame.Flags & CAN_FLAGS_FD)
             {
                 msg.setFD(true);
             }
-            if(frame.Flags & CAN_FLAGS_RTR)
+            if (frame.Flags & CAN_FLAGS_RTR)
             {
                 msg.setRTR(true);
             }
-            if(frame.Flags & CAN_FLAGS_BRS)
+            if (frame.Flags & CAN_FLAGS_BRS)
             {
                 msg.setBRS(true);
             }
-            if(frame.Flags & CAN_FLAGS_TX)
+            if (frame.Flags & CAN_FLAGS_TX)
             {
+                // TX echo from the device — frame was sent by the host
                 msg.setRX(false);
             }
 
-            if(frame.ErrFlags)
+            if (frame.ErrFlags)
             {
-                qDebug() << "ERR: " << frame.ErrFlags;
+                qDebug() << "CAN error flags:" << frame.ErrFlags;
                 msg.setErrorFrame(true);
             }
 
-            for(int i = 0; i < frame.DLC; i++)
+            for (int i = 0; i < frame.DLC; i++)
             {
                 msg.setByte(i, frame.Data[i]);
             }
 
-            if(m_Channel_StatusCAN[frame.Channel])
+            // Only enqueue if the channel is currently enabled
+            if (frame.Channel < m_Channel_StatusCAN.size() && m_Channel_StatusCAN[frame.Channel])
             {
                 m_ReceiveQueue[frame.Channel].push(msg);
             }
@@ -530,34 +556,16 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet)
             break;
         }
 
-        case 253u: // DATA_REPORT_LIN_MSG
+        case 253u: // DATA_REPORT_LIN_MSG — incoming LIN frame from the bus
         {
             Protocol_LinFrame_t frame;
+            std::memcpy(&frame, packet.Data, sizeof(Protocol_LinFrame_t));
 
-            memcpy(&frame, packet.Data, sizeof(Protocol_LinFrame_t));
-
-            /*uint8_t ch = packet.Data[1] + 1;
-
-            uint32_t time = packet.Data[2]<<24 | packet.Data[3]<<16 | packet.Data[4]<<8 | packet.Data[5];
-
-            uint8_t alive = packet.Data[6];
-            uint8_t valid = packet.Data[7];
-
-            uint8_t id = packet.Data[8];
-            uint8_t len = packet.Data[9];
-            //uint8_t crc = dat.Data[10];
-
-            uint8_t data[8] = {};
-            memcpy(data, &packet.Data[11], len);
-
-            QVector<std::string> v;
-            for(uint8_t i: data)
-            {
-                v.append(uint8_to_hex(i));
-            }*/
-
-            fprintf(stderr, "LIN MSG\n");
-            fprintf(stderr, "ID: %d, DLC: %d, Alive: %d, Valid: %d\n", frame.ID, frame.DLC, frame.Flags&0x1, frame.Flags&0x2>>1);
+            // Flags: bit 0 = alive (response received), bit 1 = valid checksum
+            qDebug() << "LIN MSG — ID:" << frame.ID
+                     << "DLC:" << frame.DLC
+                     << "Alive:" << (frame.Flags & 0x1)
+                     << "Valid:" << ((frame.Flags & 0x2) >> 1);
             break;
         }
 
@@ -565,13 +573,13 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet)
             break;
         }
         break;
+    }
 
     case MSG_NOTIFICATION:
     {
-        uint8_t type = packet.Data[0];
-        Q_UNUSED(type);
-        fprintf(stderr, "DEV: %s\n", (char*)&packet.Data[1]);
-
+        // The device sends free-form log strings prefixed by a type byte.
+        // packet.Data[0] = notification type (unused), [1..] = null-terminated string.
+        qDebug() << "DEV:" << reinterpret_cast<const char *>(&packet.Data[1]);
         break;
     }
 
@@ -587,11 +595,16 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet)
 }
 
 
+// ---------------------------------------------------------------------------
+// Worker thread
+// ---------------------------------------------------------------------------
+
 void GrIPHandler::WorkerThread()
 {
+    // QSerialPort must be created on the thread that uses it.
     m_SerialPort = new QSerialPort();
     m_SerialPort->setPortName(m_PortName);
-    m_SerialPort->setBaudRate(1000000);
+    m_SerialPort->setBaudRate(500000);
     m_SerialPort->setDataBits(QSerialPort::Data8);
     m_SerialPort->setParity(QSerialPort::NoParity);
     m_SerialPort->setStopBits(QSerialPort::OneStop);
@@ -600,58 +613,74 @@ void GrIPHandler::WorkerThread()
 
     GrIP_Init();
 
-    if(!m_SerialPort->open(QIODevice::ReadWrite))
+    if (!m_SerialPort->open(QIODevice::ReadWrite))
     {
-        perror("Serport connect failed!");
+        qCritical() << "Serial port open failed:" << m_SerialPort->errorString();
         delete m_SerialPort;
         m_SerialPort = nullptr;
+
+        // Notify Start() that the open attempt is done (failed).
+        {
+            std::unique_lock<std::mutex> lck(m_MutexReady);
+            m_WorkerReady = true;
+        }
+        m_CvReady.notify_one();
         return;
     }
 
     qRegisterMetaType<QSerialPort::SerialPortError>("SerialThread");
     connect(m_SerialPort, &QSerialPort::errorOccurred, this, &GrIPHandler::handleSerialError);
 
+    // Discard any stale data left in hardware buffers from a previous session.
     m_SerialPort->flush();
     m_SerialPort->clear();
-
     m_SerialPort->waitForReadyRead(50);
 
-    while(!m_Exit)
+    // Notify Start() that the port is open and ready for commands.
     {
+        std::unique_lock<std::mutex> lck(m_MutexReady);
+        m_WorkerReady = true;
+    }
+    m_CvReady.notify_one();
+
+    while (!m_Exit)
+    {
+        // --- RX: read bytes from the port and feed the GrIP framer ---
         m_SerialPort->waitForReadyRead(1);
         if (m_SerialPort->bytesAvailable())
         {
-            //qDebug() << "LEN " << m_SerialPort->bytesAvailable() << " bytes";
-            QByteArray data = m_SerialPort->readAll();
-            if(!data.isEmpty()) {
-                //qDebug() << "RX " << data.size() << " bytes";
+            const QByteArray data = m_SerialPort->readAll();
+            if (!data.isEmpty())
+            {
                 GrIP_RxCallback(data);
             }
         }
-        auto tx = GrIP_GetTxData();
-        if (tx.size())
+
+        // --- TX: flush any bytes queued by GrIP_Transmit calls ---
+        const auto tx = GrIP_GetTxData();
+        if (!tx.isEmpty())
         {
             m_SerialPort->write(tx);
             m_SerialPort->flush();
         }
 
-        // Update GrIP
-        for(int i = 0; i < 512; i++)
+        // --- Advance GrIP state machines (retransmit timers, ACK tracking, etc.) ---
+        for (int i = 0; i < 512; i++)
         {
             GrIP_Update();
         }
 
-        // Check for new packet
-        for(int i = 0; i < 32; i++)
+        // --- Dispatch fully decoded packets, up to 32 per iteration ---
+        for (int i = 0; i < 32; i++)
         {
             GrIP_Packet_t dat = {};
-            if(GrIP_Receive(&dat))
+            if (GrIP_Receive(&dat))
             {
                 ProcessData(dat);
             }
             else
             {
-                break;
+                break; // No more packets queued
             }
         }
 
@@ -659,60 +688,45 @@ void GrIPHandler::WorkerThread()
     }
 }
 
+
+// ---------------------------------------------------------------------------
+// Serial error handler (Qt slot)
+// ---------------------------------------------------------------------------
+
 void GrIPHandler::handleSerialError(QSerialPort::SerialPortError error)
 {
-    if (error == QSerialPort::ResourceError)
+    static const auto toErrorString = [](QSerialPort::SerialPortError err) -> QString
     {
-        perror("error");
-    }
+        switch (err)
+        {
+        case QSerialPort::NoError:
+            return {};
+        case QSerialPort::DeviceNotFoundError:
+            return QStringLiteral("Device not found");
+        case QSerialPort::PermissionError:
+            return QStringLiteral("Permission denied");
+        case QSerialPort::OpenError:
+            return QStringLiteral("Open error");
+        case QSerialPort::WriteError:
+            return QStringLiteral("Write error");
+        case QSerialPort::ReadError:
+            return QStringLiteral("Read error");
+        case QSerialPort::ResourceError:
+            return QStringLiteral("Resource error");
+        case QSerialPort::UnsupportedOperationError:
+            return QStringLiteral("Unsupported operation");
+        case QSerialPort::TimeoutError:
+            return {}; // Transient; not worth logging
+        case QSerialPort::NotOpenError:
+            return QStringLiteral("Not open error");
+        default:
+            return QStringLiteral("Unknown error");
+        }
+    };
 
-    QString  ERRORString = "";
-    switch (error) {
-    case QSerialPort::NoError:
-        ERRORString=  "No Error";
-        break;
-    case QSerialPort::DeviceNotFoundError:
-        ERRORString= "Device Not Found";
-        break;
-    case QSerialPort::PermissionError:
-        ERRORString= "Permission Denied";
-        break;
-    case QSerialPort::OpenError:
-        ERRORString= "Open Error";
-        break;
-    /*case QSerialPort::ParityError:
-        ERRORString= "Parity Error";
-        break;
-    case QSerialPort::FramingError:
-        ERRORString= "Framing Error";
-        break;
-    case QSerialPort::BreakConditionError:
-        ERRORString= "Break Condition";
-        break;*/
-    case QSerialPort::WriteError:
-        ERRORString= "Write Error";
-        break;
-    case QSerialPort::ReadError:
-        ERRORString= "Read Error";
-        break;
-    case QSerialPort::ResourceError:
-        ERRORString= "Resource Error";
-        break;
-    case QSerialPort::UnsupportedOperationError:
-        ERRORString= "Unsupported Operation";
-        break;
-    case QSerialPort::UnknownError:
-        ERRORString= "Unknown Error";
-        break;
-    case QSerialPort::TimeoutError:
-        //ERRORString= "Timeout Error";
-        break;
-    case QSerialPort::NotOpenError:
-        ERRORString= "Not Open Error";
-        break;
-    default:
-        ERRORString= "Other Error";
+    const QString msg = toErrorString(error);
+    if (!msg.isEmpty())
+    {
+        qWarning() << "Serial port error:" << msg;
     }
-    if(ERRORString.size())
-        qDebug() << "SerialPortWorker::errorOccurred  ,info is  " << QString::fromStdString(ERRORString.toStdString());
 }

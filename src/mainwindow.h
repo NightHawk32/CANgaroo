@@ -127,7 +127,12 @@ private:
 
     QList<class GraphWindow*> _standaloneGraphWindows;
 
-  
+    // Recent files
+    static constexpr int MaxRecentFiles = 8;
+    QMenu *m_recentFilesMenu = nullptr;
+    void addToRecentFiles(const QString &filename);
+    void updateRecentFilesMenu();
+
     void createLanguageMenu();
     QTranslator m_translator;
     QMenu *m_languageMenu = nullptr;

@@ -34,6 +34,7 @@
 #include <QPalette>
 #include <QActionGroup>
 #include <QEvent>
+#include <QFileInfo>
 
 #include "core/MeasurementSetup.h"
 #include "core/Backend.h"
@@ -114,6 +115,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     connect(actionImportFull, &QAction::triggered, this, &MainWindow::importFullTrace);
     traceMenu->addAction(actionImportFull);
 
+    // Build "Open Recent" submenu and insert it after "Open Workspace..." in menuFile.
+    m_recentFilesMenu = new QMenu(tr("Open Recent"), this);
+    ui->menuFile->insertMenu(ui->action_WorkspaceSave, m_recentFilesMenu);
+    ui->menuFile->insertSeparator(ui->action_WorkspaceSave);
+    updateRecentFilesMenu();
+
     // Load settings
     bool restoreEnabled = settings.value("ui/restoreWindowGeometry", false).toBool();
     bool CANblasterEnabled = settings.value("mainWindow/CANblaster", false).toBool();
@@ -151,6 +158,32 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
 
     setWorkspaceModified(false);
     newWorkspace();
+
+    // Restore inner tab widget states after tabs have been created by newWorkspace().
+    // QMainWindow::restoreState() (called above) only covers the outer window;
+    // each tab is its own QMainWindow with independent dock-widget layout.
+    //
+    // Must be deferred via QTimer::singleShot(0) so it fires *after* the
+    // resizeDocks() timer registered inside createTraceWindow() — both use
+    // timeout 0, and Qt processes them FIFO, so the restore always wins.
+    if (restoreEnabled)
+    {
+        for (int i = 0; i < ui->mainTabs->count(); i++)
+        {
+            QMainWindow *tab = qobject_cast<QMainWindow *>(ui->mainTabs->widget(i));
+            if (tab)
+            {
+                const QByteArray tabState = settings.value(QString("mainWindow/tab_%1_state").arg(i)).toByteArray();
+                if (!tabState.isEmpty())
+                {
+                    QTimer::singleShot(0, tab, [tab, tabState]()
+                    {
+                        tab->restoreState(tabState);
+                    });
+                }
+            }
+        }
+    }
 
     // NOTE: must be called after drivers/plugins are initialized
     _setupDlg = new SetupDialog(Backend::instance(), 0);
@@ -252,6 +285,52 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::addToRecentFiles(const QString &filename)
+{
+    QStringList recent = settings.value("recentFiles/list").toStringList();
+    recent.removeAll(filename);        // remove duplicate if present
+    recent.prepend(filename);          // most recent first
+    while (recent.size() > MaxRecentFiles)
+    {
+        recent.removeLast();
+    }
+    settings.setValue("recentFiles/list", recent);
+    updateRecentFilesMenu();
+}
+
+void MainWindow::updateRecentFilesMenu()
+{
+    m_recentFilesMenu->clear();
+
+    const QStringList recent = settings.value("recentFiles/list").toStringList();
+    for (const QString &path : recent)
+    {
+        QAction *action = m_recentFilesMenu->addAction(QFileInfo(path).fileName());
+        action->setToolTip(path);
+        action->setStatusTip(path);
+        connect(action, &QAction::triggered, this, [this, path]()
+        {
+            if (askSaveBecauseWorkspaceModified() != QMessageBox::Cancel)
+            {
+                loadWorkspaceFromFile(path);
+            }
+        });
+    }
+
+    m_recentFilesMenu->setEnabled(!recent.isEmpty());
+
+    if (!recent.isEmpty())
+    {
+        m_recentFilesMenu->addSeparator();
+        QAction *clearAction = m_recentFilesMenu->addAction(tr("Clear Recent Files"));
+        connect(clearAction, &QAction::triggered, this, [this]()
+        {
+            settings.remove("recentFiles/list");
+            updateRecentFilesMenu();
+        });
+    }
+}
+
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     if (askSaveBecauseWorkspaceModified() != QMessageBox::Cancel)
@@ -276,6 +355,16 @@ void MainWindow::closeEvent(QCloseEvent *event)
     settings.setValue("mainWindow/maximized", isMaximized());
     settings.setValue("ui/restoreWindowGeometry", ui->actionRestore_Window->isChecked());
     settings.setValue("mainWindow/CANblaster", ui->actionCANblaster->isChecked());
+
+    // Save each tab's inner dock-widget layout independently.
+    for (int i = 0; i < ui->mainTabs->count(); i++)
+    {
+        QMainWindow *tab = qobject_cast<QMainWindow *>(ui->mainTabs->widget(i));
+        if (tab)
+        {
+            settings.setValue(QString("mainWindow/tab_%1_state").arg(i), tab->saveState());
+        }
+    }
 
     QMainWindow::closeEvent(event);
 }
@@ -383,6 +472,14 @@ bool MainWindow::loadWorkspaceTab(QDomElement el)
         {
             mdi->loadXML(backend(), el);
         }
+
+        // Load TxGeneratorWindow dock content (cyclic frames) if present.
+        TxGeneratorWindow *gen = mw->findChild<TxGeneratorWindow *>();
+        QDomElement genEl = el.firstChildElement("txgeneratorwindow");
+        if (gen && !genEl.isNull())
+        {
+            gen->loadXML(backend(), genEl);
+        }
     }
 
     return true;
@@ -445,6 +542,7 @@ void MainWindow::loadWorkspaceFromFile(QString filename)
     if (loadWorkspaceSetup(setupRoot))
     {
         _workspaceFileName = filename;
+        addToRecentFiles(filename);
     }
     else
     {
@@ -481,6 +579,15 @@ bool MainWindow::saveWorkspaceToFile(QString filename)
             return false;
         }
 
+        // Save TxGeneratorWindow dock content (cyclic frames) as a sibling element.
+        TxGeneratorWindow *gen = w->findChild<TxGeneratorWindow *>();
+        if (gen)
+        {
+            QDomElement genEl = doc.createElement("txgeneratorwindow");
+            gen->saveXML(backend(), doc, genEl);
+            tabEl.appendChild(genEl);
+        }
+
         tabsRoot.appendChild(tabEl);
     }
 
@@ -500,6 +607,7 @@ bool MainWindow::saveWorkspaceToFile(QString filename)
         outFile.close();
         _workspaceFileName = filename;
         setWorkspaceModified(false);
+        addToRecentFiles(filename);
         log_info(QString(tr("Saved workspace settings to file: %1")).arg(filename));
         return true;
     }
@@ -699,6 +807,7 @@ QDockWidget *MainWindow::addGraphWidget(QMainWindow *parent)
         parent = currentTab();
     }
     QDockWidget *dock = new QDockWidget(tr("Graph"), parent);
+    dock->setObjectName(QStringLiteral("dock_graph"));
     dock->setWidget(new GraphWindow(dock, backend()));
     parent->addDockWidget(Qt::BottomDockWidgetArea, dock);
 
@@ -712,6 +821,7 @@ QDockWidget *MainWindow::addRawTxWidget(QMainWindow *parent)
         parent = currentTab();
     }
     QDockWidget *dock = new QDockWidget(tr("Message View"), parent);
+    dock->setObjectName(QStringLiteral("dock_rawtx"));
     RawTxWindow *rawTx = new RawTxWindow(dock, backend());
     dock->setWidget(rawTx);
     parent->addDockWidget(Qt::BottomDockWidgetArea, dock);
@@ -732,6 +842,7 @@ QDockWidget *MainWindow::addLogWidget(QMainWindow *parent)
         parent = currentTab();
     }
     QDockWidget *dock = new QDockWidget(tr("Log"), parent);
+    dock->setObjectName(QStringLiteral("dock_log"));
     dock->setWidget(new LogWindow(dock, backend()));
     parent->addDockWidget(Qt::BottomDockWidgetArea, dock);
 
@@ -745,6 +856,7 @@ QDockWidget *MainWindow::addStatusWidget(QMainWindow *parent)
         parent = currentTab();
     }
     QDockWidget *dock = new QDockWidget(tr("CAN Status"), parent);
+    dock->setObjectName(QStringLiteral("dock_status"));
     dock->setWidget(new CanStatusWindow(dock, backend()));
     parent->addDockWidget(Qt::BottomDockWidgetArea, dock);
 
@@ -758,6 +870,7 @@ QDockWidget *MainWindow::addTxGeneratorWidget(QMainWindow *parent)
         parent = currentTab();
     }
     QDockWidget *dock = new QDockWidget(tr("Generator View"), parent);
+    dock->setObjectName(QStringLiteral("dock_generator"));
     TxGeneratorWindow *gen = new TxGeneratorWindow(dock, backend());
     dock->setWidget(gen);
     parent->addDockWidget(Qt::BottomDockWidgetArea, dock);

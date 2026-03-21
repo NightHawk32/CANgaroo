@@ -101,6 +101,7 @@ private:
         uint64_t lastSent;
         CanInterfaceId interfaceId;
         CanDbMessage *dbMsg;
+        QString interfaceName; ///< Display name saved to XML; resolved to interfaceId by resolveInterfaceNames()
     };
 
     QList<CyclicMessage> _cyclicMessages;
@@ -110,5 +111,8 @@ private:
     void updateActiveList();
     void updateRowUI(int row);
     void populateDbcMessages();
+    // Matches each CyclicMessage::interfaceName against the combo box and
+    // sets interfaceId accordingly. Called after the combo box is repopulated.
+    void resolveInterfaceNames();
 };
 
