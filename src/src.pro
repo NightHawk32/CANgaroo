@@ -11,7 +11,7 @@ TEMPLATE = app
 CONFIG += warn_on
 CONFIG += link_pkgconfig
 
-VERSION = 0.4.4
+VERSION = 0.5.0
 DEFINES += VERSION_STRING=\\\"$${VERSION}\\\"
 
 TRANSLATIONS = \
@@ -52,8 +52,12 @@ include($$PWD/window/GraphWindow/GraphWindow.pri)
 include($$PWD/window/CanStatusWindow/CanStatusWindow.pri)
 include($$PWD/window/RawTxWindow/RawTxWindow.pri)
 include($$PWD/window/TxGeneratorWindow/TxGeneratorWindow.pri)
+include($$PWD/window/ScriptWindow/ScriptWindow.pri)
 include($$PWD/helpers/helpers.pri)
 
+
+unix:PKGCONFIG += python3-embed
+unix:INCLUDEPATH += /usr/include/pybind11
 
 unix:PKGCONFIG += libnl-3.0
 unix:PKGCONFIG += libnl-route-3.0

@@ -778,16 +778,9 @@ bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeou
     // Transmit all items that are queued
     can_msg_t tmp;
 
-    QList<can_msg_t>::iterator it;
     _serport_mutex.lock();
-    for(it = _can_msg_queue.begin(); it<_can_msg_queue.end();it++)
+    while (!_can_msg_queue.empty())
     {
-        if(_can_msg_queue.empty())
-        {
-            std::cout << "msg empty1" << std::endl;
-            break;
-        }
-
         // Consume first item
         tmp = _can_msg_queue.front();
         _can_msg_queue.pop_front();
@@ -797,23 +790,10 @@ bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeou
         {
             _send_wait_respond ++;
             _readMessage_datetime = QDateTime::currentDateTime();
-
-            // if(_can_msg_tx_queue.empty() == false)
-            // {
-            //     msgtx.cloneFrom(_can_msg_tx_queue.front());
-            //     if(_can_msg_tx_queue.empty() == false)
-            //         _can_msg_tx_queue.pop_front();
-            //     struct timeval tv;
-            //     gettimeofday(&tv,NULL);
-            //     msgtx.setTimestamp(tv);
-            //     _can_msg_tx_queue.push_front(msgtx);
-
-            // }
         }
         else
         {
             _status.tx_errors ++;
-            //_send_wait_respond = 0;
 
             if(_can_msg_tx_queue.empty() == false)
             {
@@ -821,15 +801,7 @@ bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeou
             }
         }
 
-        //_serport->flush();
         _serport->waitForBytesWritten(200);
-
-        if(it >= _can_msg_queue.end())
-        {
-            std::cout << "msg empty" << std::endl;
-            //_can_msg_queue.clear();
-            break;
-        }
     }
     _serport_mutex.unlock();
 

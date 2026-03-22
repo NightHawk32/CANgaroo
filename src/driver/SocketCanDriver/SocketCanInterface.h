@@ -23,6 +23,7 @@
 
 #include "../CanInterface.h"
 #include <linux/can/netlink.h>
+#include <string>
 
 class SocketCanDriver;
 
@@ -110,6 +111,7 @@ private:
     ts_mode_t _ts_mode;
 
     const char *cname();
+    std::string _cnameBuffer;
     bool updateStatus();
 
     QString buildIpRouteCmd(const MeasurementInterface &mi);

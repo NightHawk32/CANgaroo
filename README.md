@@ -4,9 +4,9 @@
 
 **🔩 Supported Interfaces & Hardware:**
 
-*   **PEAK-System (PCAN)**: 
+*   **PEAK-System (PCAN)**:
     *   PCAN-USB, PCAN-USB Pro, PCAN-PCIe, etc. (Native driver: `peak_usb`).
-*   **Native USB-CAN Adapters**: 
+*   **Native USB-CAN Adapters**:
     *   [CANable](https://canable.io/) (with Candlelight firmware)
     *   Kvaser USB/CAN Leaf
     *   Candlelight compatible devices (e.g., MKS CANable, cantact)
@@ -16,7 +16,7 @@
 *   **Industrial / Embedded CAN**:
     *   PCIe/mPCIe CAN cards
     *   Embedded CAN controllers on SoCs (e.g., Raspberry Pi with MCP2515)
-*   **Remote / Network CAN**: 
+*   **Remote / Network CAN**:
     *   [CANblaster](https://github.com/OpenAutoDiagLabs/CANblaster) (UDP)
     *   tcpcan / candlelight-over-ethernet
 *   **GrIP Driver**
@@ -40,29 +40,31 @@
 
 ## 🛠️ Building
 ### 🐧 Linux
+
+#### Install dependencies:
 | Distribution | Command |
 | :--- | :--- |
-| **Ubuntu / Debian** | `sudo apt install qt6-base-dev qt6-base-private-dev qt6-tools-dev libqt6charts6-dev libqt6serialport6-dev build-essential libnl-3-dev libnl-route-3-dev libgl1-mesa-dev` |
-| **Fedora** | `sudo dnf install qt6-qtbase-devel qt6-qtcharts-devel qt6-qtserialport-devel libnl3-devel` |
-| **Arch Linux** | `sudo pacman -S qt6-base qt6-charts qt6-serialport libnl` |
+| **Ubuntu / Debian** | `sudo apt install build-essential qt6-base-dev qt6-charts-dev qt6-serialport-dev qt6-tools-dev qt6-l10n-tools libqt6opengl6-dev libnl-3-dev libnl-route-3-dev python3-dev pybind11-dev pkg-config` |
+| **Fedora** | `sudo dnf install gcc-c++ make qt6-qtbase-devel qt6-qtcharts-devel qt6-qtserialport-devel qt6-qttools-devel libnl3-devel python3-devel pybind11-devel pkgconfig` |
+| **Arch Linux** | `sudo pacman -S base-devel qt6-base qt6-charts qt6-serialport qt6-tools libnl python pybind11 pkgconf` |
 
-#### Build with:
-  * qmake6
-  * make
-  * make install
+#### Build:
+```bash
+qmake6
+make -j$(nproc)
+```
+The binary will be in `bin/cangaroo`.
 
 ### 🪟 Windows
-* Qt Creator (Community Version is okay) brings everything you need
-* except for the PCAN libraries. 
-  * Get them from http://www.peak-system.com/fileadmin/media/files/pcan-basic.zip
-  * Extract to .zip to src/driver/PeakCanDriver/pcan-basic-api
-  * Make sure PCANBasic.dll (the one from pcan-basic-api/Win32 on a "normal" 32bit Windows build)
-    is found when running cangaroo, e.g. by putting it in the same folder as the .exe file.
-* if you don't want Peak support, you can just disable the driver:
-  remove the line "win32:include($$PWD/driver/PeakCanDriver/PeakCanDriver.pri)"
-  from src/src.pro
-* if you want to deploy the cangaroo app, make sure to also include the needed Qt Libraries.
-  for a normal release build, these are: Qt5Core.dll Qt5Gui.dll Qt5Widgets.dll Qt5Xml.dll
+* Install [Qt 6](https://www.qt.io/download-qt-installer) (Community / Open Source) with Qt Creator.
+* Install [Python 3](https://www.python.org/downloads/) and [pybind11](https://github.com/pybind/pybind11) (`pip install pybind11`).
+* Open `cangaroo.pro` in Qt Creator and build.
+* **PCAN support** (optional):
+  * Download from http://www.peak-system.com/fileadmin/media/files/pcan-basic.zip
+  * Extract to `src/driver/PeakCanDriver/pcan-basic-api`
+  * Place `PCANBasic.dll` next to the built `.exe` file.
+  * To disable PCAN support, remove the line `win32:include($$PWD/driver/PeakCanDriver/PeakCanDriver.pri)` from `src/src.pro`.
+* **Deployment**: include the required Qt6 libraries (Qt6Core, Qt6Gui, Qt6Widgets, Qt6Xml, Qt6Charts, Qt6SerialPort, Qt6OpenGL, Qt6OpenGLWidgets) or use `windeployqt`.
 
 ### ARXML to DBC Conversion
 Cangaroo natively supports DBC. If you have ARXML files, you can convert them using `canconvert`:

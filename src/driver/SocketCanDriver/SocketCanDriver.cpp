@@ -88,7 +88,7 @@ SocketCanInterface *SocketCanDriver::createOrUpdateInterface(int index, QString 
 
     foreach (CanInterface *intf, getInterfaces()) {
         SocketCanInterface *scif = dynamic_cast<SocketCanInterface*>(intf);
-		if (scif->getIfIndex() == index) {
+        if (scif && scif->getIfIndex() == index) {
 			scif->setName(name);
             return scif;
 		}

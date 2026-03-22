@@ -23,6 +23,8 @@
 
 CanDbSignal::CanDbSignal(CanDbMessage *parent)
   : _parent(parent),
+    _startBit(0),
+    _length(0),
     _isUnsigned(false),
     _isBigEndian(false),
     _factor(1),

@@ -65,11 +65,11 @@ void CanListener::run()
     _intf.open();
 
     qRegisterMetaType<log_level_t >("log_level_t");
-    log_info(QString(tr("interface: %1, Version: %2")).arg(_intf.getName(),_intf.getVersion()));
+    log_info(QString(tr("Interface #%1: %2, Version: %3")).arg(QString::number(_intf.getId()), _intf.getName(), _intf.getVersion()));
 
     _openComplete = true;
     while (_shouldBeRunning) {
-        if (_intf.readMessage(rxMessages, 500)) {
+        if (_intf.readMessage(rxMessages, 300)) {
             for(const CanMessage &msg: std::as_const(rxMessages))
             {
                 trace->enqueueMessage(msg, false);

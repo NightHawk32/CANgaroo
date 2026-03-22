@@ -65,10 +65,10 @@ AggregatedTraceViewItem *AggregatedTraceViewItem::parent() const
 
 AggregatedTraceViewItem *AggregatedTraceViewItem::firstChild() const
 {
-    return _children.first();
+    return _children.isEmpty() ? nullptr : _children.first();
 }
 
 AggregatedTraceViewItem *AggregatedTraceViewItem::lastChild() const
 {
-    return _children.last();
+    return _children.isEmpty() ? nullptr : _children.last();
 }

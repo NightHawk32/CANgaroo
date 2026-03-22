@@ -436,9 +436,11 @@ void GraphWindow::onMouseMove(QMouseEvent *event)
             }
             int nearestIdx = (left > 0 && qAbs(points[left-1].x() - t) < qAbs(points[left].x() - t)) ? left - 1 : left;
 
+            if (chart->axes(Qt::Horizontal).isEmpty()) { if (tracer) tracer->hide(); continue; }
             QValueAxis *axisX = qobject_cast<QValueAxis*>(chart->axes(Qt::Horizontal).first());
+            if (!axisX) { if (tracer) tracer->hide(); continue; }
             double xRange = axisX->max() - axisX->min();
-            
+
             if (qAbs(points[nearestIdx].x() - t) < xRange * 0.1) {
                 html += QString("<span style='color:%1; font-size: 14px;'>●</span> (Bus %2) %3: <b>%4</b> %5<br/>")
                         .arg(series->color().name()).arg(tsv->getBusId(sig)).arg(sig->name())
@@ -468,7 +470,9 @@ void GraphWindow::onMouseMove(QMouseEvent *event)
             }
             int nearestIdx = (left > 0 && qAbs(points[left-1].x() - t) < qAbs(points[left].x() - t)) ? left - 1 : left;
 
+            if (chart->axes(Qt::Horizontal).isEmpty()) { if (tracer) tracer->hide(); continue; }
             QValueAxis *axisX = qobject_cast<QValueAxis*>(chart->axes(Qt::Horizontal).first());
+            if (!axisX) { if (tracer) tracer->hide(); continue; }
             double xRange = axisX->max() - axisX->min();
             
             // For scatter, maybe use a smaller/stricter proximity?

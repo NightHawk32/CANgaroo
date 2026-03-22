@@ -47,6 +47,7 @@
 #include <window/CanStatusWindow/CanStatusWindow.h>
 #include <window/RawTxWindow/RawTxWindow.h>
 #include <window/TxGeneratorWindow/TxGeneratorWindow.h>
+#include <window/ScriptWindow/ScriptWindow.h>
 
 #include <driver/SLCANDriver/SLCANDriver.h>
 #include <driver/GrIPDriver/GrIPDriver.h>
@@ -480,6 +481,14 @@ bool MainWindow::loadWorkspaceTab(QDomElement el)
         {
             gen->loadXML(backend(), genEl);
         }
+
+        // Load ScriptWindow dock content (script code + autorun) if present.
+        ScriptWindow *script = mw->findChild<ScriptWindow *>();
+        QDomElement scriptEl = el.firstChildElement("scriptwindow");
+        if (script && !scriptEl.isNull())
+        {
+            script->loadXML(backend(), scriptEl);
+        }
     }
 
     return true;
@@ -573,7 +582,7 @@ bool MainWindow::saveWorkspaceToFile(QString filename)
         tabEl.setAttribute("title", ui->mainTabs->tabText(i));
 
         ConfigurableWidget *mdi = dynamic_cast<ConfigurableWidget*>(w->centralWidget());
-        if (!mdi->saveXML(backend(), doc, tabEl))
+        if (!mdi || !mdi->saveXML(backend(), doc, tabEl))
         {
             log_error(QString(tr("Cannot save window settings to file: %1")).arg(filename));
             return false;
@@ -586,6 +595,15 @@ bool MainWindow::saveWorkspaceToFile(QString filename)
             QDomElement genEl = doc.createElement("txgeneratorwindow");
             gen->saveXML(backend(), doc, genEl);
             tabEl.appendChild(genEl);
+        }
+
+        // Save ScriptWindow dock content (script code + autorun).
+        ScriptWindow *script = w->findChild<ScriptWindow *>();
+        if (script)
+        {
+            QDomElement scriptEl = doc.createElement("scriptwindow");
+            script->saveXML(backend(), doc, scriptEl);
+            tabEl.appendChild(scriptEl);
         }
 
         tabsRoot.appendChild(tabEl);
@@ -709,6 +727,11 @@ int MainWindow::askSaveBecauseWorkspaceModified()
         msgBox.setWindowFlag(Qt::FramelessWindowHint);
         msgBox.setStyleSheet(QStringLiteral("QMessageBox { border: 3px solid palette(highlight); padding: 10px; }"));
 
+        // Center on main window
+        msgBox.adjustSize();
+        QPoint center = mapToGlobal(rect().center());
+        msgBox.move(center.x() - msgBox.width() / 2, center.y() - msgBox.height() / 2);
+
         int result = msgBox.exec();
         if (result == QMessageBox::Save)
         {
@@ -744,6 +767,7 @@ QMainWindow *MainWindow::createTraceWindow(QString title)
     QDockWidget *dockRawTxWidget = addRawTxWidget(mm);
     QDockWidget *dockGeneratorWidget = addTxGeneratorWidget(mm);
     QDockWidget *dockGraphWidget = addGraphWidget(mm);
+    QDockWidget *dockScriptWidget = addScriptWidget(mm);
 
     TxGeneratorWindow *gen = qobject_cast<TxGeneratorWindow*>(dockGeneratorWidget->widget());
     RawTxWindow *rawtx = qobject_cast<RawTxWindow*>(dockRawTxWidget->widget());
@@ -893,6 +917,21 @@ QDockWidget *MainWindow::addTxGeneratorWidget(QMainWindow *parent)
     return dock;
 }
 
+QDockWidget *MainWindow::addScriptWidget(QMainWindow *parent)
+{
+    if (!parent)
+    {
+        parent = currentTab();
+    }
+    QDockWidget *dock = new QDockWidget(tr("Python Script"), parent);
+    dock->setObjectName(QStringLiteral("dock_script"));
+    dock->setWidget(new ScriptWindow(dock, backend()));
+    parent->addDockWidget(Qt::BottomDockWidgetArea, dock);
+    setupDockFloatReparent(dock, parent);
+
+    return dock;
+}
+
 void MainWindow::setupDockFloatReparent(QDockWidget *dock, QMainWindow *innerParent)
 {
     (void) innerParent;
@@ -988,7 +1027,8 @@ void MainWindow::stopMeasurement()
 {
     backend().stopMeasurement();
 
-    foreach (TxGeneratorWindow *gen, findChildren<TxGeneratorWindow*>()) {
+    foreach (TxGeneratorWindow *gen, findChildren<TxGeneratorWindow*>())
+    {
         gen->stopAll();
     }
 }

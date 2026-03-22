@@ -69,6 +69,7 @@ public slots:
     QDockWidget *addLogWidget(QMainWindow *parent=0);
     QDockWidget *addStatusWidget(QMainWindow *parent=0);
     QDockWidget *addTxGeneratorWidget(QMainWindow *parent=0);
+    QDockWidget *addScriptWidget(QMainWindow *parent=0);
 
     bool showSetupDialog();
     void showAboutDialog();

@@ -91,7 +91,11 @@ DecodeStatus UdsDecoder::tryDecode(const CanMessage& frame, ProtocolMessage& out
                     outMsg.rawFrames = session.frames;
                     outMsg.protocol = "uds";
                     outMsg.timestamp = static_cast<uint64_t>(session.frames.first().getFloatTimestamp() * 1000000.0);
-                    
+
+                    if (outMsg.payload.isEmpty()) {
+                        m_sessions.remove(id);
+                        return DecodeStatus::Ignored;
+                    }
                     uint8_t sid = outMsg.payload.at(0);
                     outMsg.id = sid;
                     outMsg.name = interpretService(sid);

@@ -337,7 +337,7 @@ void TxGeneratorWindow::on_btnAddManual_released()
     cm.msg.setLength(ui->spinManualDlc->value());
     cm.msg.setExtended(id > 0x7FF || ui->lineManualId->text().length() > 3);
     cm.name = "Manual";
-    cm.interval = 100;
+    cm.interval = ui->spinInterval->value();
     cm.enabled = false;
     cm.lastSent = 0;
     cm.interfaceId = (CanInterfaceId)ui->comboBoxInterface->currentData().toUInt();

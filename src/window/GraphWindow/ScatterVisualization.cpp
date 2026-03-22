@@ -201,7 +201,7 @@ void ScatterVisualization::setSignalColor(CanDbSignal *signal, const QColor &col
 
 void ScatterVisualization::updateAxes()
 {
-    if (_chart->axes(Qt::Vertical).isEmpty() || _seriesMap.isEmpty()) return;
+    if (_chart->axes(Qt::Vertical).isEmpty() || _chart->axes(Qt::Horizontal).isEmpty() || _seriesMap.isEmpty()) return;
 
     double minY = DBL_MAX;
     double maxY = -DBL_MAX;

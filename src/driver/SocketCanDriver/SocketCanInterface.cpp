@@ -421,7 +421,8 @@ int SocketCanInterface::getIfIndex() {
 
 const char *SocketCanInterface::cname()
 {
-    return _name.toStdString().c_str();
+    _cnameBuffer = _name.toStdString();
+    return _cnameBuffer.c_str();
 }
 
 void SocketCanInterface::open() {

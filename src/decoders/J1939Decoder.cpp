@@ -12,6 +12,7 @@ DecodeStatus J1939Decoder::tryDecode(const CanMessage& frame, ProtocolMessage& o
     uint8_t sa = id & 0xFF;
 
     if (pgn == 0x00EC00) { // TP.CM
+        if (frame.getLength() < 8) { return DecodeStatus::Ignored; }
         uint8_t controlByte = frame.getByte(0);
         if (controlByte == 32 || controlByte == 16) { // BAM (32) or RTS (16)
             uint16_t size = frame.getByte(1) | (frame.getByte(2) << 8);

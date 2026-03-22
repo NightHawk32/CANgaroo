@@ -41,7 +41,7 @@ CanMessage::CanMessage()
 }
 
 CanMessage::CanMessage(uint32_t can_id)
-    : _dlc(0), _isFD(false), _isBRS(false), _isRX(true), _isShow(true), _interface(0), _u8()
+    : _raw_id(0), _dlc(0), _isFD(false), _isBRS(false), _isRX(true), _isShow(true), _interface(0), _u8()
 {
     _timestamp.tv_sec = 0;
     _timestamp.tv_usec = 0;
@@ -92,8 +92,8 @@ uint32_t CanMessage::getId() const {
 }
 
 void CanMessage::setId(const uint32_t id) {
-    _raw_id &= ~ id_mask_extended;
-    _raw_id = id;
+    uint32_t flags = _raw_id & ~id_mask_extended;
+    _raw_id = (id & id_mask_extended) | flags;
     if (id>0x7FF) {
 		setExtended(true);
 	}
