@@ -87,11 +87,8 @@ void CanDriver::deleteInterface(CanInterface *intf)
 
 void CanDriver::deleteAllInterfaces()
 {
-    for(CanInterface* interface: _interfaces)
-    {
-        delete interface;
-        _interfaces.removeOne(interface);
-    }
+    qDeleteAll(_interfaces);
+    _interfaces.clear();
 }
 
 

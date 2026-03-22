@@ -701,9 +701,13 @@ int MainWindow::askSaveBecauseWorkspaceModified()
         msgBox.setInformativeText(tr("Do you want to save your changes?"));
         msgBox.setStandardButtons(QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
         msgBox.setDefaultButton(QMessageBox::Save);
-        /*msgBox.setButtonText(QMessageBox::Save, QString(tr("Save")));
-        msgBox.setButtonText(QMessageBox::Discard, QString(tr("Discard")));
-        msgBox.setButtonText(QMessageBox::Cancel, QString(tr("Cancel")));*/
+
+        msgBox.button(QMessageBox::Save)->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
+        msgBox.button(QMessageBox::Discard)->setIcon(style()->standardIcon(QStyle::SP_DialogDiscardButton));
+        msgBox.button(QMessageBox::Cancel)->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
+
+        msgBox.setWindowFlag(Qt::FramelessWindowHint);
+        msgBox.setStyleSheet(QStringLiteral("QMessageBox { border: 3px solid palette(highlight); padding: 10px; }"));
 
         int result = msgBox.exec();
         if (result == QMessageBox::Save)
@@ -810,6 +814,7 @@ QDockWidget *MainWindow::addGraphWidget(QMainWindow *parent)
     dock->setObjectName(QStringLiteral("dock_graph"));
     dock->setWidget(new GraphWindow(dock, backend()));
     parent->addDockWidget(Qt::BottomDockWidgetArea, dock);
+    setupDockFloatReparent(dock, parent);
 
     return dock;
 }
@@ -825,6 +830,7 @@ QDockWidget *MainWindow::addRawTxWidget(QMainWindow *parent)
     RawTxWindow *rawTx = new RawTxWindow(dock, backend());
     dock->setWidget(rawTx);
     parent->addDockWidget(Qt::BottomDockWidgetArea, dock);
+    setupDockFloatReparent(dock, parent);
 
     TxGeneratorWindow *gen = parent->findChild<TxGeneratorWindow*>();
     if (gen) {
@@ -845,6 +851,7 @@ QDockWidget *MainWindow::addLogWidget(QMainWindow *parent)
     dock->setObjectName(QStringLiteral("dock_log"));
     dock->setWidget(new LogWindow(dock, backend()));
     parent->addDockWidget(Qt::BottomDockWidgetArea, dock);
+    setupDockFloatReparent(dock, parent);
 
     return dock;
 }
@@ -859,6 +866,7 @@ QDockWidget *MainWindow::addStatusWidget(QMainWindow *parent)
     dock->setObjectName(QStringLiteral("dock_status"));
     dock->setWidget(new CanStatusWindow(dock, backend()));
     parent->addDockWidget(Qt::BottomDockWidgetArea, dock);
+    setupDockFloatReparent(dock, parent);
 
     return dock;
 }
@@ -874,6 +882,7 @@ QDockWidget *MainWindow::addTxGeneratorWidget(QMainWindow *parent)
     TxGeneratorWindow *gen = new TxGeneratorWindow(dock, backend());
     dock->setWidget(gen);
     parent->addDockWidget(Qt::BottomDockWidgetArea, dock);
+    setupDockFloatReparent(dock, parent);
 
     RawTxWindow *rawtx = parent->findChild<RawTxWindow*>();
     if (rawtx) {
@@ -882,6 +891,26 @@ QDockWidget *MainWindow::addTxGeneratorWidget(QMainWindow *parent)
     }
 
     return dock;
+}
+
+void MainWindow::setupDockFloatReparent(QDockWidget *dock, QMainWindow *innerParent)
+{
+    (void) innerParent;
+    connect(dock, &QDockWidget::topLevelChanged, this, [dock](bool floating)
+    {
+        if (floating)
+        {
+            // Deferred so we don't destroy the window handle mid-drag.
+            // Only override decoration flags — Qt::Window is already set
+            // by Qt when the dock floats, so setParent() is not called.
+            QTimer::singleShot(0, dock, [dock]()
+            {
+                dock->setWindowFlags(Qt::Window | Qt::CustomizeWindowHint
+                                     | Qt::WindowTitleHint | Qt::WindowCloseButtonHint);
+                dock->show();
+            });
+        }
+    });
 }
 
 void MainWindow::on_actionCan_Status_View_triggered()

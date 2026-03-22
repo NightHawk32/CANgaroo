@@ -463,6 +463,7 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet)
 
             // Rebuild per-channel queues to match the reported channel count.
             // CAN-FD channels follow classic CAN channels in the same vectors.
+            m_Channel_StatusCAN.clear();
             m_ReceiveQueue.clear();
 
             for (int i = 0; i < can + canfd; i++)

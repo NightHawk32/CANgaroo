@@ -21,6 +21,7 @@
 
 #include "AggregatedTraceViewModel.h"
 #include <QColor>
+#include <QDateTime>
 #include <QSet>
 #include <core/ThemeManager.h>
 
@@ -37,6 +38,19 @@ AggregatedTraceViewModel::AggregatedTraceViewModel(Backend &backend)
     connect(backend.getTrace(), SIGNAL(afterClear()), this, SLOT(afterClear()));
 
     connect(&backend, SIGNAL(onSetupChanged()), this, SLOT(onSetupChanged()));
+
+    // Periodically repaint so stale-message fade updates without user interaction
+    connect(&_fadeTimer, &QTimer::timeout, this, [this]()
+    {
+        int rows = _rootItem->childCount();
+        if (rows > 0)
+        {
+            emit dataChanged(index(0, 0, QModelIndex()),
+                             index(rows - 1, columnCount(QModelIndex()) - 1, QModelIndex()),
+                             {Qt::ForegroundRole});
+        }
+    });
+    _fadeTimer.start(200);
 }
 
 void AggregatedTraceViewModel::createItem(const CanMessage &msg)
@@ -85,7 +99,7 @@ void AggregatedTraceViewModel::onUpdateModel()
                 updatedRows.insert(item->row());
             }
         }
-        
+
         foreach (int r, updatedRows) {
             AggregatedTraceViewItem *item = _rootItem->child(r);
             if (item) {
@@ -151,7 +165,7 @@ void AggregatedTraceViewModel::afterClear()
 
 AggregatedTraceViewModel::unique_key_t AggregatedTraceViewModel::makeUniqueKey(const CanMessage &msg) const
 {
-    return ((uint64_t)msg.getInterfaceId() << 32) | msg.getRawId();
+    return ((uint64_t)msg.getInterfaceId() << 32) | (uint64_t)msg.isRX() << 31 | msg.getRawId();
 }
 
 double AggregatedTraceViewModel::getTimeDiff(const timeval t1, const timeval t2) const
@@ -241,14 +255,23 @@ QVariant AggregatedTraceViewModel::data_TextColorRole(const QModelIndex &index, 
     AggregatedTraceViewItem *item = (AggregatedTraceViewItem *)index.internalPointer();
     if (!item) { return QVariant(); }
 
-    const CanMessage& msg = item->_lastmsg;
-    if (msg.isErrorFrame()) return isDark ? QColor(255, 100, 100) : QColor(Qt::red);
+    const CanMessage &msg = (item->parent() == _rootItem)
+        ? item->_lastmsg
+        : item->parent()->_lastmsg;
 
-    if (item->parent() == _rootItem) { // CanMessage row
-        return ThemeManager::instance().colors().text;
-    } else { // CanSignal Row
-        return data_TextColorRole_Signal(index, role, item->parent()->_lastmsg);
-    }
+    // Fade stale messages via alpha based on time since last reception
+    qint64 now_ms = QDateTime::currentMSecsSinceEpoch();
+    double diff_sec = (now_ms - msg.getTimestamp_ms()) / 1000.0;
+
+    int alpha = 255 - static_cast<int>(diff_sec * 100);
+    alpha = qBound(80, alpha, 255);
+
+    QColor color = msg.isErrorFrame()
+        ? (isDark ? QColor(255, 100, 100) : QColor(Qt::red))
+        : ThemeManager::instance().colors().text;
+
+    color.setAlpha(alpha);
+    return color;
 }
 
 

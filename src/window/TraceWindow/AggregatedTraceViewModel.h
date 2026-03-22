@@ -24,6 +24,7 @@
 #include <QAbstractItemModel>
 #include <QMap>
 #include <QList>
+#include <QTimer>
 #include <sys/time.h>
 
 #include "BaseTraceViewModel.h"
@@ -55,6 +56,7 @@ public:
 private:
     CanIdMap _map;
     AggregatedTraceViewItem *_rootItem;
+    QTimer _fadeTimer;
     QList<CanMessage> _pendingMessageUpdates;
     QMap<unique_key_t, CanMessage> _pendingMessageInserts;
 

@@ -134,6 +134,7 @@ private:
     void updateRecentFilesMenu();
 
     void createLanguageMenu();
+    void setupDockFloatReparent(QDockWidget *dock, QMainWindow *innerParent);
     QTranslator m_translator;
     QMenu *m_languageMenu = nullptr;
     QActionGroup *m_languageActionGroup = nullptr;
