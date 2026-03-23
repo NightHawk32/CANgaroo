@@ -46,7 +46,7 @@ SLCANInterface::SLCANInterface(SLCANDriver *driver, int index, QString name, boo
     _idx(index),
     _isOpen(false),
     _isOffline(false),
-    _serport(NULL),
+    _serport(nullptr),
     _name(name),
     _rx_linbuf_ctr(0),
     _rxbuf_head(0),
@@ -152,13 +152,13 @@ QList<CanTiming> SLCANInterface::getAvailableBitrates()
     }
 
     unsigned i=0;
-    foreach (unsigned br, bitrates)
+    for (unsigned br : bitrates)
     {
         for (unsigned br_fd : bitrates_fd)
         {
-            foreach (unsigned sp, samplePoints)
+            for (unsigned sp : samplePoints)
             {
-                foreach (unsigned sp_fd, samplePoints_fd)
+                for (unsigned sp_fd : samplePoints_fd)
                 {
                     retval << CanTiming(i++, br, br_fd, sp,sp_fd);
                 }
@@ -297,7 +297,7 @@ QString SLCANInterface::getVersion()
 
 void SLCANInterface::open()
 {
-    if(_serport != NULL)
+    if(_serport != nullptr)
     {
         delete _serport;
     }

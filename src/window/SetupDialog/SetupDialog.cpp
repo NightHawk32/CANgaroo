@@ -248,7 +248,7 @@ void SetupDialog::addInterface(const QModelIndex &parent)
     SelectCanInterfacesDialog dlg(0);
     CanInterfaceIdList list;
     if (dlg.selectInterfaces(*_backend, list, _currentNetwork->getReferencedCanInterfaces())) {
-        foreach (CanInterfaceId intf, list) {
+        for (auto intf : list) {
             model->addInterface(parent, intf);
         }
     }
@@ -293,7 +293,7 @@ void SetupDialog::reloadCanDbs(const QModelIndex &index)
             SetupDialogTreeItem *child = root->child(i);
             if (child->getType() == SetupDialogTreeItem::type_candb) {
                  // Find the updated pCanDb in the network by path
-                 foreach (pCanDb updatedDb, root->network->_canDbs) {
+                 for (const auto &updatedDb : root->network->_canDbs) {
                      if (updatedDb->getPath() == child->candb->getPath()) {
                          child->candb = updatedDb;
                          break;
@@ -315,7 +315,7 @@ void SetupDialog::addCanDb(const QModelIndex &parent, const QString &filename)
 {
     // Check for duplicates
     if (_currentNetwork) {
-        foreach (pCanDb existingDb, _currentNetwork->_canDbs) {
+        for (const auto &existingDb : _currentNetwork->_canDbs) {
             if (existingDb->getPath() == filename) {
                 QMessageBox::StandardButton reply;
                 reply = QMessageBox::question(this, tr("Duplicate DBC"),

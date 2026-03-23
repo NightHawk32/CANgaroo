@@ -27,7 +27,7 @@
 #include <QTimer>
 
 class CANBlasterDriver;
-typedef struct {
+struct can_config_t {
     bool supports_canfd;
     bool supports_timing;
     uint32_t state;
@@ -35,9 +35,9 @@ typedef struct {
     uint32_t sample_point;
     uint32_t ctrl_mode;
     uint32_t restart_ms;
-} can_config_t;
+};
 
-typedef struct {
+struct can_status_t {
     uint32_t can_state;
 
     uint64_t rx_count;
@@ -47,7 +47,7 @@ typedef struct {
     uint64_t tx_count;
     int tx_errors;
     uint64_t tx_dropped;
-} can_status_t;
+};
 
 class CANBlasterInterface: public CanInterface {
     Q_OBJECT
@@ -92,11 +92,11 @@ public:
     int getIfIndex();
 
 private:
-    typedef enum {
+    enum ts_mode_t {
         ts_mode_SIOCSHWTSTAMP,
         ts_mode_SIOCGSTAMPNS,
         ts_mode_SIOCGSTAMP
-    } ts_mode_t;
+    };
 
     int _idx;
     bool _isOpen;
@@ -136,7 +136,7 @@ private:
  * bit 30	: remote transmission request flag (1 = rtr frame)
  * bit 31	: frame format flag (0 = standard 11 bit, 1 = extended 29 bit)
  */
-typedef uint32_t canid_t;
+using canid_t = uint32_t;
 
 #define CAN_SFF_ID_BITS		11
 #define CAN_EFF_ID_BITS		29
@@ -147,7 +147,7 @@ typedef uint32_t canid_t;
  * bit 0-28	: error class mask (see include/uapi/linux/can/error.h)
  * bit 29-31	: set to zero
  */
-typedef uint32_t can_err_mask_t;
+using can_err_mask_t = uint32_t;
 
 /* CAN payload length and DLC definitions according to ISO 11898-1 */
 #define CAN_MAX_DLC 8

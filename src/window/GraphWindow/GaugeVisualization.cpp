@@ -65,7 +65,7 @@ void GaugeWidget::paintEvent(QPaintEvent *)
     // Active Radial Bar (The colored arc)
     double range = _max - _min;
     double ratio = (_value - _min) / range;
-    int span = (int)(ratio * 240 * 16);
+    int span = static_cast<int>(ratio * 240 * 16);
     
     painter.setPen(QPen(_color, 18, Qt::SolidLine, Qt::RoundCap));
     // Draw from left (210 degrees) clockwise

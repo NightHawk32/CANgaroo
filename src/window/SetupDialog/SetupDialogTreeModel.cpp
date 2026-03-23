@@ -238,11 +238,11 @@ SetupDialogTreeItem *SetupDialogTreeModel::loadNetwork(SetupDialogTreeItem *root
     item_candb_root->network = &network;
     item_network->appendChild(item_candb_root);
 
-    foreach (MeasurementInterface *intf, network.interfaces()) {
+    for (auto *intf : network.interfaces()) {
         loadMeasurementInterface(*item_intf_root, intf);
     }
 
-    foreach (pCanDb candb, network._canDbs) {
+    for (auto candb : network._canDbs) {
         loadCanDb(*item_candb_root, candb);
     }
 
@@ -255,7 +255,7 @@ void SetupDialogTreeModel::load(MeasurementSetup &setup)
     SetupDialogTreeItem *_newRoot = new SetupDialogTreeItem(SetupDialogTreeItem::type_root, 0);
     _newRoot->setup = &setup;
 
-    foreach (MeasurementNetwork *network, setup.getNetworks()) {
+    for (auto *network : setup.getNetworks()) {
         loadNetwork(_newRoot, *network);
     }
 

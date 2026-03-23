@@ -69,7 +69,7 @@ void ConditionalLoggingManager::processMessage(const CanMessage &msg)
     if (!dbmsg) return;
 
     bool relevantUpdate = false;
-    foreach (CanDbSignal *signal, dbmsg->getSignals()) {
+    for (auto *signal : dbmsg->getSignals()) {
         if (signal->isPresentInMessage(msg)) {
             double value = signal->extractPhysicalFromMessage(msg);
             _signalValues[signal] = value;

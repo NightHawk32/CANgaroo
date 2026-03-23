@@ -48,7 +48,7 @@ void MeasurementSetup::clear()
 void MeasurementSetup::cloneFrom(MeasurementSetup &origin)
 {
     clear();
-    foreach (MeasurementNetwork *network, origin._networks) {
+    for (auto *network : origin._networks) {
         MeasurementNetwork *network_copy = new MeasurementNetwork();
         network_copy->cloneFrom(*network);
         _networks.append(network_copy);
@@ -58,7 +58,7 @@ void MeasurementSetup::cloneFrom(MeasurementSetup &origin)
 
 bool MeasurementSetup::saveXML(Backend &backend, QDomDocument &xml, QDomElement &root)
 {
-    foreach (MeasurementNetwork *network, _networks) {
+    for (auto *network : _networks) {
         QDomElement networkNode = xml.createElement("network");
         if (!network->saveXML(backend, xml, networkNode)) {
             return false;
@@ -104,8 +104,8 @@ CanDbMessage *MeasurementSetup::findDbMessage(const CanMessage &msg) const
 {
     CanDbMessage *result = 0;
 
-    foreach (MeasurementNetwork *network, _networks) {
-        foreach (pCanDb db, network->_canDbs) {
+    for (auto *network : _networks) {
+        for (const auto &db : network->_canDbs) {
             result = db->getMessageById(msg.getRawId());
             if (result != 0) {
                 return result;
@@ -132,7 +132,7 @@ MeasurementNetwork *MeasurementSetup::getNetwork(int index) const
 
 MeasurementNetwork *MeasurementSetup::getNetworkByName(QString name) const
 {
-    foreach (MeasurementNetwork *network, _networks) {
+    for (auto *network : _networks) {
         if (network->name() == name) {
             return network;
         }

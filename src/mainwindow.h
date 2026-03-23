@@ -88,6 +88,7 @@ private slots:
     void on_action_TraceClear_triggered();
     void on_actionCan_Status_View_triggered();
     void on_actionGenerator_View_triggered();
+    void on_actionScript_View_triggered();
     void showThemeDialog();
 
     void switchLanguage(QAction *action);

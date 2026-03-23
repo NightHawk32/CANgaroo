@@ -2,6 +2,7 @@
 
 #include <core/ConfigurableWidget.h>
 #include <core/Backend.h>
+#include <QDateTime>
 
 class PythonEngine;
 class QPlainTextEdit;
@@ -50,6 +51,8 @@ private:
     QPushButton *_btnSave;
     QCheckBox *_chkAutoRun;
     QString _scriptFilePath;
+    QDateTime _lastLoadTime;
 
     void loadScriptFile(const QString &filename);
+    void reloadIfModified();
 };

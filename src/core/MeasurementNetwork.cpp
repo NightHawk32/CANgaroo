@@ -32,7 +32,7 @@ MeasurementNetwork::MeasurementNetwork()
 void MeasurementNetwork::cloneFrom(MeasurementNetwork &origin)
 {
     _name = origin._name;
-    foreach (MeasurementInterface *omi, origin._interfaces) {
+    for (auto *omi : origin._interfaces) {
         MeasurementInterface *mi = new MeasurementInterface();
         mi->cloneFrom(*omi);
         _interfaces.append(mi);
@@ -68,7 +68,7 @@ MeasurementInterface *MeasurementNetwork::addCanInterface(CanInterfaceId canif)
 CanInterfaceIdList MeasurementNetwork::getReferencedCanInterfaces()
 {
     CanInterfaceIdList list;
-    foreach (MeasurementInterface *mi, _interfaces) {
+    for (auto *mi : _interfaces) {
         list << mi->canInterface();
     }
     return list;
@@ -113,7 +113,7 @@ bool MeasurementNetwork::saveXML(Backend &backend, QDomDocument &xml, QDomElemen
     root.setAttribute("name", _name);
 
     QDomElement interfacesNode = xml.createElement("interfaces");
-    foreach (MeasurementInterface *intf, _interfaces) {
+    for (auto *intf : _interfaces) {
         QDomElement intfNode = xml.createElement("interface");
         if (!intf->saveXML(backend, xml, intfNode)) {
             return false;
@@ -123,7 +123,7 @@ bool MeasurementNetwork::saveXML(Backend &backend, QDomDocument &xml, QDomElemen
     root.appendChild(interfacesNode);
 
     QDomElement candbsNode = xml.createElement("databases");
-    foreach (pCanDb candb, _canDbs) {
+    for (const auto &candb : _canDbs) {
         QDomElement dbNode = xml.createElement("database");
         if (!candb->saveXML(backend, xml, dbNode)) {
             return false;

@@ -28,8 +28,8 @@
 class Backend;
 class CanInterface;
 
-typedef uint16_t CanInterfaceId;
-typedef QList<uint16_t> CanInterfaceIdList;
+using CanInterfaceId = uint16_t;
+using CanInterfaceIdList = QList<uint16_t>;
 
 class CanDriver {
 public:

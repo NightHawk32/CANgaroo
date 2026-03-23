@@ -83,7 +83,7 @@ void AggregatedTraceViewModel::onUpdateModel()
 
     if (!_pendingMessageInserts.isEmpty()) {
         beginInsertRows(QModelIndex(), _rootItem->childCount(), _rootItem->childCount()+_pendingMessageInserts.size()-1);
-        foreach (CanMessage msg, _pendingMessageInserts) {
+        for (const auto &msg : _pendingMessageInserts) {
             createItem(msg);
         }
         endInsertRows();
@@ -92,7 +92,7 @@ void AggregatedTraceViewModel::onUpdateModel()
 
     if (!_pendingMessageUpdates.isEmpty()) {
         QSet<int> updatedRows;
-        foreach (CanMessage msg, _pendingMessageUpdates) {
+        for (const auto &msg : _pendingMessageUpdates) {
             AggregatedTraceViewItem *item = _map.value(makeUniqueKey(msg));
             if (item) {
                 updateItem(msg);
@@ -100,7 +100,7 @@ void AggregatedTraceViewModel::onUpdateModel()
             }
         }
 
-        foreach (int r, updatedRows) {
+        for (auto r : updatedRows) {
             AggregatedTraceViewItem *item = _rootItem->child(r);
             if (item) {
                 QModelIndex msgIdx = createIndex(r, 0, item);
@@ -165,13 +165,13 @@ void AggregatedTraceViewModel::afterClear()
 
 AggregatedTraceViewModel::unique_key_t AggregatedTraceViewModel::makeUniqueKey(const CanMessage &msg) const
 {
-    return ((uint64_t)msg.getInterfaceId() << 32) | (uint64_t)msg.isRX() << 31 | msg.getRawId();
+    return static_cast<uint64_t>(msg.getInterfaceId()) << 32 | static_cast<uint64_t>(msg.isRX()) << 31 | msg.getRawId();
 }
 
 double AggregatedTraceViewModel::getTimeDiff(const timeval t1, const timeval t2) const
 {
     double diff = t2.tv_sec - t1.tv_sec;
-    diff += ((double)(t2.tv_usec - t1.tv_usec)) / 1000000;
+    diff += static_cast<double>(t2.tv_usec - t1.tv_usec) / 1000000;
     return diff;
 }
 
@@ -237,7 +237,7 @@ QVariant AggregatedTraceViewModel::data_DisplayRole(const QModelIndex &index, in
     if (!item) { return QVariant(); }
 
     if (index.column() == column_index) {
-        return (item->parent() == _rootItem) ? QVariant((uint32_t)(index.row() + 1)) : QVariant();
+        return (item->parent() == _rootItem) ? QVariant(static_cast<uint32_t>(index.row() + 1)) : QVariant();
     }
 
     if (item->parent() == _rootItem) { // CanMessage row

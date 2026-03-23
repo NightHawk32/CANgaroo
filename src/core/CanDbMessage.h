@@ -29,7 +29,7 @@
 class CanDbNode;
 class CanDbSignal;
 
-typedef QList<CanDbSignal*> CanDbSignalList;
+using CanDbSignalList = QList<CanDbSignal*>;
 
 class CanDbMessage
 {

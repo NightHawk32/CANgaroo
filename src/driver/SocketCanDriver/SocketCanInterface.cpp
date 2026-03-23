@@ -88,8 +88,8 @@ QList<CanTiming> SocketCanInterface::getAvailableBitrates()
     QList<unsigned> samplePoints({500, 625, 750, 875});
 
     unsigned i=0;
-    foreach (unsigned br, bitrates) {
-        foreach (unsigned sp, samplePoints) {
+    for (unsigned br : bitrates) {
+        for (unsigned sp : samplePoints) {
             retval << CanTiming(i++, br, 0, sp);
         }
     }
@@ -97,8 +97,8 @@ QList<CanTiming> SocketCanInterface::getAvailableBitrates()
     // Add CAN FD Data Bitrates if supported
     if (supportsCanFD()) {
         QList<unsigned> fdBitrates({500000, 1000000, 2000000, 4000000, 5000000, 8000000});
-        foreach (unsigned br, bitrates) {
-            foreach (unsigned fdbr, fdBitrates) {
+        for (unsigned br : bitrates) {
+            for (unsigned fdbr : fdBitrates) {
                 // For simplicity, we add FD variants of common arbitration bitrates
                 retval << CanTiming(i++, br, fdbr, 800, 800);
             }
@@ -122,13 +122,13 @@ QString SocketCanInterface::buildIpRouteCmd(const MeasurementInterface &mi)
     cmd.append("bitrate");
     cmd.append(QString().number(mi.bitrate()));
     cmd.append("sample-point");
-    cmd.append(QString().number((float)mi.samplePoint()/1000.0, 'f', 3));
+    cmd.append(QString().number(static_cast<float>(mi.samplePoint())/1000.0, 'f', 3));
 
     if (mi.isCanFD()) {
         cmd.append("dbitrate");
         cmd.append(QString().number(mi.fdBitrate()));
         cmd.append("dsample-point");
-        cmd.append(QString().number((float)mi.fdSamplePoint()/1000.0, 'f', 3));
+        cmd.append(QString().number(static_cast<float>(mi.fdSamplePoint())/1000.0, 'f', 3));
         cmd.append("fd");
         cmd.append("on");
     }
@@ -175,9 +175,9 @@ void SocketCanInterface::applyConfig(const MeasurementInterface &mi)
         cmd = "ip";
         args << "link" << "set" << getName() << "up" << "type" << "can";
         args << "bitrate" << QString::number(mi.bitrate());
-        args << "sample-point" << QString::number((float)mi.samplePoint()/1000.0, 'f', 3);
+        args << "sample-point" << QString::number(static_cast<float>(mi.samplePoint())/1000.0, 'f', 3);
         args << "dbitrate" << QString::number(mi.fdBitrate());
-        args << "dsample-point" << QString::number((float)mi.fdSamplePoint()/1000.0, 'f', 3);
+        args << "dsample-point" << QString::number(static_cast<float>(mi.fdSamplePoint())/1000.0, 'f', 3);
         args << "fd" << "on";
         
         if (mi.doAutoRestart()) {
@@ -224,7 +224,7 @@ bool SocketCanInterface::updateStatus()
     bool retval = false;
 
     struct nl_sock *sock = nl_socket_alloc();
-    struct nl_cache *cache = NULL;
+    struct nl_cache *cache = nullptr;
     struct rtnl_link *link;
     uint32_t state;
 
@@ -267,7 +267,7 @@ bool SocketCanInterface::readConfig()
     bool retval = false;
 
     struct nl_sock *sock = nl_socket_alloc();
-    struct nl_cache *cache = NULL;
+    struct nl_cache *cache = nullptr;
     struct rtnl_link *link;
 
     nl_connect(sock, NETLINK_ROUTE);
@@ -328,8 +328,8 @@ unsigned SocketCanInterface::getBitrate() {
 
     if (br == 0) {
         // Fallback to setup bitrate
-        foreach (MeasurementNetwork *network, Backend::instance().getSetup().getNetworks()) {
-            foreach (MeasurementInterface *mi, network->interfaces()) {
+        for (auto *network : Backend::instance().getSetup().getNetworks()) {
+            for (auto *mi : network->interfaces()) {
                 if (mi->canInterface() == getId()) {
                     unsigned fallbackBr = mi->bitrate();
                     log_info(QString("SocketCanInterface %1: getBitrate() fallback to %2 (ID match %3)").arg(_name).arg(fallbackBr).arg(getId()));
@@ -555,7 +555,7 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
 
     CanMessage msg;
 
-    int rv = select(_fd+1, &fdset, NULL, NULL, &timeout);
+    int rv = select(_fd+1, &fdset, nullptr, nullptr, &timeout);
     if (rv > 0) {
         int nbytes = ::read(_fd, &frame, sizeof(struct canfd_frame));
         if (nbytes < 0) {

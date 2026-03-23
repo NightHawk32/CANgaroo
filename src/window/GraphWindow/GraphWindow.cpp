@@ -408,7 +408,7 @@ void GraphWindow::onMouseMove(QMouseEvent *event)
 
     // Absolute Timestamp
     uint64_t startUsecs = _backend.getUsecsAtMeasurementStart();
-    uint64_t currentUsecs = startUsecs + (uint64_t)(t * 1000000.0);
+    uint64_t currentUsecs = startUsecs + static_cast<uint64_t>(t * 1000000.0);
     QDateTime dt = QDateTime::fromMSecsSinceEpoch(currentUsecs / 1000);
     QString timeStr = dt.toString("yyyy-MM-dd HH:mm:ss.zzz t");
 

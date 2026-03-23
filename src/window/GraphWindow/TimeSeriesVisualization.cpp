@@ -136,7 +136,7 @@ void TimeSeriesVisualization::addMessage(const CanMessage &msg)
         _isUpdatingRange = true;
         QAbstractAxis *axisX = _chart->axes(Qt::Horizontal).first();
         if (_windowDuration > 0) {
-            double windowSize = (double)_windowDuration;
+            double windowSize = static_cast<double>(_windowDuration);
             if (t > windowSize) {
                 // strict sliding: Tail moves with Head
                 axisX->setRange(t - windowSize, t);
@@ -170,7 +170,7 @@ void TimeSeriesVisualization::onActivated()
     _isUpdatingRange = true;
     QAbstractAxis *axisX = _chart->axes(Qt::Horizontal).first();
     if (_windowDuration > 0) {
-        double windowSize = (double)_windowDuration;
+        double windowSize = static_cast<double>(_windowDuration);
         if (t > windowSize) {
             axisX->setRange(t - windowSize, t);
         } else {
@@ -209,8 +209,8 @@ void TimeSeriesVisualization::updateYAxisRange()
     for (auto series : _seriesMap.values()) {
         for (const QPointF &p : series->points()) {
             if (p.x() >= minX && p.x() <= maxX) {
-                minY = qMin(minY, (double)p.y());
-                maxY = qMax(maxY, (double)p.y());
+                minY = qMin(minY, static_cast<double>(p.y()));
+                maxY = qMax(maxY, static_cast<double>(p.y()));
                 hasData = true;
             }
         }

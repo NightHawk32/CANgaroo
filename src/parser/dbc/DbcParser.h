@@ -36,13 +36,13 @@ class DbcParser
 {
 
 public:
-    typedef QList<DbcToken *> DbcTokenList;
+    using DbcTokenList = QList<DbcToken *>;
 
-    typedef enum {
+    enum error_t {
         err_ok,
         err_cannot_open_file,
         err_tokenize_error,
-    } error_t;
+    };
 
 public:
     DbcParser();

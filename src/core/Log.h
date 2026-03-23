@@ -23,14 +23,14 @@
 
 #include <QDateTime>
 
-typedef enum log_level {
+enum log_level_t {
     log_level_debug,
     log_level_info,
     log_level_warning,
     log_level_error,
     log_level_critical,
     log_level_fatal
-} log_level_t;
+};
 
 void log_msg(const QDateTime dt, const log_level_t level, const QString msg);
 void log_msg(const log_level_t level, const QString msg);

@@ -36,9 +36,9 @@ class Backend;
 class CanDb;
 class CanDbMessage;
 
-typedef QMap<QString,CanDbNode*> CanDbNodeMap;
-typedef QMap<uint32_t, CanDbMessage*> CanDbMessageList;
-typedef QSharedPointer<CanDb> pCanDb;
+using CanDbNodeMap = QMap<QString, CanDbNode*>;
+using CanDbMessageList = QMap<uint32_t, CanDbMessage*>;
+using pCanDb = QSharedPointer<CanDb>;
 
 class CanDb
 {

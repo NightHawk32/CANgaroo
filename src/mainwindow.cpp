@@ -85,6 +85,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     connect(ui->actionSetup, SIGNAL(triggered()), this, SLOT(showSetupDialog()));
     connect(ui->actionTransmit_View, SIGNAL(triggered()), this, SLOT(addRawTxWidget()));
     connect(ui->actionGenerator_View, SIGNAL(triggered()), this, SLOT(on_actionGenerator_View_triggered()));
+    connect(ui->actionScript_View, &QAction::triggered, this, &MainWindow::on_actionScript_View_triggered);
 
     QAction *actionStandaloneGraph = new QAction(tr("Standalone Graph"), this);
     actionStandaloneGraph->setShortcut(QKeySequence("Ctrl+Shift+B"));
@@ -210,27 +211,33 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
         "  background: #0078d7;"
         "}"
         "QPushButton#btnStartMeasurement {"
-        "  background-color: #28a745;"
+        "  background-color: #218838;"
         "  color: white;"
         "  border-radius: 12px;"
         "  padding: 5px 15px;"
         "  font-weight: bold;"
         "}"
         "QPushButton#btnStartMeasurement:hover {"
-        "  background-color: #218838;"
+        "  background-color: #28a745;"
+        "}"
+        "QPushButton#btnStartMeasurement:pressed {"
+        "  background-color: #196b2c;"
         "}"
         "QPushButton#btnStartMeasurement:disabled {"
         "  background-color: #94d3a2;"
         "}"
         "QPushButton#btnStopMeasurement {"
-        "  background-color: #dc3545;"
+        "  background-color: #c82333;"
         "  color: white;"
         "  border-radius: 12px;"
         "  padding: 5px 15px;"
         "  font-weight: bold;"
         "}"
         "QPushButton#btnStopMeasurement:hover {"
-        "  background-color: #c82333;"
+        "  background-color: #dc3545;"
+        "}"
+        "QPushButton#btnStopMeasurement:pressed {"
+        "  background-color: #a71d2a;"
         "}"
         "QPushButton#btnStopMeasurement:disabled {"
         "  background-color: #f1aeb5;"
@@ -780,20 +787,22 @@ QMainWindow *MainWindow::createTraceWindow(QString title)
     mm->splitDockWidget(dockRawTxWidget,dockLogWidget,Qt::Horizontal);
     mm->splitDockWidget(dockGeneratorWidget,dockLogWidget,Qt::Horizontal);
     mm->splitDockWidget(dockGraphWidget,dockLogWidget,Qt::Horizontal);
+    mm->splitDockWidget(dockScriptWidget,dockLogWidget,Qt::Horizontal);
     mm->tabifyDockWidget(dockGeneratorWidget, dockRawTxWidget); // Generator first, Message next
     mm->tabifyDockWidget(dockRawTxWidget, dockGraphWidget);
+    mm->tabifyDockWidget(dockGraphWidget, dockScriptWidget);
     mm->splitDockWidget(dockStatusWidget,dockLogWidget,Qt::Horizontal);
     mm->tabifyDockWidget(dockStatusWidget, dockLogWidget); // Status first, Log next
 
     // Use QTimer to resize docks and ensure correct focus/visibility after layout is complete
-    QTimer::singleShot(0, mm, [mm, dockLogWidget, dockRawTxWidget, dockGeneratorWidget, dockStatusWidget]() {
+    QTimer::singleShot(0, mm, [mm, dockLogWidget, dockRawTxWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget]() {
         dockStatusWidget->show();
         dockStatusWidget->raise();
         dockGeneratorWidget->show();
         dockGeneratorWidget->raise();
 
-        mm->resizeDocks({dockLogWidget, dockRawTxWidget, dockGeneratorWidget, dockStatusWidget}, {600, 600, 600, 600}, Qt::Vertical);
-        mm->resizeDocks({dockLogWidget, dockRawTxWidget, dockGeneratorWidget, dockStatusWidget}, {1200, 1200, 1200, 1200}, Qt::Horizontal);
+        mm->resizeDocks({dockLogWidget, dockRawTxWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget}, {600, 600, 600, 600, 600}, Qt::Vertical);
+        mm->resizeDocks({dockLogWidget, dockRawTxWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget}, {1200, 1200, 1200, 1200, 1200}, Qt::Horizontal);
     });
 
     ui->mainTabs->setCurrentWidget(mm);
@@ -1027,7 +1036,7 @@ void MainWindow::stopMeasurement()
 {
     backend().stopMeasurement();
 
-    foreach (TxGeneratorWindow *gen, findChildren<TxGeneratorWindow*>())
+    for (auto *gen : findChildren<TxGeneratorWindow*>())
     {
         gen->stopAll();
     }
@@ -1097,6 +1106,11 @@ void MainWindow::on_action_WorkspaceNew_triggered()
 void MainWindow::on_actionGenerator_View_triggered()
 {
     addTxGeneratorWidget();
+}
+
+void MainWindow::on_actionScript_View_triggered()
+{
+    addScriptWidget();
 }
 
 void MainWindow::switchLanguage(QAction *action)
@@ -1215,7 +1229,7 @@ void MainWindow::exportFullTrace()
 
         QJsonObject m;
         m["timestamp"] = msg->getFloatTimestamp();
-        m["raw_id"] = (int)msg->getRawId();
+        m["raw_id"] = static_cast<int>(msg->getRawId());
         m["id"] = msg->getIdString();
         m["dlc"] = msg->getLength();
         m["data"] = msg->getDataHexString();
@@ -1306,7 +1320,7 @@ void MainWindow::importFullTrace()
 
         double ts = m["timestamp"].toDouble();
         struct timeval tv;
-        tv.tv_sec  = (time_t)ts;
+        tv.tv_sec  = static_cast<time_t>(ts);
         tv.tv_usec = (ts - tv.tv_sec) * 1e6;
         msg.setTimestamp(tv);
 
@@ -1315,7 +1329,7 @@ void MainWindow::importFullTrace()
 
         QByteArray ba = QByteArray::fromHex(m["data"].toString().toUtf8());
         for (int b = 0; b < ba.size(); b++)
-            msg.setByte(b, (uint8_t)ba[b]);
+            msg.setByte(b, static_cast<uint8_t>(ba[b]));
 
         msg.setRX(m["direction"].toString() == "RX");
 

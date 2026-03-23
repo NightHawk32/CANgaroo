@@ -20,7 +20,7 @@ void testUdsSingleFrame() {
     assert(out.id == 0x10);
     assert(out.type == MessageType::Request);
     assert(out.payload.size() == 2);
-    assert((uint8_t)out.payload[0] == 0x10);
+    assert(static_cast<uint8_t>(out.payload[0]) == 0x10);
     std::cout << "testUdsSingleFrame passed" << std::endl;
 }
 

@@ -107,7 +107,7 @@ void CanTrace::flushQueue()
             CanMessage &msg = _data[i];
             CanDbMessage *dbmsg = setup.findDbMessage(msg);
             if (dbmsg && dbmsg->getMuxer()) {
-                foreach (CanDbSignal *signal, dbmsg->getSignals()) {
+                for (auto *signal : dbmsg->getSignals()) {
                     if (signal->isMuxed() && signal->isPresentInMessage(msg)) {
                         _muxCache[signal] = signal->extractRawDataFromMessage(msg);
                     }

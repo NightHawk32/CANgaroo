@@ -36,14 +36,14 @@ class SetupDialogTreeItem
 {
 public:
 
-    typedef enum {
+    enum item_type {
         type_root,
         type_network,
         type_interface_root,
         type_interface,
         type_candb_root,
         type_candb,
-    } item_type;
+    };
 
 public:
     SetupDialogTreeItem(item_type type, Backend *backend, SetupDialogTreeItem *parent=0);

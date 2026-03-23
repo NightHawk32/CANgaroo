@@ -43,10 +43,10 @@ class TraceWindow : public ConfigurableWidget
     Q_OBJECT
 
 public:
-    typedef enum mode {
+    enum mode_t {
         mode_aggregated,
         mode_unified
-    } mode_t;
+    };
 
     explicit TraceWindow(QWidget *parent, Backend &backend);
     ~TraceWindow();

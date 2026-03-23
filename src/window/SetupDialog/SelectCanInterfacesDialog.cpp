@@ -41,14 +41,14 @@ bool SelectCanInterfacesDialog::selectInterfaces(Backend &backend, CanInterfaceI
     ui->treeWidget->clear();
 
     CanInterfaceIdList allInterfaces;
-    foreach (CanInterfaceId intf, backend.getInterfaceList()) {
+    for (auto intf : backend.getInterfaceList()) {
         if (!excludeInterfaces.contains(intf)) {
             allInterfaces.append(intf);
         }
     }
 
 
-    foreach (CanInterfaceId intf, allInterfaces) {
+    for (auto intf : allInterfaces) {
         QTreeWidgetItem *treeItem = new QTreeWidgetItem(ui->treeWidget);
         treeItem->setText(0, backend.getInterfaceName(intf));
         treeItem->setText(1, backend.getDriverName(intf));
@@ -57,7 +57,7 @@ bool SelectCanInterfacesDialog::selectInterfaces(Backend &backend, CanInterfaceI
 
     if (exec()==QDialog::Accepted) {
         selectedInterfaces.clear();
-        foreach (QModelIndex idx, ui->treeWidget->selectionModel()->selectedRows()) {
+        for (const auto &idx : ui->treeWidget->selectionModel()->selectedRows()) {
             if (idx.isValid()) {
                 selectedInterfaces.append(allInterfaces[idx.row()]);
             }

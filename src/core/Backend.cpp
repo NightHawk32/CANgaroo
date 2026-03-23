@@ -79,8 +79,8 @@ bool Backend::startMeasurement()
     _measurementStartTime = QDateTime::currentMSecsSinceEpoch();
     _timerSinceStart.start();
 
-    foreach (MeasurementNetwork *network, _setup.getNetworks()) {
-        foreach (MeasurementInterface *mi, network->interfaces()) {
+    for (auto *network : _setup.getNetworks()) {
+        for (auto *mi : network->interfaces()) {
 
             CanInterface *intf = getInterfaceById(mi->canInterface());
             if (intf) {
@@ -102,11 +102,11 @@ bool Backend::startMeasurement()
 bool Backend::stopMeasurement()
 {
     if (_measurementRunning) {
-        foreach (CanListener *listener, _listeners) {
+        for (auto *listener : _listeners) {
             listener->requestStop();
         }
 
-        foreach (CanListener *listener, _listeners) {
+        for (auto *listener : _listeners) {
             log_info(QString(tr("Closing interface: %1")).arg(getInterfaceName(listener->getInterfaceId())));
             listener->waitFinish();
         }
@@ -133,9 +133,9 @@ void Backend::loadDefaultSetup(MeasurementSetup &setup)
     setup.clear();
     int i = 1;
 
-    foreach (CanDriver *driver, _drivers) {
+    for (auto *driver : _drivers) {
         driver->update();
-        foreach (CanInterfaceId intf, driver->getInterfaceIds()) {
+        for (auto intf : driver->getInterfaceIds()) {
             MeasurementNetwork *network = setup.createNetwork();
             network->setName(tr("Network ") + QString("%1").arg(i++));
 
@@ -167,7 +167,7 @@ void Backend::setSetup(MeasurementSetup &new_setup)
 
 double Backend::currentTimeStamp() const
 {
-    return ((double)QDateTime::currentMSecsSinceEpoch()) / 1000;
+    return static_cast<double>(QDateTime::currentMSecsSinceEpoch()) / 1000;
 }
 
 CanTrace *Backend::getTrace()
@@ -189,8 +189,8 @@ CanDbMessage *Backend::findDbMessage(const CanMessage &msg) const
 CanInterfaceIdList Backend::getInterfaceList()
 {
     CanInterfaceIdList result;
-    foreach (CanDriver *driver, _drivers) {
-        foreach (CanInterfaceId id, driver->getInterfaceIds()) {
+    for (auto *driver : _drivers) {
+        for (auto id : driver->getInterfaceIds()) {
             result.append(id);
         }
     }
@@ -231,7 +231,7 @@ QString Backend::getDriverName(CanInterfaceId id)
 
 CanDriver *Backend::getDriverByName(QString driverName)
 {
-    foreach (CanDriver *driver, _drivers) {
+    for (auto *driver : _drivers) {
         if (driver->getName()==driverName) {
             return driver;
         }
@@ -287,7 +287,7 @@ LogModel &Backend::getLogModel() const
 
 double Backend::getTimestampAtMeasurementStart() const
 {
-    return (double)_measurementStartTime / 1000.0;
+    return static_cast<double>(_measurementStartTime) / 1000.0;
 }
 
 uint64_t Backend::getUsecsAtMeasurementStart() const

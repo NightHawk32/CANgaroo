@@ -189,7 +189,7 @@ QList<CanTiming> CandleApiInterface::getAvailableBitrates()
     candle_capability_t caps;
     if (candle_channel_get_capabilities(_handle, 0, &caps)) {
         int i = 0;
-        foreach (const CandleApiTiming t, _timings) {
+        for (const auto &t : _timings) {
             if (t.getBaseClk() == caps.fclk_can) {
                 retval << CanTiming(i++, t.getBitrate(), 0, t.getSamplePoint());
             }
@@ -206,7 +206,7 @@ bool CandleApiInterface::setBitTiming(uint32_t bitrate, uint32_t samplePoint)
         return false;
     }
 
-    foreach (const CandleApiTiming t, _timings) {
+    for (const auto &t : _timings) {
         if ( (t.getBaseClk() == caps.fclk_can)
           && (t.getBitrate()==bitrate)
           && (t.getSamplePoint()==samplePoint) )

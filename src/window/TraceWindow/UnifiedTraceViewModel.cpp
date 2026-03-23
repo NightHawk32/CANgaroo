@@ -430,10 +430,10 @@ QString UnifiedTraceViewModel::formatUnifiedTimestamp(uint64_t ts, uint64_t prev
         case timestamp_mode_absolute:
             return QDateTime::fromMSecsSinceEpoch(ts / 1000).toString("HH:mm:ss.zzz");
         case timestamp_mode_relative:
-            val = (double)(ts - (uint64_t)(backend()->getTimestampAtMeasurementStart() * 1000000.0)) / 1000000.0;
+            val = static_cast<double>(ts - static_cast<uint64_t>(backend()->getTimestampAtMeasurementStart() * 1000000.0)) / 1000000.0;
             break;
         case timestamp_mode_delta:
-            val = (prevTs > 0) ? (double)(ts - prevTs) / 1000000.0 : 0.0;
+            val = (prevTs > 0) ? static_cast<double>(ts - prevTs) / 1000000.0 : 0.0;
             break;
         default:
             return "0.000000";

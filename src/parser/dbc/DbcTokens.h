@@ -25,7 +25,7 @@
 #include <QChar>
 #include <QRegularExpression>
 
-typedef enum {
+enum dbc_token_type_t {
     dbc_tok_whitespace = 1,
     dbc_tok_identifier = 2,
     dbc_tok_string = 4,
@@ -43,7 +43,7 @@ typedef enum {
     dbc_tok_minus = 16384,
 
     dbc_tok_ALL = 0xFFFFFFFF
-} dbc_token_type_t;
+};
 
 class DbcToken {
 public:

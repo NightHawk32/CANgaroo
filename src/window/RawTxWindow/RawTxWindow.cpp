@@ -306,7 +306,7 @@ void RawTxWindow::updateCapabilities()
     // By default BRS should be available
     CanInterface *intf = _backend.getInterfaceById(_slavedInterfaceId);
 
-    if(intf == NULL)
+    if(intf == nullptr)
     {
         return;
     }
@@ -480,79 +480,79 @@ void RawTxWindow::reflash_can_msg()
     uint8_t data_int[64];
     int data_ctr = 0;
 
-    data_int[data_ctr++] = ui->fieldByte0_0->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte1_0->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte2_0->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte3_0->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte4_0->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte5_0->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte6_0->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte7_0->text().toUpper().toInt(NULL, 16);
+    data_int[data_ctr++] = ui->fieldByte0_0->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte1_0->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte2_0->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte3_0->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte4_0->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte5_0->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte6_0->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte7_0->text().toUpper().toInt(nullptr, 16);
 
-    data_int[data_ctr++] = ui->fieldByte0_1->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte1_1->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte2_1->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte3_1->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte4_1->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte5_1->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte6_1->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte7_1->text().toUpper().toInt(NULL, 16);
+    data_int[data_ctr++] = ui->fieldByte0_1->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte1_1->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte2_1->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte3_1->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte4_1->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte5_1->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte6_1->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte7_1->text().toUpper().toInt(nullptr, 16);
 
-    data_int[data_ctr++] = ui->fieldByte0_2->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte1_2->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte2_2->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte3_2->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte4_2->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte5_2->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte6_2->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte7_2->text().toUpper().toInt(NULL, 16);
+    data_int[data_ctr++] = ui->fieldByte0_2->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte1_2->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte2_2->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte3_2->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte4_2->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte5_2->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte6_2->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte7_2->text().toUpper().toInt(nullptr, 16);
 
-    data_int[data_ctr++] = ui->fieldByte0_3->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte1_3->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte2_3->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte3_3->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte4_3->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte5_3->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte6_3->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte7_3->text().toUpper().toInt(NULL, 16);
+    data_int[data_ctr++] = ui->fieldByte0_3->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte1_3->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte2_3->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte3_3->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte4_3->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte5_3->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte6_3->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte7_3->text().toUpper().toInt(nullptr, 16);
 
-    data_int[data_ctr++] = ui->fieldByte0_4->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte1_4->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte2_4->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte3_4->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte4_4->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte5_4->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte6_4->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte7_4->text().toUpper().toInt(NULL, 16);
+    data_int[data_ctr++] = ui->fieldByte0_4->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte1_4->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte2_4->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte3_4->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte4_4->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte5_4->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte6_4->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte7_4->text().toUpper().toInt(nullptr, 16);
 
-    data_int[data_ctr++] = ui->fieldByte0_5->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte1_5->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte2_5->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte3_5->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte4_5->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte5_5->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte6_5->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte7_5->text().toUpper().toInt(NULL, 16);
+    data_int[data_ctr++] = ui->fieldByte0_5->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte1_5->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte2_5->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte3_5->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte4_5->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte5_5->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte6_5->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte7_5->text().toUpper().toInt(nullptr, 16);
 
-    data_int[data_ctr++] = ui->fieldByte0_6->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte1_6->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte2_6->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte3_6->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte4_6->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte5_6->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte6_6->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte7_6->text().toUpper().toInt(NULL, 16);
+    data_int[data_ctr++] = ui->fieldByte0_6->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte1_6->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte2_6->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte3_6->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte4_6->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte5_6->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte6_6->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte7_6->text().toUpper().toInt(nullptr, 16);
 
-    data_int[data_ctr++] = ui->fieldByte0_7->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte1_7->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte2_7->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte3_7->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte4_7->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte5_7->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte6_7->text().toUpper().toInt(NULL, 16);
-    data_int[data_ctr++] = ui->fieldByte7_7->text().toUpper().toInt(NULL, 16);
+    data_int[data_ctr++] = ui->fieldByte0_7->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte1_7->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte2_7->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte3_7->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte4_7->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte5_7->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte6_7->text().toUpper().toInt(nullptr, 16);
+    data_int[data_ctr++] = ui->fieldByte7_7->text().toUpper().toInt(nullptr, 16);
 
-    uint32_t address = ui->fieldAddress->text().toUpper().toUInt(NULL, 16);
+    uint32_t address = ui->fieldAddress->text().toUpper().toUInt(nullptr, 16);
 
     // If address is beyond std address namespace, force extended
     if(address > 0x7ff)
@@ -850,7 +850,7 @@ void RawTxWindow::showFDFields()
 
 void RawTxWindow::fieldAddress_textChanged(QString str)
 {
-    uint32_t address = ui->fieldAddress->text().toUpper().toUInt(NULL, 16);
+    uint32_t address = ui->fieldAddress->text().toUpper().toUInt(nullptr, 16);
 
     // If address is beyond std address namespace, force extended
     if(address > 0x7ff || str.length() > 3)

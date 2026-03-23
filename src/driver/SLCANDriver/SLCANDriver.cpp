@@ -50,7 +50,7 @@ bool SLCANDriver::update()
 
     int interface_cnt = 0;
 
-    foreach (const QSerialPortInfo &info, QSerialPortInfo::availablePorts())
+    for (const auto &info : QSerialPortInfo::availablePorts())
     {
         // fprintf(stderr, "Name : %s \r\n",  info.portName().toStdString().c_str());
         // fprintf(stderr, "   Description : %s \r\n", info.description().toStdString().c_str());
@@ -109,7 +109,7 @@ QString SLCANDriver::getName()
 
 SLCANInterface *SLCANDriver::createOrUpdateInterface(int index, QString name, bool fd_support, uint32_t manufacturer)
 {
-    foreach (CanInterface *intf, getInterfaces())
+    for (auto *intf : getInterfaces())
     {
         SLCANInterface *scif = dynamic_cast<SLCANInterface*>(intf);
         if (scif->getIfIndex() == index)

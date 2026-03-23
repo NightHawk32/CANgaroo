@@ -51,7 +51,7 @@ bool CandleApiDriver::update()
                 if (candle_dev_get(clist, i, &dev)) {
                     CandleApiInterface *cif = findInterface(dev);
 
-                    if (cif == NULL) {
+                    if (cif == nullptr) {
                         cif = new CandleApiInterface(this, dev);
                         addInterface(cif);
                     } else {
@@ -70,11 +70,11 @@ bool CandleApiDriver::update()
 
 CandleApiInterface *CandleApiDriver::findInterface(candle_handle dev)
 {
-    foreach (CanInterface *intf, getInterfaces()) {
+    for (auto *intf : getInterfaces()) {
         CandleApiInterface *cif = dynamic_cast<CandleApiInterface*>(intf);
         if (cif->getPath() == std::wstring(candle_dev_get_path(dev))) {
             return cif;
         }
     }
-    return NULL;
+    return nullptr;
 }

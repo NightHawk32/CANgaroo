@@ -61,7 +61,7 @@ QList<CanInterface *> CanDriver::getInterfaces() const
 CanInterfaceIdList CanDriver::getInterfaceIds() const
 {
     CanInterfaceIdList retval;
-    foreach (CanInterface *intf, _interfaces) {
+    for (auto *intf : _interfaces) {
         retval.push_back(intf->getId());
     }
     return retval;
@@ -95,7 +95,7 @@ void CanDriver::deleteAllInterfaces()
 
 CanInterface *CanDriver::getInterfaceByName(QString ifName)
 {
-    foreach (CanInterface *intf, _interfaces) {
+    for (auto *intf : _interfaces) {
         if (intf->getName() == ifName) {
             return intf;
         }

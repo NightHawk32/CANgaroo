@@ -41,8 +41,8 @@ class AggregatedTraceViewModel : public BaseTraceViewModel
     Q_OBJECT
 
 public:
-    typedef uint64_t unique_key_t;
-    typedef QMap<unique_key_t, AggregatedTraceViewItem*> CanIdMap;
+    using unique_key_t = uint64_t;
+    using CanIdMap = QMap<unique_key_t, AggregatedTraceViewItem*>;
 
 public:
     AggregatedTraceViewModel(Backend &backend);

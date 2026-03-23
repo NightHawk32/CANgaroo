@@ -9,6 +9,7 @@
 #include <QFileDialog>
 #include <QTextStream>
 #include <QDomDocument>
+#include <QFileInfo>
 #include <QFont>
 
 #include <core/PythonEngine.h>
@@ -33,8 +34,8 @@ ScriptWindow::ScriptWindow(QWidget *parent, Backend &backend)
     _btnLoad  = new QPushButton(tr("Load"));
     _btnSave  = new QPushButton(tr("Save"));
 
-    _chkAutoRun = new QCheckBox(tr("Auto"));
-    _chkAutoRun->setToolTip(tr("Start/stop script with measurement"));
+    _chkAutoRun = new QCheckBox(tr("AutoRun"));
+    _chkAutoRun->setToolTip(tr("Start/Stop script with measurement"));
     _btnStop->setEnabled(false);
 
     toolbar->addWidget(_btnRun);
@@ -108,12 +109,13 @@ void ScriptWindow::retranslateUi()
     _btnClear->setText(tr("Clear"));
     _btnLoad->setText(tr("Load"));
     _btnSave->setText(tr("Save"));
-    _chkAutoRun->setText(tr("Auto"));
-    _chkAutoRun->setToolTip(tr("Start/stop script with measurement"));
+    _chkAutoRun->setText(tr("AutoRun"));
+    _chkAutoRun->setToolTip(tr("Start/Stop script with measurement"));
 }
 
 void ScriptWindow::onRunClicked()
 {
+    reloadIfModified();
     _console->clear();
     _engine->runScript(_editor->toPlainText());
 }
@@ -136,6 +138,18 @@ void ScriptWindow::loadScriptFile(const QString &filename)
         QTextStream in(&file);
         _editor->setPlainText(in.readAll());
         _scriptFilePath = filename;
+        _lastLoadTime = QFileInfo(filename).lastModified();
+    }
+}
+
+void ScriptWindow::reloadIfModified()
+{
+    if (_scriptFilePath.isEmpty()) { return; }
+    QFileInfo fi(_scriptFilePath);
+    if (!fi.exists()) { return; }
+    if (fi.lastModified() > _lastLoadTime)
+    {
+        loadScriptFile(_scriptFilePath);
     }
 }
 
@@ -199,6 +213,7 @@ void ScriptWindow::onMeasurementStarted()
 {
     if (_chkAutoRun->isChecked() && !_engine->isRunning())
     {
+        reloadIfModified();
         _console->clear();
         _engine->runScript(_editor->toPlainText());
     }

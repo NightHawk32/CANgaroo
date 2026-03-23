@@ -43,7 +43,7 @@ CANBlasterInterface::CANBlasterInterface(CANBlasterDriver *driver, int index, QS
     _isOpen(false),
     _name(name),
     _ts_mode(ts_mode_SIOCSHWTSTAMP),
-    _socket(NULL)
+    _socket(nullptr)
 {
     // Set defaults
     _settings.setBitrate(500000);
@@ -86,9 +86,9 @@ QList<CanTiming> CANBlasterInterface::getAvailableBitrates()
     QList<unsigned> samplePoints({875});
 
     unsigned i=0;
-    foreach (unsigned br, bitrates) {
+    for (unsigned br : bitrates) {
         for (unsigned br_fd : bitrates_fd) {
-            foreach (unsigned sp, samplePoints) {
+            for (unsigned sp : samplePoints) {
                 retval << CanTiming(i++, br, br_fd, sp);
             }
         }
@@ -200,7 +200,7 @@ void CANBlasterInterface::open()
 {
 
     // Start off with a fresh socket
-    if(_socket != NULL)
+    if(_socket != nullptr)
     {
         delete _socket;
     }
@@ -219,7 +219,7 @@ void CANBlasterInterface::open()
 
 void CANBlasterInterface::close()
 {
-    if(_socket != NULL && _socket->isOpen())
+    if(_socket != nullptr && _socket->isOpen())
     {
         _socket->close();
     }

@@ -105,7 +105,7 @@ void GenericCanSetupPage::updateUI()
                 uint8_t div,seg1,seg2;
                 uint32_t temp;
                 uint32_t CustomBitrateSet;
-                CustomBitrateSet = ui->CustomBitrateSet->text().toUpper().toUInt(NULL, 16);
+                CustomBitrateSet = ui->CustomBitrateSet->text().toUpper().toUInt(nullptr, 16);
                 div =  CustomBitrateSet >> 16;
                 seg1 = CustomBitrateSet >> 8;
                 seg2 = CustomBitrateSet & 0xff;
@@ -152,7 +152,7 @@ void GenericCanSetupPage::updateUI()
                 uint8_t div,seg1,seg2;
                 uint32_t temp;
                 uint32_t CustomFdBitrateSet;
-                CustomFdBitrateSet = ui->CustomFdBitrateSet->text().toUpper().toUInt(NULL, 16);
+                CustomFdBitrateSet = ui->CustomFdBitrateSet->text().toUpper().toUInt(nullptr, 16);
                 div =  CustomFdBitrateSet >> 16;
                 seg1 = CustomFdBitrateSet >> 8;
                 seg2 = CustomFdBitrateSet & 0xff;

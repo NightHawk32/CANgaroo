@@ -32,8 +32,8 @@ TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :
     connect(ui->btnBulkStop, SIGNAL(clicked()), this, SLOT(on_btnBulkStop_clicked()));
 
     // Initial styling
-    ui->btnBulkRun->setStyleSheet("QPushButton { font-weight: bold; } QPushButton:checked { background-color: #28a745; color: white; border: 1px solid #218838; }");
-    ui->btnBulkStop->setStyleSheet("QPushButton { font-weight: bold; } QPushButton:checked { background-color: #dc3545; color: white; border: 1px solid #c82333; }");
+    ui->btnBulkRun->setStyleSheet("QPushButton { font-weight: bold; background: #218838; color: white; border-radius: 4px; padding: 4px 8px; } QPushButton:hover { background: #28a745; } QPushButton:pressed { background: #196b2c; } QPushButton:disabled { background: #94d3a2; }");
+    ui->btnBulkStop->setStyleSheet("QPushButton { font-weight: bold; background: #c82333; color: white; border-radius: 4px; padding: 4px 8px; } QPushButton:hover { background: #dc3545; } QPushButton:pressed { background: #a71d2a; } QPushButton:disabled { background: #f1aeb5; }");
 
     connect(ui->treeActive, SIGNAL(itemChanged(QTreeWidgetItem*,int)), this, SLOT(on_treeActive_itemChanged(QTreeWidgetItem*,int)));
     connect(ui->treeAvailable, SIGNAL(itemSelectionChanged()), this, SLOT(on_treeAvailable_itemSelectionChanged()));
@@ -67,11 +67,11 @@ TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :
     // Add Random Payload button programmatically
     _btnRandomPayload = new QPushButton(tr("Randomize Payload"), this);
     _btnRandomPayload->setToolTip(tr("Randomize data bytes for selected messages"));
-    _btnRandomPayload->setStyleSheet("QPushButton { font-weight: bold; background: #6f42c1; color: white; border-radius: 4px; padding: 4px 8px; } QPushButton:hover { background: #5a32a3; }");
+    _btnRandomPayload->setStyleSheet("QPushButton { font-weight: bold; background: #6f42c1; color: white; border-radius: 4px; padding: 4px 8px; } QPushButton:hover { background: #5a32a3; } QPushButton:pressed { background: #4a2d87; } QPushButton:disabled { background: #b8a9d4; }");
     ui->horizontalLayoutActiveControls->insertWidget(2, _btnRandomPayload); // Insert next to Run/Stop
     connect(_btnRandomPayload, &QPushButton::released, this, &TxGeneratorWindow::onRandomPayloadReleased);
 
-    srand(time(NULL));
+    srand(time(nullptr));
 
     refreshInterfaces();
     updateMeasurementState();
@@ -101,7 +101,7 @@ bool TxGeneratorWindow::saveXML(Backend &backend, QDomDocument &xml, QDomElement
         QString ifName;
         for (int i = 0; i < ui->comboBoxInterface->count(); i++)
         {
-            if ((CanInterfaceId)ui->comboBoxInterface->itemData(i).toUInt() == cm.interfaceId)
+            if (static_cast<CanInterfaceId>(ui->comboBoxInterface->itemData(i).toUInt()) == cm.interfaceId)
             {
                 ifName = ui->comboBoxInterface->itemText(i);
                 break;
@@ -186,7 +186,7 @@ void TxGeneratorWindow::resolveInterfaceNames()
         {
             if (ui->comboBoxInterface->itemText(i) == cm.interfaceName)
             {
-                cm.interfaceId = (CanInterfaceId)ui->comboBoxInterface->itemData(i).toUInt();
+                cm.interfaceId = static_cast<CanInterfaceId>(ui->comboBoxInterface->itemData(i).toUInt());
                 break;
             }
         }
@@ -199,8 +199,8 @@ void TxGeneratorWindow::refreshInterfaces()
     ui->comboBoxInterface->clear();
 
     MeasurementSetup &setup = _backend.getSetup();
-    foreach (MeasurementNetwork *network, setup.getNetworks()) {
-        foreach (MeasurementInterface *mi, network->interfaces()) {
+    for (auto *network : setup.getNetworks()) {
+        for (auto *mi : network->interfaces()) {
             CanInterfaceId ifid = mi->canInterface();
             CanInterface *intf = _backend.getInterfaceById(ifid);
             if (intf) {
@@ -223,15 +223,15 @@ void TxGeneratorWindow::populateDbcMessages()
 {
     ui->treeAvailable->clear();
 
-    CanInterfaceId currentId = (CanInterfaceId)ui->comboBoxInterface->currentData().toUInt();
+    CanInterfaceId currentId = static_cast<CanInterfaceId>(ui->comboBoxInterface->currentData().toUInt());
     MeasurementSetup &setup = _backend.getSetup();
 
-    foreach (MeasurementNetwork *network, setup.getNetworks()) {
+    for (auto *network : setup.getNetworks()) {
         // Only show DBCs associated with the current interface if possible,
         // but currently networks map to interfaces.
         // Let's find if this network is using our interface.
         bool interfaceMatches = false;
-        foreach (MeasurementInterface *mi, network->interfaces()) {
+        for (auto *mi : network->interfaces()) {
             if (mi->canInterface() == currentId) {
                 interfaceMatches = true;
                 break;
@@ -239,7 +239,7 @@ void TxGeneratorWindow::populateDbcMessages()
         }
 
         if (interfaceMatches) {
-            foreach (pCanDb db, network->_canDbs) {
+            for (const auto &db : network->_canDbs) {
                 if (db) {
                     CanDbMessageList msgs = db->getMessageList();
                     for (auto it = msgs.begin(); it != msgs.end(); ++it) {
@@ -303,7 +303,7 @@ void TxGeneratorWindow::on_btnAddToList_released()
 
     if (selected.isEmpty()) return;
 
-    foreach (QTreeWidgetItem *item, selected) {
+    for (auto *item : selected) {
         CanDbMessage *dbMsg = (CanDbMessage*)item->data(0, Qt::UserRole).value<void*>();
         if (!dbMsg) continue;
 
@@ -316,7 +316,7 @@ void TxGeneratorWindow::on_btnAddToList_released()
         cm.interval = 100;
         cm.enabled = false;
         cm.lastSent = 0;
-        cm.interfaceId = (CanInterfaceId)ui->comboBoxInterface->currentData().toUInt();
+        cm.interfaceId = static_cast<CanInterfaceId>(ui->comboBoxInterface->currentData().toUInt());
         cm.dbMsg = dbMsg;
 
         _cyclicMessages.append(cm);
@@ -340,7 +340,7 @@ void TxGeneratorWindow::on_btnAddManual_released()
     cm.interval = ui->spinInterval->value();
     cm.enabled = false;
     cm.lastSent = 0;
-    cm.interfaceId = (CanInterfaceId)ui->comboBoxInterface->currentData().toUInt();
+    cm.interfaceId = static_cast<CanInterfaceId>(ui->comboBoxInterface->currentData().toUInt());
     cm.dbMsg = nullptr;
 
     _cyclicMessages.append(cm);
@@ -355,13 +355,13 @@ void TxGeneratorWindow::on_btnRemove_released()
 
     // To avoid index shifting issues, we collect rows and remove from highest to lowest
     QList<int> rows;
-    foreach (QTreeWidgetItem *item, selected) {
+    for (auto *item : selected) {
         int row = ui->treeActive->indexOfTopLevelItem(item);
         if (row >= 0) rows.append(row);
     }
     std::sort(rows.begin(), rows.end(), std::greater<int>());
 
-    foreach (int row, rows) {
+    for (auto row : rows) {
         if (row >= 0 && row < _cyclicMessages.size()) {
             _cyclicMessages.removeAt(row);
         }
@@ -379,7 +379,7 @@ void TxGeneratorWindow::on_btnSendOnce_released()
         }
     }
 
-    foreach (QTreeWidgetItem *item, selected) {
+    for (auto *item : selected) {
         int row = ui->treeActive->indexOfTopLevelItem(item);
         if (row >= 0 && row < _cyclicMessages.size()) {
             CyclicMessage &cm = _cyclicMessages[row];
@@ -391,7 +391,7 @@ void TxGeneratorWindow::on_btnSendOnce_released()
                     CanMessage loopback = cm.msg;
                     loopback.setRX(false);
                     struct timeval tv;
-                    gettimeofday(&tv, NULL);
+                    gettimeofday(&tv, nullptr);
                     loopback.setTimestamp(tv);
                     emit loopbackFrame(loopback);
                 }
@@ -408,7 +408,7 @@ void TxGeneratorWindow::on_btnBulkRun_clicked()
     QList<QTreeWidgetItem*> selected = ui->treeActive->selectedItems();
     if (selected.isEmpty()) return;
 
-    foreach (QTreeWidgetItem *item, selected) {
+    for (auto *item : selected) {
         int row = ui->treeActive->indexOfTopLevelItem(item);
         if (row >= 0 && row < _cyclicMessages.size()) {
             _cyclicMessages[row].enabled = true;
@@ -431,7 +431,7 @@ void TxGeneratorWindow::on_btnBulkStop_clicked()
             updateRowUI(row);
         }
     } else {
-        foreach (QTreeWidgetItem *item, selected) {
+        for (auto *item : selected) {
             int row = ui->treeActive->indexOfTopLevelItem(item);
             if (row >= 0 && row < _cyclicMessages.size()) {
                 _cyclicMessages[row].enabled = false;
@@ -454,7 +454,7 @@ void TxGeneratorWindow::on_spinInterval_valueChanged(int i)
             updateRowUI(row);
         }
     } else {
-        foreach (QTreeWidgetItem *item, selected) {
+        for (auto *item : selected) {
             int row = ui->treeActive->indexOfTopLevelItem(item);
             if (row >= 0 && row < _cyclicMessages.size()) {
                 _cyclicMessages[row].interval = i;
@@ -468,7 +468,7 @@ void TxGeneratorWindow::on_comboBoxInterface_currentIndexChanged(int index)
 {
     (void)index;
     populateDbcMessages();
-    emit interfaceChanged((CanInterfaceId)ui->comboBoxInterface->currentData().toUInt());
+    emit interfaceChanged(static_cast<CanInterfaceId>(ui->comboBoxInterface->currentData().toUInt()));
 }
 
 void TxGeneratorWindow::on_treeAvailable_itemDoubleClicked(QTreeWidgetItem *item, int column)
@@ -533,7 +533,7 @@ void TxGeneratorWindow::on_treeActive_itemChanged(QTreeWidgetItem *item, int col
 
                 // If this item is part of a selection, apply to all selected items
                 if (item->isSelected()) {
-                    foreach (QTreeWidgetItem *selItem, ui->treeActive->selectedItems()) {
+                    for (auto *selItem : ui->treeActive->selectedItems()) {
                         if (selItem == item) continue;
                         int selRow = ui->treeActive->indexOfTopLevelItem(selItem);
                         if (selRow >= 0 && selRow < _cyclicMessages.size()) {
@@ -573,7 +573,7 @@ void TxGeneratorWindow::onStatusButtonClicked()
 
         // If this item is part of a selection, apply to all selected items
         if (item->isSelected()) {
-            foreach (QTreeWidgetItem *selItem, ui->treeActive->selectedItems()) {
+            for (auto *selItem : ui->treeActive->selectedItems()) {
                 int selRow = ui->treeActive->indexOfTopLevelItem(selItem);
                 if (selRow >= 0 && selRow < _cyclicMessages.size()) {
                     _cyclicMessages[selRow].enabled = targetState;
@@ -593,12 +593,12 @@ void TxGeneratorWindow::onSendTimerTimeout()
         return;
     }
     struct timeval tv;
-    gettimeofday(&tv, NULL);
-    uint64_t now_ms = (uint64_t)tv.tv_sec * 1000 + (tv.tv_usec / 1000);
+    gettimeofday(&tv, nullptr);
+    uint64_t now_ms = static_cast<uint64_t>(tv.tv_sec) * 1000 + (tv.tv_usec / 1000);
 
     for (int i = 0; i < _cyclicMessages.size(); ++i) {
         CyclicMessage &cm = _cyclicMessages[i];
-        if (cm.enabled && (now_ms - cm.lastSent >= (uint64_t)cm.interval)) {
+        if (cm.enabled && (now_ms - cm.lastSent >= static_cast<uint64_t>(cm.interval))) {
             CanInterface *intf = _backend.getInterfaceById(cm.interfaceId);
             if (intf && intf->isOpen()) {
                 cm.msg.setInterfaceId(cm.interfaceId);
@@ -607,7 +607,7 @@ void TxGeneratorWindow::onSendTimerTimeout()
                     CanMessage loopback = cm.msg;
                     loopback.setRX(false);
                     struct timeval tv_loop;
-                    gettimeofday(&tv_loop, NULL);
+                    gettimeofday(&tv_loop, nullptr);
                     loopback.setTimestamp(tv_loop);
                     emit loopbackFrame(loopback);
                 }
@@ -642,7 +642,7 @@ void TxGeneratorWindow::updateActiveList()
 {
     // Save selection
     QList<int> selectedRows;
-    foreach (QTreeWidgetItem *item, ui->treeActive->selectedItems()) {
+    for (auto *item : ui->treeActive->selectedItems()) {
         int row = ui->treeActive->indexOfTopLevelItem(item);
         if (row >= 0) selectedRows.append(row);
     }
@@ -761,12 +761,12 @@ void TxGeneratorWindow::onRandomPayloadReleased()
         }
     }
 
-    foreach (QTreeWidgetItem *item, selected) {
+    for (auto *item : selected) {
         int row = ui->treeActive->indexOfTopLevelItem(item);
         if (row >= 0 && row < _cyclicMessages.size()) {
             CyclicMessage &cm = _cyclicMessages[row];
             for (int i = 0; i < cm.msg.getLength(); ++i) {
-                cm.msg.setDataAt(i, (uint8_t)(rand() % 256));
+                cm.msg.setDataAt(i, static_cast<uint8_t>(rand() % 256));
             }
             updateRowUI(row);
 

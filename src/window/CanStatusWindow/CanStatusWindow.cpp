@@ -94,7 +94,7 @@ void CanStatusWindow::beginMeasurement()
 {
     ui->treeWidget->clear();
     _lastStats.clear();
-    foreach (CanInterfaceId ifid, backend().getInterfaceList()) {
+    for (auto ifid : backend().getInterfaceList()) {
         CanInterface *intf = backend().getInterfaceById(ifid);
         QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeWidget);
         item->setData(0, Qt::UserRole, QVariant::fromValue((void*)intf));
@@ -124,7 +124,7 @@ void CanStatusWindow::endMeasurement()
 void CanStatusWindow::clearStatistics()
 {
     // Reset statistics in all active interfaces
-    foreach (CanInterfaceId ifid, backend().getInterfaceList())
+    for (auto ifid : backend().getInterfaceList())
     {
         CanInterface *intf = backend().getInterfaceById(ifid);
         if (intf)
@@ -163,7 +163,7 @@ void CanStatusWindow::update()
                      uint64_t dbits = currentBits - ls.lastBits;
                      unsigned bitrate = intf->getBitrate();
                      if (bitrate > 0) {
-                         double load = (double)dbits * 1000.0 / (double)bitrate / (double)dt * 100.0;
+                         double load = static_cast<double>(dbits) * 1000.0 / static_cast<double>(bitrate) / static_cast<double>(dt) * 100.0;
                          if (load > 100.0) load = 100.0;
                          item->setText(column_bus_load, QString("%1%").arg(load, 0, 'f', 1));
                      } else {

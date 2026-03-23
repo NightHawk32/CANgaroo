@@ -28,7 +28,7 @@
 
 class CanDbMessage;
 
-typedef QMap<uint64_t,QString> CanDbValueTable;
+using CanDbValueTable = QMap<uint64_t, QString>;
 
 class CanDbSignal
 {

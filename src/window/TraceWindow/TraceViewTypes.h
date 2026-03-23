@@ -21,10 +21,10 @@
 
 #pragma once
 
-typedef enum timestamp_mode {
+enum timestamp_mode_t {
     timestamp_mode_absolute,
     timestamp_mode_relative,
     timestamp_mode_delta,
     timestamp_modes_count
-} timestamp_mode_t;
+};
 

@@ -5,24 +5,21 @@
 #include <stdint.h>
 
 
-typedef enum
-{
+enum StatusLedState_e {
     LED_OFF = 0, LED_RED, LED_GREEN, LED_ORANGE
-} StatusLedState_e;
+};
 
 
-typedef struct
-{
+struct Protocol_LinCfg_t {
     uint16_t Baudrate;
     uint8_t Timebase;
     uint16_t Jitter;
     uint8_t Mode;
     uint8_t Protocol;
-} Protocol_LinCfg_t;
+};
 
 
-typedef struct
-{
+struct CAN_Msg_t {
     uint8_t Channel;
     // CAN ID
     uint32_t ID;
@@ -34,11 +31,10 @@ typedef struct
     uint32_t Time;
     // Message data (max 8 bytes)
     uint8_t Data[8];
-} CAN_Msg_t;
+};
 
 
-typedef struct
-{
+struct LIN_Frame_t {
     // LIN Channel
     uint8_t Channel;
 
@@ -55,7 +51,7 @@ typedef struct
     uint8_t Len;
     // Data array
     uint8_t Data[8];
-} LIN_Frame_t;
+};
 
 
 #define SYSTEM_REPORT_INFO      0u

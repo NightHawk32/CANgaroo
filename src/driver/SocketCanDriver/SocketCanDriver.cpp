@@ -52,7 +52,7 @@ bool SocketCanDriver::update() {
     deleteAllInterfaces();
 
     struct nl_sock *sock = nl_socket_alloc();
-    struct nl_cache *cache = NULL;
+    struct nl_cache *cache = nullptr;
 
     nl_connect(sock, NETLINK_ROUTE);
     int result = rtnl_link_alloc_cache(sock, AF_UNSPEC, &cache);
@@ -86,7 +86,7 @@ QString SocketCanDriver::getName() {
 
 SocketCanInterface *SocketCanDriver::createOrUpdateInterface(int index, QString name) {
 
-    foreach (CanInterface *intf, getInterfaces()) {
+    for (auto *intf : getInterfaces()) {
         SocketCanInterface *scif = dynamic_cast<SocketCanInterface*>(intf);
         if (scif && scif->getIfIndex() == index) {
 			scif->setName(name);

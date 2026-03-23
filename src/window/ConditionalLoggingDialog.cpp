@@ -57,7 +57,7 @@ ConditionalLoggingDialog::ConditionalLoggingDialog(Backend &backend, QWidget *pa
     _signalsTree->blockSignals(false);
 
     // Load conditions
-    foreach (const LoggingCondition &cond, mgr->getConditions()) {
+    for (const auto &cond : mgr->getConditions()) {
         addCondition();
         QTreeWidgetItem *item = _conditionsTree->topLevelItem(_conditionsTree->topLevelItemCount() - 1);
         QComboBox *sigC = qobject_cast<QComboBox*>(_conditionsTree->itemWidget(item, 0));
@@ -71,7 +71,7 @@ ConditionalLoggingDialog::ConditionalLoggingDialog(Backend &backend, QWidget *pa
                     break;
                 }
             }
-            opC->setCurrentIndex(opC->findData((int)cond.op));
+            opC->setCurrentIndex(opC->findData(static_cast<int>(cond.op)));
             valE->setText(QString::number(cond.threshold));
         }
     }
@@ -146,22 +146,22 @@ void ConditionalLoggingDialog::populateSignals()
     _signalsTree->blockSignals(true);
     _signalsTree->clear();
     
-    foreach (MeasurementNetwork *network, _backend.getSetup().getNetworks()) {
+    for (auto *network : _backend.getSetup().getNetworks()) {
         QTreeWidgetItem *networkItem = new QTreeWidgetItem(_signalsTree);
         networkItem->setText(0, network->name());
         networkItem->setCheckState(0, Qt::Unchecked);
         networkItem->setData(0, Qt::UserRole, QVariant::fromValue((void*)network));
         networkItem->setData(0, Qt::UserRole + 1, "network");
 
-        foreach (pCanDb db, network->_canDbs) {
-            foreach (CanDbMessage *msg, db->getMessageList().values()) {
+        for (const auto &db : network->_canDbs) {
+            for (auto *msg : db->getMessageList().values()) {
                 QTreeWidgetItem *msgItem = new QTreeWidgetItem(networkItem);
                 msgItem->setText(0, msg->getName());
                 msgItem->setCheckState(0, Qt::Unchecked);
                 msgItem->setData(0, Qt::UserRole, QVariant::fromValue((void*)msg));
                 msgItem->setData(0, Qt::UserRole + 1, "message");
 
-                foreach (CanDbSignal *sig, msg->getSignals()) {
+                for (auto *sig : msg->getSignals()) {
                     QTreeWidgetItem *sigItem = new QTreeWidgetItem(msgItem);
                     sigItem->setText(0, sig->name());
                     sigItem->setCheckState(0, Qt::Unchecked);
@@ -237,12 +237,12 @@ void ConditionalLoggingDialog::addCondition()
     
     QComboBox *signalCombo = new QComboBox(this);
     QList<pCanDb> allDbs;
-    foreach (MeasurementNetwork *network, _backend.getSetup().getNetworks()) {
+    for (auto *network : _backend.getSetup().getNetworks()) {
         allDbs.append(network->_canDbs);
     }
-    foreach (pCanDb db, allDbs) {
-        foreach (CanDbMessage *msg, db->getMessageList().values()) {
-            foreach (CanDbSignal *sig, msg->getSignals()) {
+    for (const auto &db : allDbs) {
+        for (auto *msg : db->getMessageList().values()) {
+            for (auto *sig : msg->getSignals()) {
                 signalCombo->addItem(sig->name(), QVariant::fromValue((void*)sig));
             }
         }
@@ -250,12 +250,12 @@ void ConditionalLoggingDialog::addCondition()
     _conditionsTree->setItemWidget(item, 0, signalCombo);
 
     QComboBox *opCombo = new QComboBox(this);
-    opCombo->addItem(">", (int)ConditionOperator::Greater);
-    opCombo->addItem("<", (int)ConditionOperator::Less);
-    opCombo->addItem("==", (int)ConditionOperator::Equal);
-    opCombo->addItem(">=", (int)ConditionOperator::GreaterEqual);
-    opCombo->addItem("<=", (int)ConditionOperator::LessEqual);
-    opCombo->addItem("!=", (int)ConditionOperator::NotEqual);
+    opCombo->addItem(">", static_cast<int>(ConditionOperator::Greater));
+    opCombo->addItem("<", static_cast<int>(ConditionOperator::Less));
+    opCombo->addItem("==", static_cast<int>(ConditionOperator::Equal));
+    opCombo->addItem(">=", static_cast<int>(ConditionOperator::GreaterEqual));
+    opCombo->addItem("<=", static_cast<int>(ConditionOperator::LessEqual));
+    opCombo->addItem("!=", static_cast<int>(ConditionOperator::NotEqual));
     _conditionsTree->setItemWidget(item, 1, opCombo);
 
     QLineEdit *valEdit = new QLineEdit("0.0", this);
@@ -295,7 +295,7 @@ void ConditionalLoggingDialog::onAccept()
             
             if (type == "network") {
                 MeasurementNetwork *net = (MeasurementNetwork*)data;
-                foreach (MeasurementInterface *mi, net->interfaces()) {
+                for (auto *mi : net->interfaces()) {
                     filterBusIds.insert(mi->canInterface());
                 }
             } else if (type == "message") {
@@ -323,8 +323,8 @@ void ConditionalLoggingDialog::onAccept()
 
         if (sigC && opC && valE) {
             LoggingCondition cond;
-            cond.signal = (CanDbSignal*)sigC->currentData().value<void*>();
-            cond.op = (ConditionOperator)opC->currentData().toInt();
+            cond.signal = static_cast<CanDbSignal*>(sigC->currentData().value<void*>());
+            cond.op = static_cast<ConditionOperator>(opC->currentData().toInt());
             cond.threshold = valE->text().toDouble();
             conditions.append(cond);
         }

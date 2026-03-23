@@ -37,7 +37,7 @@
 
 class SLCANDriver;
 
-typedef struct {
+struct can_config_t {
     bool supports_canfd;
     bool supports_timing;
     uint32_t state;
@@ -45,9 +45,9 @@ typedef struct {
     uint32_t sample_point;
     uint32_t ctrl_mode;
     uint32_t restart_ms;
-} can_config_t;
+};
 
-typedef struct {
+struct can_status_t {
     uint32_t can_state;
 
     uint64_t rx_count;
@@ -57,12 +57,12 @@ typedef struct {
     uint64_t tx_count;
     int tx_errors;
     uint64_t tx_dropped;
-} can_status_t;
+};
 
-typedef struct {
+struct can_msg_t {
     char buf[SLCAN_MTU+1];
     qint64 length;
-} can_msg_t;
+};
 
 class SLCANInterface: public CanInterface {
     Q_OBJECT
@@ -114,11 +114,11 @@ public:
     int getIfIndex();
 
 private:
-    typedef enum {
+    enum ts_mode_t {
         ts_mode_SIOCSHWTSTAMP,
         ts_mode_SIOCGSTAMPNS,
         ts_mode_SIOCGSTAMP
-    } ts_mode_t;
+    };
 
     uint32_t _manufacturer;
     QString _version;

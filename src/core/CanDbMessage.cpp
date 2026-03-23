@@ -82,8 +82,7 @@ CanDbSignal *CanDbMessage::getSignal(int num)
 
 CanDbSignal *CanDbMessage::getSignalByName(QString signal_name)
 {
-    CanDbSignal *signal;
-    foreach (signal, _signals) {
+    for (auto *signal : _signals) {
         if (signal->name() == signal_name) {
             return signal;
         }

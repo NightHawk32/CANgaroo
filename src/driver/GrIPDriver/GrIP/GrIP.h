@@ -11,16 +11,14 @@
 // Transmit/Receive buffer size - Do not exceed (GRIP_BUFFER_SIZE - 10)
 #define GRIP_BUFFER_SIZE    128u
 
-typedef enum
-{
+enum GrIP_ProtocolType_e {
     PROT_GrIP = 0, PROT_BoOTA
-} GrIP_ProtocolType_e;
+};
 
 /**
   * Available message types.
   */
-typedef enum
-{
+enum GrIP_MessageType_e {
     MSG_SYSTEM_CMD          = 0u,
     MSG_REALTIME_CMD        = 1u,
     MSG_DATA                = 2u,
@@ -30,13 +28,12 @@ typedef enum
     MSG_ERROR               = 6u,
     MSG_SYNC                = 7u,
     MSG_MAX_NUM             = 8u
-} GrIP_MessageType_e;
+};
 
 /**
   * Return Types.
   */
-typedef enum
-{
+enum GrIP_ReturnType_e {
     RET_OK              = 0,
     RET_NOK             = 1,
     RET_WRONG_VERSION   = 2,
@@ -45,7 +42,7 @@ typedef enum
     RET_WRONG_PARAM     = 5,
     RET_WRONG_TYPE      = 6,
     RET_WRONG_LEN       = 7,
-} GrIP_ReturnType_e;
+};
 
 /**
   * GrIP Packet Header
@@ -65,30 +62,27 @@ typedef struct __attribute__((packed))
 /**
   * GrIP Receive Packet
   */
-typedef struct
-{
+struct GrIP_Packet_t {
     GrIP_PacketHeader_t RX_Header;
     uint8_t             Data[GRIP_BUFFER_SIZE];
-} GrIP_Packet_t;
+};
 
 /**
   * Data struct.
   * Data: Pointer to data.
   * Length: Length of data in bytes.
   */
-typedef struct
-{
+struct GrIP_Pdu_t {
     const uint8_t  *Data;
     uint16_t  Length;
-} GrIP_Pdu_t;
+};
 
-typedef struct
-{
+struct GrIP_ErrorFlags_t {
     uint8_t  LastError;
     uint16_t CRC_Error;
     uint16_t Len_Error;
     uint16_t Param_Error;
-} GrIP_ErrorFlags_t;
+};
 
 /**
   * Initialize the module

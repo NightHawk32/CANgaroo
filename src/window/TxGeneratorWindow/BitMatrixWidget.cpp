@@ -95,7 +95,7 @@ void BitMatrixWidget::paintEvent(QPaintEvent *event)
         f.setBold(true);
         painter.setFont(f);
 
-        foreach (CanDbSignal *signal, _msg->getSignals()) {
+        for (auto *signal : _msg->getSignals()) {
             
             for (int row = 0; row < byteCount; ++row) {
                 
@@ -212,7 +212,7 @@ BitMatrixWidget::BitInfo BitMatrixWidget::getBitInfo(int byteIndex, int bitIndex
     // Byte 1, Bit 0 is Absolute Bit 8
     int absoluteBit = byteIndex * 8 + bitIndex;
 
-    foreach (CanDbSignal *sig, _msg->getSignals()) {
+    for (auto *sig : _msg->getSignals()) {
         int start = sig->startBit();
         int len = sig->length();
         bool intel = !sig->isBigEndian();
