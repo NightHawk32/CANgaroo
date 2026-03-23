@@ -8,7 +8,7 @@
 #include <core/MeasurementInterface.h>
 #include <driver/CanInterface.h>
 #include <driver/CanDriver.h>
-#include <sys/time.h>
+#include <chrono>
 
 TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :
     ConfigurableWidget(parent),
@@ -390,9 +390,8 @@ void TxGeneratorWindow::on_btnSendOnce_released()
                 if (ui->cbShowInTrace->isChecked() && intf->ShowTxMsg()) {
                     CanMessage loopback = cm.msg;
                     loopback.setRX(false);
-                    struct timeval tv;
-                    gettimeofday(&tv, nullptr);
-                    loopback.setTimestamp(tv);
+                    auto now = std::chrono::system_clock::now().time_since_epoch();
+                    loopback.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
                     emit loopbackFrame(loopback);
                 }
             } else {
@@ -592,9 +591,8 @@ void TxGeneratorWindow::onSendTimerTimeout()
     if (!_backend.isMeasurementRunning()) {
         return;
     }
-    struct timeval tv;
-    gettimeofday(&tv, nullptr);
-    uint64_t now_ms = static_cast<uint64_t>(tv.tv_sec) * 1000 + (tv.tv_usec / 1000);
+    auto now = std::chrono::system_clock::now().time_since_epoch();
+    uint64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
 
     for (int i = 0; i < _cyclicMessages.size(); ++i) {
         CyclicMessage &cm = _cyclicMessages[i];
@@ -606,9 +604,8 @@ void TxGeneratorWindow::onSendTimerTimeout()
                 if (ui->cbShowInTrace->isChecked() && intf->ShowTxMsg()) {
                     CanMessage loopback = cm.msg;
                     loopback.setRX(false);
-                    struct timeval tv_loop;
-                    gettimeofday(&tv_loop, nullptr);
-                    loopback.setTimestamp(tv_loop);
+                    auto now_loop = std::chrono::system_clock::now().time_since_epoch();
+                    loopback.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now_loop).count());
                     emit loopbackFrame(loopback);
                 }
                 cm.lastSent = now_ms;

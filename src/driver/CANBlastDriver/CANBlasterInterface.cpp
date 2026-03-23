@@ -39,7 +39,7 @@
 
 CANBlasterInterface::CANBlasterInterface(CANBlasterDriver *driver, int index, QString name, bool fd_support)
   : CanInterface((CanDriver *)driver),
-	_idx(index),
+    _idx(index),
     _isOpen(false),
     _name(name),
     _ts_mode(ts_mode_SIOCSHWTSTAMP),
@@ -70,7 +70,7 @@ QString CANBlasterInterface::getDetailsStr() const {
 }
 
 QString CANBlasterInterface::getName() const {
-	return _name;
+    return _name;
 }
 
 void CANBlasterInterface::setName(QString name) {
@@ -287,11 +287,7 @@ bool CANBlasterInterface::readMessage(QList<CanMessage> &msglist, unsigned int t
             // Set timestamp to current time
             CanMessage msg;
 
-            qint64 msec = QDateTime::currentMSecsSinceEpoch();
-            msg.setTimestamp({
-                static_cast<long>(msec / 1000),        // Sekunden
-                static_cast<long>((msec % 1000) * 1000) // Mikrosekunden
-            });
+            msg.setTimestamp_ms(QDateTime::currentMSecsSinceEpoch());
 
             msg.setInterfaceId(getId());
             msg.setId(frame.can_id & CAN_ERR_MASK);

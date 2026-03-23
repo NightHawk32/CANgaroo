@@ -25,27 +25,21 @@
 #include <core/portable_endian.h>
 
 enum {
-	id_flag_extended = 0x80000000,
-	id_flag_rtr      = 0x40000000,
-	id_flag_error    = 0x20000000,
-	id_mask_extended = 0x1FFFFFFF,
-	id_mask_standard = 0x7FF
+    id_flag_extended = 0x80000000,
+    id_flag_rtr      = 0x40000000,
+    id_flag_error    = 0x20000000,
+    id_mask_extended = 0x1FFFFFFF,
+    id_mask_standard = 0x7FF
 };
 
 CanMessage::CanMessage()
     : _raw_id(0), _dlc(0), _isFD(false), _isBRS(false), _isRX(true), _isShow(true), _interface(0), _u8()
 {
-    _timestamp.tv_sec = 0;
-    _timestamp.tv_usec = 0;
-    _timestamp_ms = 0;
 }
 
 CanMessage::CanMessage(uint32_t can_id)
     : _raw_id(0), _dlc(0), _isFD(false), _isBRS(false), _isRX(true), _isShow(true), _interface(0), _u8()
 {
-    _timestamp.tv_sec = 0;
-    _timestamp.tv_usec = 0;
-    _timestamp_ms = 0;
     setId(can_id);
 }
 
@@ -70,8 +64,7 @@ void CanMessage::cloneFrom(const CanMessage &msg)
     }
 
     _interface = msg._interface;
-    _timestamp = msg._timestamp;
-    _timestamp_ms = msg._timestamp_ms;
+    _timestamp_us = msg._timestamp_us;
 }
 
 
@@ -80,35 +73,35 @@ uint32_t CanMessage::getRawId() const {
 }
 
 void CanMessage::setRawId(const uint32_t raw_id) {
-	_raw_id = raw_id;
+    _raw_id = raw_id;
 }
 
 uint32_t CanMessage::getId() const {
-	if (isExtended()) {
-		return _raw_id & id_mask_extended;
-	} else {
-		return _raw_id & id_mask_standard;
-	}
+    if (isExtended()) {
+        return _raw_id & id_mask_extended;
+    } else {
+        return _raw_id & id_mask_standard;
+    }
 }
 
 void CanMessage::setId(const uint32_t id) {
     uint32_t flags = _raw_id & ~id_mask_extended;
     _raw_id = (id & id_mask_extended) | flags;
     if (id>0x7FF) {
-		setExtended(true);
-	}
+        setExtended(true);
+    }
 }
 
 bool CanMessage::isExtended() const {
-	return (_raw_id & id_flag_extended) != 0;
+    return (_raw_id & id_flag_extended) != 0;
 }
 
 void CanMessage::setExtended(const bool isExtended) {
-	if (isExtended) {
-		_raw_id |= id_flag_extended;
-	} else {
-		_raw_id &= ~id_flag_extended;
-	}
+    if (isExtended) {
+        _raw_id |= id_flag_extended;
+    } else {
+        _raw_id &= ~id_flag_extended;
+    }
 }
 
 bool CanMessage::isRTR() const {
@@ -140,14 +133,14 @@ void CanMessage::setBRS(const bool isBRS) {
 }
 
 bool CanMessage::isErrorFrame() const {
-	return (_raw_id & id_flag_error) != 0;
+    return (_raw_id & id_flag_error) != 0;
 }
 
 void CanMessage::setErrorFrame(const bool isErrorFrame) {
-	if (isErrorFrame) {
-		_raw_id |= id_flag_error;
-	} else {
-		_raw_id &= ~id_flag_error;
+    if (isErrorFrame) {
+        _raw_id |= id_flag_error;
+    } else {
+        _raw_id &= ~id_flag_error;
     }
 }
 
@@ -162,16 +155,16 @@ void CanMessage::setInterfaceId(CanInterfaceId interface)
 }
 
 uint8_t CanMessage::getLength() const {
-	return _dlc;
+    return _dlc;
 }
 
 void CanMessage::setLength(const uint8_t dlc) {
     // Limit to CANFD max length
     if (dlc<=64) {
-		_dlc = dlc;
-	} else {
-		_dlc = 8;
-	}
+        _dlc = dlc;
+    } else {
+        _dlc = 8;
+    }
 }
 
 bool CanMessage::isRX() const {
@@ -191,16 +184,16 @@ void CanMessage::setShow(const bool enable) {
 }
 
 uint8_t CanMessage::getByte(const uint8_t index) const {
-	if (index<sizeof(_u8)) {
-		return _u8[index];
-	} else {
-		return 0;
-	}
+    if (index<sizeof(_u8)) {
+        return _u8[index];
+    } else {
+        return 0;
+    }
 }
 
 void CanMessage::setByte(const uint8_t index, const uint8_t value) {
-	if (index<sizeof(_u8)) {
-		_u8[index] = value;
+    if (index<sizeof(_u8)) {
+        _u8[index] = value;
     }
 }
 
@@ -244,116 +237,118 @@ void CanMessage::setDataAt(uint8_t position, uint8_t data)
 }
 
 void CanMessage::setData(const uint8_t d0) {
-	_dlc = 1;
-	_u8[0] = d0;
+    _dlc = 1;
+    _u8[0] = d0;
 }
 
 void CanMessage::setData(const uint8_t d0, const uint8_t d1) {
-	_dlc = 2;
-	_u8[0] = d0;
-	_u8[1] = d1;
+    _dlc = 2;
+    _u8[0] = d0;
+    _u8[1] = d1;
 }
 
 void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2) {
-	_dlc = 3;
-	_u8[0] = d0;
-	_u8[1] = d1;
-	_u8[2] = d2;
+    _dlc = 3;
+    _u8[0] = d0;
+    _u8[1] = d1;
+    _u8[2] = d2;
 }
 
 void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
-		const uint8_t d3) {
-	_dlc = 4;
-	_u8[0] = d0;
-	_u8[1] = d1;
-	_u8[2] = d2;
-	_u8[3] = d3;
+        const uint8_t d3) {
+    _dlc = 4;
+    _u8[0] = d0;
+    _u8[1] = d1;
+    _u8[2] = d2;
+    _u8[3] = d3;
 }
 
 void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
-		const uint8_t d3, const uint8_t d4) {
-	_dlc = 5;
-	_u8[0] = d0;
-	_u8[1] = d1;
-	_u8[2] = d2;
-	_u8[3] = d3;
-	_u8[4] = d4;
+        const uint8_t d3, const uint8_t d4) {
+    _dlc = 5;
+    _u8[0] = d0;
+    _u8[1] = d1;
+    _u8[2] = d2;
+    _u8[3] = d3;
+    _u8[4] = d4;
 }
 
 void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
-		const uint8_t d3, const uint8_t d4, const uint8_t d5) {
-	_dlc = 6;
-	_u8[0] = d0;
-	_u8[1] = d1;
-	_u8[2] = d2;
-	_u8[3] = d3;
-	_u8[4] = d4;
-	_u8[5] = d5;
+        const uint8_t d3, const uint8_t d4, const uint8_t d5) {
+    _dlc = 6;
+    _u8[0] = d0;
+    _u8[1] = d1;
+    _u8[2] = d2;
+    _u8[3] = d3;
+    _u8[4] = d4;
+    _u8[5] = d5;
 }
 
 void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
-		const uint8_t d3, const uint8_t d4, const uint8_t d5,
-		const uint8_t d6) {
-	_dlc = 7;
-	_u8[0] = d0;
-	_u8[1] = d1;
-	_u8[2] = d2;
-	_u8[3] = d3;
-	_u8[4] = d4;
-	_u8[5] = d5;
-	_u8[6] = d6;
+        const uint8_t d3, const uint8_t d4, const uint8_t d5,
+        const uint8_t d6) {
+    _dlc = 7;
+    _u8[0] = d0;
+    _u8[1] = d1;
+    _u8[2] = d2;
+    _u8[3] = d3;
+    _u8[4] = d4;
+    _u8[5] = d5;
+    _u8[6] = d6;
 }
 
 void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
-		const uint8_t d3, const uint8_t d4, const uint8_t d5, const uint8_t d6,
-		const uint8_t d7) {
-	_dlc = 8;
-	_u8[0] = d0;
-	_u8[1] = d1;
-	_u8[2] = d2;
-	_u8[3] = d3;
-	_u8[4] = d4;
-	_u8[5] = d5;
-	_u8[6] = d6;
+        const uint8_t d3, const uint8_t d4, const uint8_t d5, const uint8_t d6,
+        const uint8_t d7) {
+    _dlc = 8;
+    _u8[0] = d0;
+    _u8[1] = d1;
+    _u8[2] = d2;
+    _u8[3] = d3;
+    _u8[4] = d4;
+    _u8[5] = d5;
+    _u8[6] = d6;
     _u8[7] = d7;
 }
 
-timeval CanMessage::getTimestamp() const
+int64_t CanMessage::getTimestamp_us() const
 {
-    return _timestamp;
+    return _timestamp_us;
 }
 
-qint64 CanMessage::getTimestamp_ms() const
+int64_t CanMessage::getTimestamp_ms() const
 {
-    return _timestamp_ms;
-}
-
-void CanMessage::setTimestamp(qint64 ms)
-{
-    _timestamp_ms = ms;
-}
-
-void CanMessage::setTimestamp(const timeval timestamp)
-{
-    _timestamp = timestamp;
-    _timestamp_ms = (_timestamp.tv_sec * 1000 + _timestamp.tv_usec / 1000);
-}
-
-void CanMessage::setTimestamp(const uint64_t seconds, const uint32_t micro_seconds)
-{
-    _timestamp.tv_sec = seconds;
-    _timestamp.tv_usec = micro_seconds;
-    _timestamp_ms = (_timestamp.tv_sec * 1000 + _timestamp.tv_usec / 1000);
+    return _timestamp_us / 1000;
 }
 
 double CanMessage::getFloatTimestamp() const
 {
-    return static_cast<double>(_timestamp.tv_sec) + (static_cast<double>(_timestamp.tv_usec) / 1000000);
+    return static_cast<double>(_timestamp_us) / 1000000.0;
 }
 
 QDateTime CanMessage::getDateTime() const
 {
-    return QDateTime::fromMSecsSinceEpoch(static_cast<qint64>(1000 * getFloatTimestamp()));
+    return QDateTime::fromMSecsSinceEpoch(_timestamp_us / 1000);
+}
+
+void CanMessage::setTimestamp_us(int64_t us)
+{
+    _timestamp_us = us;
+}
+
+void CanMessage::setTimestamp_ms(int64_t ms)
+{
+    _timestamp_us = ms * 1000;
+}
+
+void CanMessage::setTimestamp(double seconds)
+{
+    _timestamp_us = static_cast<int64_t>(seconds * 1000000.0);
+}
+
+void CanMessage::setTimestamp(uint64_t seconds, uint32_t micro_seconds)
+{
+    _timestamp_us = static_cast<int64_t>(seconds) * 1000000 + micro_seconds;
 }
 
 QString CanMessage::getIdString() const

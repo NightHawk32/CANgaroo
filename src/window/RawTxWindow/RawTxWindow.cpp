@@ -597,11 +597,7 @@ void RawTxWindow::reflash_can_msg()
     _can_msg.setRX(false);
     _can_msg.setShow(true);
 
-    qint64 msec = QDateTime::currentMSecsSinceEpoch();
-    _can_msg.setTimestamp({
-        static_cast<long>(msec / 1000),        // Seconds
-        static_cast<long>((msec % 1000) * 1000) // Microseconds
-    });
+    _can_msg.setTimestamp_ms(QDateTime::currentMSecsSinceEpoch());
 
     if (!_is_setting_message) {
         emit messageUpdated(_can_msg);

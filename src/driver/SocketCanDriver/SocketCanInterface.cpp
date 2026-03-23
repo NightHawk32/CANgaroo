@@ -49,9 +49,9 @@
 
 SocketCanInterface::SocketCanInterface(SocketCanDriver *driver, int index, QString name)
   : CanInterface((CanDriver *)driver),
-	_idx(index),
+    _idx(index),
     _isOpen(false),
-	_fd(0),
+    _fd(0),
     _name(name),
     _ts_mode(ts_mode_SIOCSHWTSTAMP)
 {
@@ -74,7 +74,7 @@ SocketCanInterface::~SocketCanInterface() {
 }
 
 QString SocketCanInterface::getName() const {
-	return _name;
+    return _name;
 }
 
 void SocketCanInterface::setName(QString name) {

@@ -81,7 +81,7 @@ bool SocketCanDriver::update() {
 }
 
 QString SocketCanDriver::getName() {
-	return "SocketCAN";
+    return "SocketCAN";
 }
 
 SocketCanInterface *SocketCanDriver::createOrUpdateInterface(int index, QString name) {
@@ -89,10 +89,10 @@ SocketCanInterface *SocketCanDriver::createOrUpdateInterface(int index, QString 
     for (auto *intf : getInterfaces()) {
         SocketCanInterface *scif = dynamic_cast<SocketCanInterface*>(intf);
         if (scif && scif->getIfIndex() == index) {
-			scif->setName(name);
+            scif->setName(name);
             return scif;
-		}
-	}
+        }
+    }
 
 
     SocketCanInterface *scif = new SocketCanInterface(this, index, name);

@@ -62,8 +62,6 @@ private:
 
     unique_key_t makeUniqueKey(const CanMessage &msg) const;
     void createItem(const CanMessage &msg, AggregatedTraceViewItem *item, unique_key_t key);
-    double getTimeDiff(const timeval t1, const timeval t2) const;
-    
 protected:
     virtual QVariant data_DisplayRole(const QModelIndex &index, int role) const;
     virtual QVariant data_TextColorRole(const QModelIndex &index, int role) const;

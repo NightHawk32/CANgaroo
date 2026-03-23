@@ -119,7 +119,7 @@ QString SLCANInterface::getDetailsStr() const
 
 QString SLCANInterface::getName() const
 {
-	return _name;
+    return _name;
 }
 
 void SLCANInterface::setName(QString name)
@@ -929,11 +929,7 @@ bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeou
 bool SLCANInterface::parseMessage(CanMessage &msg)
 {
     // Set timestamp to current time
-    qint64 msec = QDateTime::currentMSecsSinceEpoch();
-    msg.setTimestamp({
-        static_cast<long>(msec / 1000),        // Sekunden
-        static_cast<long>((msec % 1000) * 1000) // Mikrosekunden
-    });
+    msg.setTimestamp_ms(QDateTime::currentMSecsSinceEpoch());
 
     // Defaults
     msg.setErrorFrame(0);

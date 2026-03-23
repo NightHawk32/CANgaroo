@@ -328,7 +328,7 @@ bool CandleApiInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
                 ts_us += us_since_start & 0xFFFFFFFF00000000;
             }
 
-            msg.setTimestamp(ts_us/1000000, ts_us % 1000000);
+            msg.setTimestamp_us(static_cast<int64_t>(ts_us));
             msglist.append(msg);
             return true;
         }

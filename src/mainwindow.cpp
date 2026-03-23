@@ -1319,10 +1319,7 @@ void MainWindow::importFullTrace()
         CanMessage msg;
 
         double ts = m["timestamp"].toDouble();
-        struct timeval tv;
-        tv.tv_sec  = static_cast<time_t>(ts);
-        tv.tv_usec = (ts - tv.tv_sec) * 1e6;
-        msg.setTimestamp(tv);
+        msg.setTimestamp(ts);
 
         msg.setRawId(m["raw_id"].toInt());
         msg.setLength(m["dlc"].toInt());

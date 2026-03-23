@@ -71,7 +71,7 @@ public:
     virtual uint32_t getCapabilities();
 
 
-	virtual void open();
+    virtual void open();
     virtual void close();
     virtual bool isOpen();
 
@@ -131,21 +131,21 @@ private:
 /*
  * Controller Area Network Identifier structure
  *
- * bit 0-28	: CAN identifier (11/29 bit)
- * bit 29	: error message frame flag (0 = data frame, 1 = error message)
- * bit 30	: remote transmission request flag (1 = rtr frame)
- * bit 31	: frame format flag (0 = standard 11 bit, 1 = extended 29 bit)
+ * bit 0-28    : CAN identifier (11/29 bit)
+ * bit 29    : error message frame flag (0 = data frame, 1 = error message)
+ * bit 30    : remote transmission request flag (1 = rtr frame)
+ * bit 31    : frame format flag (0 = standard 11 bit, 1 = extended 29 bit)
  */
 using canid_t = uint32_t;
 
-#define CAN_SFF_ID_BITS		11
-#define CAN_EFF_ID_BITS		29
+#define CAN_SFF_ID_BITS        11
+#define CAN_EFF_ID_BITS        29
 
 /*
  * Controller Area Network Error Message Frame Mask structure
  *
- * bit 0-28	: error class mask (see include/uapi/linux/can/error.h)
- * bit 29-31	: set to zero
+ * bit 0-28    : error class mask (see include/uapi/linux/can/error.h)
+ * bit 29-31    : set to zero
  */
 using can_err_mask_t = uint32_t;
 
@@ -233,5 +233,5 @@ struct canfd_frame {
     uint8_t    data[CANFD_MAX_DLEN] __attribute__((aligned(8)));
 };
 
-#define CAN_MTU		(sizeof(struct can_frame))
-#define CANFD_MTU	(sizeof(struct canfd_frame))
+#define CAN_MTU        (sizeof(struct can_frame))
+#define CANFD_MTU    (sizeof(struct canfd_frame))

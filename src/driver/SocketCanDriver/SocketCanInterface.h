@@ -53,7 +53,7 @@ struct can_status_t {
 class SocketCanInterface: public CanInterface {
 public:
     SocketCanInterface(SocketCanDriver *driver, int index, QString name);
-	virtual ~SocketCanInterface();
+    virtual ~SocketCanInterface();
 
     virtual QString getName() const;
     void setName(QString name);
@@ -72,9 +72,9 @@ public:
     virtual uint32_t getCapabilities();
 
 
-	virtual void open();
+    virtual void open();
     virtual bool isOpen();
-	virtual void close();
+    virtual void close();
 
     virtual void sendMessage(const CanMessage &msg);
     virtual bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms);
@@ -102,7 +102,7 @@ private:
 
     int _idx;
     bool _isOpen;
-	int _fd;
+    int _fd;
     QString _name;
 
     can_config_t _config;

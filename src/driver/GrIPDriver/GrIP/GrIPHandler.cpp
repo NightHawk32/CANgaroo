@@ -509,11 +509,7 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet)
             msg.setBRS(false);
             msg.setLength(frame.DLC);
             msg.setRX(true);
-            msg.setTimestamp(
-            {
-                static_cast<long>(msec / 1000),          // Whole seconds
-                static_cast<long>((msec % 1000) * 1000)  // Remainder in µs
-            });
+            msg.setTimestamp_ms(msec);
 
             if (frame.Flags & CAN_FLAGS_EXT_ID)
             {

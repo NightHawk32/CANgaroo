@@ -126,10 +126,10 @@ CANBlasterInterface *CANBlasterDriver::createOrUpdateInterface(int index, QStrin
     for (auto *intf : getInterfaces()) {
         CANBlasterInterface *scif = dynamic_cast<CANBlasterInterface*>(intf);
         if (scif && scif->getIfIndex() == index) {
-			scif->setName(name);
+            scif->setName(name);
             return scif;
-		}
-	}
+        }
+    }
 
 
     CANBlasterInterface *scif = new CANBlasterInterface(this, index, name, fd_support);

@@ -114,10 +114,10 @@ SLCANInterface *SLCANDriver::createOrUpdateInterface(int index, QString name, bo
         SLCANInterface *scif = dynamic_cast<SLCANInterface*>(intf);
         if (scif->getIfIndex() == index)
         {
-			scif->setName(name);
+            scif->setName(name);
             return scif;
-		}
-	}
+        }
+    }
 
     SLCANInterface *scif = new SLCANInterface(this, index, name, fd_support, manufacturer);
     addInterface(scif);

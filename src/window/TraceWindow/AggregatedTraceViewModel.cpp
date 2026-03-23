@@ -168,12 +168,6 @@ AggregatedTraceViewModel::unique_key_t AggregatedTraceViewModel::makeUniqueKey(c
     return static_cast<uint64_t>(msg.getInterfaceId()) << 32 | static_cast<uint64_t>(msg.isRX()) << 31 | msg.getRawId();
 }
 
-double AggregatedTraceViewModel::getTimeDiff(const timeval t1, const timeval t2) const
-{
-    double diff = t2.tv_sec - t1.tv_sec;
-    diff += static_cast<double>(t2.tv_usec - t1.tv_usec) / 1000000;
-    return diff;
-}
 
 
 QModelIndex AggregatedTraceViewModel::index(int row, int column, const QModelIndex &parent) const

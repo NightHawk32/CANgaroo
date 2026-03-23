@@ -92,7 +92,7 @@ public:
     virtual unsigned getBitrate();
     virtual uint32_t getCapabilities();
 
-	virtual void open();
+    virtual void open();
     virtual void close();
     virtual bool isOpen();
 

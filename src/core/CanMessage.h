@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <QString>
 #include <QDateTime>
@@ -31,24 +31,24 @@
 class CanMessage
 {
 public:
-	CanMessage();
-	CanMessage(uint32_t can_id);
+    CanMessage();
+    CanMessage(uint32_t can_id);
     CanMessage(const CanMessage &msg);
     CanMessage& operator=(const CanMessage&) = default;
 
     void cloneFrom(const CanMessage &msg);
 
-	uint32_t getRawId() const;
-	void setRawId(const uint32_t raw_id);
+    uint32_t getRawId() const;
+    void setRawId(const uint32_t raw_id);
 
-	uint32_t getId() const;
-	void setId(const uint32_t id);
+    uint32_t getId() const;
+    void setId(const uint32_t id);
 
-	bool isExtended() const;
-	void setExtended(const bool isExtended);
+    bool isExtended() const;
+    void setExtended(const bool isExtended);
 
-	bool isRTR() const;
-	void setRTR(const bool isRTR);
+    bool isRTR() const;
+    void setRTR(const bool isRTR);
 
     bool isFD() const;
     void setFD(const bool isFD);
@@ -57,13 +57,13 @@ public:
     void setBRS(const bool isFD);
 
     bool isErrorFrame() const;
-	void setErrorFrame(const bool isErrorFrame);
+    void setErrorFrame(const bool isErrorFrame);
 
     CanInterfaceId getInterfaceId() const;
     void setInterfaceId(CanInterfaceId interface);
 
-	uint8_t getLength() const;
-	void setLength(const uint8_t dlc);
+    uint8_t getLength() const;
+    void setLength(const uint8_t dlc);
 
     bool isRX() const;
     void setRX(const bool isRX);
@@ -71,37 +71,37 @@ public:
     bool isShow() const;
     void setShow(const bool enable);
 
-	uint8_t getByte(const uint8_t index) const;
-	void setByte(const uint8_t index, const uint8_t value);
+    uint8_t getByte(const uint8_t index) const;
+    void setByte(const uint8_t index, const uint8_t value);
 
     uint64_t extractRawSignal(uint8_t start_bit, const uint8_t length, const bool isBigEndian) const;
 
     void setDataAt(uint8_t position, uint8_t data);
-	void setData(const uint8_t d0);
-	void setData(const uint8_t d0, const uint8_t d1);
-	void setData(const uint8_t d0, const uint8_t d1, const uint8_t d2);
-	void setData(const uint8_t d0, const uint8_t d1, const uint8_t d2, const uint8_t d3);
-	void setData(const uint8_t d0, const uint8_t d1, const uint8_t d2, const uint8_t d3, const uint8_t d4);
-	void setData(const uint8_t d0, const uint8_t d1, const uint8_t d2, const uint8_t d3, const uint8_t d4, const uint8_t d5);
-	void setData(const uint8_t d0, const uint8_t d1, const uint8_t d2, const uint8_t d3, const uint8_t d4, const uint8_t d5, const uint8_t d6);
-	void setData(const uint8_t d0, const uint8_t d1, const uint8_t d2, const uint8_t d3, const uint8_t d4, const uint8_t d5, const uint8_t d6, const uint8_t d7);
+    void setData(const uint8_t d0);
+    void setData(const uint8_t d0, const uint8_t d1);
+    void setData(const uint8_t d0, const uint8_t d1, const uint8_t d2);
+    void setData(const uint8_t d0, const uint8_t d1, const uint8_t d2, const uint8_t d3);
+    void setData(const uint8_t d0, const uint8_t d1, const uint8_t d2, const uint8_t d3, const uint8_t d4);
+    void setData(const uint8_t d0, const uint8_t d1, const uint8_t d2, const uint8_t d3, const uint8_t d4, const uint8_t d5);
+    void setData(const uint8_t d0, const uint8_t d1, const uint8_t d2, const uint8_t d3, const uint8_t d4, const uint8_t d5, const uint8_t d6);
+    void setData(const uint8_t d0, const uint8_t d1, const uint8_t d2, const uint8_t d3, const uint8_t d4, const uint8_t d5, const uint8_t d6, const uint8_t d7);
 
-    struct timeval getTimestamp() const;
-    qint64 getTimestamp_ms() const;
-    void setTimestamp(qint64 ms);
-    void setTimestamp(const struct timeval timestamp);
-    void setTimestamp(const uint64_t seconds, const uint32_t micro_seconds);
-
-
+    int64_t getTimestamp_us() const;
+    int64_t getTimestamp_ms() const;
     double getFloatTimestamp() const;
     QDateTime getDateTime() const;
+
+    void setTimestamp_us(int64_t us);
+    void setTimestamp_ms(int64_t ms);
+    void setTimestamp(double seconds);
+    void setTimestamp(uint64_t seconds, uint32_t micro_seconds);
 
     QString getIdString() const;
     QString getDataHexString() const;
 
 
 private:
-	uint32_t _raw_id;
+    uint32_t _raw_id;
     uint8_t _dlc;
     bool _isFD;
     bool _isBRS;
@@ -113,9 +113,8 @@ private:
         uint16_t _u16[4*8];
         uint32_t _u32[2*8];
         uint64_t _u64[8];
-	};
+    };
 
-    struct timeval _timestamp;
-    qint64 _timestamp_ms;
+    int64_t _timestamp_us = 0;
 
 };
