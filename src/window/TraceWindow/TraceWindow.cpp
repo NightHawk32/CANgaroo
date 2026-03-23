@@ -29,6 +29,7 @@
 #include "AggregatedTraceViewModel.h"
 #include "UnifiedTraceViewModel.h"
 #include "TraceFilterModel.h"
+#include <QCheckBox>
 #include <QScrollBar>
 #include <core/Backend.h>
 
@@ -88,6 +89,8 @@ TraceWindow::TraceWindow(QWidget *parent, Backend &backend) :
 
         connect(_filterModels[i], &QAbstractItemModel::rowsInserted, this, &TraceWindow::onRowsInserted);
     }
+
+    connect(_aggMonitorFilterModel, &QAbstractItemModel::rowsInserted, this, &TraceWindow::onRowsInserted);
 
     // Special handling for the first tab: Can show either Aggregated (Monitor) or Unified (All)
     ui->cbViewMode->addItem(tr("Aggregated"), mode_aggregated);
@@ -225,19 +228,15 @@ void TraceWindow::onRowsInserted(const QModelIndex &parent, int first, int last)
     (void) first;
     (void) last;
 
+    if (!ui->cbAutoscroll->isChecked()) { return; }
+
     TraceFilterModel *filterModel = qobject_cast<TraceFilterModel*>(sender());
     QTreeView* trees[] = { ui->treeAgg, ui->treeUds, ui->treeJ1939 };
-    
+
     // Find which tree corresponds to this filter model and scroll it
     for (int i = 0; i < Cat_Count; ++i) {
         if (_filterModels[i] == filterModel || (i == 0 && _aggMonitorFilterModel == filterModel)) {
-            QTreeView* tree = trees[i];
-            QScrollBar *vbar = tree->verticalScrollBar();
-            bool atBottom = (vbar->value() >= vbar->maximum() - 10); // buffer of 10 pixels
-            
-            if (atBottom || vbar->maximum() == 0) {
-                tree->scrollToBottom();
-            }
+            trees[i]->scrollToBottom();
             break;
         }
     }

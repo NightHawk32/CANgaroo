@@ -34,7 +34,7 @@
 #include <driver/CanListener.h>
 #include <parser/dbc/DbcParser.h>
 
-Backend *Backend::_instance = 0;
+Backend *Backend::_instance = nullptr;
 
 Backend::Backend()
   : QObject(0),

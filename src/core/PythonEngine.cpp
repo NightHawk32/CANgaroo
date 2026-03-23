@@ -364,8 +364,17 @@ void PythonEngine::stopScript()
 
     if (_workerThread->joinable())
     {
-        _workerThread->join();
+        if (_running)
+        {
+            // Thread didn't stop in time — detach to avoid blocking the UI forever
+            _workerThread->detach();
+        }
+        else
+        {
+            _workerThread->join();
+        }
     }
+    _workerThread.reset();
 }
 
 bool PythonEngine::isRunning() const

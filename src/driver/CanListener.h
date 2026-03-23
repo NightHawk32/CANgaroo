@@ -23,6 +23,7 @@
 
 #include <QThread>
 #include <QObject>
+#include <atomic>
 #include <driver/CanDriver.h>
 #include <driver/CanInterface.h>
 
@@ -54,7 +55,7 @@ public slots:
 private:
     Backend &_backend;
     CanInterface &_intf;
-    bool _shouldBeRunning;
-    bool _openComplete;
+    std::atomic<bool> _shouldBeRunning;
+    std::atomic<bool> _openComplete;
     QThread *_thread;
 };

@@ -496,6 +496,18 @@ bool MainWindow::loadWorkspaceTab(QDomElement el)
         {
             script->loadXML(backend(), scriptEl);
         }
+
+        // Restore dock layout state (splits, tabification, sizes).
+        // Deferred so it runs after the default layout timer from createTraceWindow().
+        QString dockState = el.attribute("dockstate");
+        if (!dockState.isEmpty())
+        {
+            QByteArray state = QByteArray::fromBase64(dockState.toLatin1());
+            QTimer::singleShot(0, mw, [mw, state]()
+            {
+                mw->restoreState(state);
+            });
+        }
     }
 
     return true;
@@ -594,6 +606,9 @@ bool MainWindow::saveWorkspaceToFile(QString filename)
             log_error(QString(tr("Cannot save window settings to file: %1")).arg(filename));
             return false;
         }
+
+        // Save dock layout state so splits/tabification/sizes are preserved.
+        tabEl.setAttribute("dockstate", QString::fromLatin1(w->saveState().toBase64()));
 
         // Save TxGeneratorWindow dock content (cyclic frames) as a sibling element.
         TxGeneratorWindow *gen = w->findChild<TxGeneratorWindow *>();

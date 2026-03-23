@@ -427,7 +427,7 @@ bool GrIPHandler::CanTransmit(uint8_t ch, const CanMessage &msg)
 // Packet dispatcher (called from WorkerThread, holds m_MutexData)
 // ---------------------------------------------------------------------------
 
-void GrIPHandler::ProcessData(GrIP_Packet_t &packet)
+void GrIPHandler::ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms)
 {
     std::unique_lock<std::mutex> lck(m_MutexData);
 
@@ -496,10 +496,6 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet)
             Protocol_CanFrame_t frame;
             std::memcpy(&frame, packet.Data, sizeof(Protocol_CanFrame_t));
 
-            // Use the host wall-clock time as the receive timestamp because the
-            // device timestamp wraps and is not synchronised to the host clock.
-            const qint64 msec = QDateTime::currentMSecsSinceEpoch();
-
             CanMessage msg(frame.ID);
 
             // Initialise all flags to false; set individually from frame.Flags below.
@@ -509,7 +505,7 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet)
             msg.setBRS(false);
             msg.setLength(frame.DLC);
             msg.setRX(true);
-            msg.setTimestamp_ms(msec);
+            msg.setTimestamp_ms(rxTimestamp_ms);
 
             if (frame.Flags & CAN_FLAGS_EXT_ID)
             {
@@ -642,14 +638,21 @@ void GrIPHandler::WorkerThread()
 
     while (!m_Exit)
     {
+        bool hadData = false;
+
         // --- RX: read bytes from the port and feed the GrIP framer ---
         m_SerialPort->waitForReadyRead(1);
+
+        // Capture timestamp as close to the read as possible
+        qint64 rxTimestamp_ms = QDateTime::currentMSecsSinceEpoch();
+
         if (m_SerialPort->bytesAvailable())
         {
             const QByteArray data = m_SerialPort->readAll();
             if (!data.isEmpty())
             {
                 GrIP_RxCallback(data);
+                hadData = true;
             }
         }
 
@@ -673,7 +676,8 @@ void GrIPHandler::WorkerThread()
             GrIP_Packet_t dat = {};
             if (GrIP_Receive(&dat))
             {
-                ProcessData(dat);
+                ProcessData(dat, rxTimestamp_ms);
+                hadData = true;
             }
             else
             {
@@ -681,7 +685,12 @@ void GrIPHandler::WorkerThread()
             }
         }
 
-        QThread::msleep(1);
+        // Only sleep when idle — skip the delay when data is flowing
+        // to minimise timestamp jitter on back-to-back frames.
+        if (!hadData)
+        {
+            QThread::usleep(500);
+        }
     }
 }
 

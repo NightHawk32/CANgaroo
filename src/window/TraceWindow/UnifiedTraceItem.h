@@ -33,6 +33,8 @@ public:
     void setGlobalIndex(uint32_t index) { m_globalIndex = index; }
     uint64_t timestamp() const { return m_timestamp; }
     void setTimestamp(uint64_t ts) { m_timestamp = ts; }
+    uint64_t prevSameIdTimestamp() const { return m_prevSameIdTimestamp; }
+    void setPrevSameIdTimestamp(uint64_t ts) { m_prevSameIdTimestamp = ts; }
 
 private:
     QVector<std::shared_ptr<UnifiedTraceItem>> m_childItems;
@@ -47,5 +49,6 @@ private:
 
     uint32_t m_globalIndex = 0;
     uint64_t m_timestamp = 0;
+    uint64_t m_prevSameIdTimestamp = 0;
     int m_row = -1;
 };

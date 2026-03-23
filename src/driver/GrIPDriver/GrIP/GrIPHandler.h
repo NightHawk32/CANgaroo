@@ -196,7 +196,7 @@ private:
      * @param packet  Decoded packet to process. Passed by reference because
      *                GrIP_Receive() fills it in place.
      */
-    void ProcessData(GrIP_Packet_t &packet);
+    void ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms);
 
     /**
      * @brief Worker thread entry point.

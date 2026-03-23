@@ -164,9 +164,14 @@ void UnifiedTraceViewModel::afterAppend()
                 auto item = std::make_shared<UnifiedTraceItem>(pmsg, m_rootItem.get());
                 if (m_firstTimestamp == 0) m_firstTimestamp = pmsg.timestamp;
                 item->setTimestamp(pmsg.timestamp);
-                item->setGlobalIndex(m_globalIndexCounter++); 
+                item->setGlobalIndex(m_globalIndexCounter++);
+
+                uint64_t dkey = makeDeltaKey(pmsg);
+                item->setPrevSameIdTimestamp(m_prevTimestampByKey.value(dkey, 0));
+                m_prevTimestampByKey[dkey] = pmsg.timestamp;
+
                 newItems.append(item);
-                
+
                 if (m_category == Cat_J1939) {
                     m_j1939AggregatedMap[getJ1939Key(pmsg)] = item;
                 }
@@ -178,6 +183,11 @@ void UnifiedTraceViewModel::afterAppend()
                 if (m_firstTimestamp == 0) m_firstTimestamp = ts;
                 item->setTimestamp(ts);
                 item->setGlobalIndex(m_globalIndexCounter++);
+
+                uint64_t dkey = makeDeltaKey(msg);
+                item->setPrevSameIdTimestamp(m_prevTimestampByKey.value(dkey, 0));
+                m_prevTimestampByKey[dkey] = ts;
+
                 newItems.append(item);
             }
         }
@@ -257,6 +267,7 @@ void UnifiedTraceViewModel::afterClear()
     m_firstTimestamp = 0;
     m_previousRowTimestamp = 0;
     m_j1939AggregatedMap.clear();
+    m_prevTimestampByKey.clear();
     endResetModel();
 }
 
@@ -270,12 +281,27 @@ void UnifiedTraceViewModel::onSetupChanged()
     m_firstTimestamp = 0;
     m_previousRowTimestamp = 0;
     m_j1939AggregatedMap.clear();
+    m_prevTimestampByKey.clear();
     
     // Re-process all frames from trace buffer
     // We bypass beginInsertRows by being inside beginResetModel
     afterAppend(); 
     
     endResetModel();
+}
+
+uint64_t UnifiedTraceViewModel::makeDeltaKey(const CanMessage &msg)
+{
+    // Combine interface ID, direction, and CAN ID into a unique key
+    return static_cast<uint64_t>(msg.getInterfaceId()) << 32
+         | static_cast<uint64_t>(msg.isRX()) << 31
+         | msg.getRawId();
+}
+
+uint64_t UnifiedTraceViewModel::makeDeltaKey(const ProtocolMessage &pmsg)
+{
+    if (pmsg.rawFrames.isEmpty()) { return 0; }
+    return makeDeltaKey(pmsg.rawFrames.first());
 }
 
 uint32_t UnifiedTraceViewModel::getJ1939Key(const ProtocolMessage& pmsg) const
@@ -297,16 +323,9 @@ QVariant UnifiedTraceViewModel::data_DisplayRole(const QModelIndex &index) const
     if (item->isProtocol()) {
         const ProtocolMessage& pmsg = item->protocolMessage();
         switch (index.column()) {
-            case column_timestamp: 
+            case column_timestamp:
             {
-                uint64_t prev = 0;
-                if (index.row() > 0) {
-                    auto prevItem = item->parentItem()->child(index.row() - 1);
-                    if (prevItem) prev = prevItem->timestamp();
-                } else {
-                    prev = (item->parentItem() != m_rootItem.get()) ? item->parentItem()->timestamp() : 0;
-                }
-                return formatUnifiedTimestamp(current, prev);
+                return formatUnifiedTimestamp(current, item->prevSameIdTimestamp());
             }
             case column_canid: 
             {
@@ -337,15 +356,10 @@ QVariant UnifiedTraceViewModel::data_DisplayRole(const QModelIndex &index) const
         }
     } else if (item->isMetadata()) {
         switch (index.column()) {
-            case column_timestamp: 
+            case column_timestamp:
             {
-                uint64_t prev = 0;
-                if (index.row() > 0) {
-                    auto prevItem = item->parentItem()->child(index.row() - 1);
-                    if (prevItem) prev = prevItem->timestamp();
-                } else {
-                    prev = (item->parentItem() != m_rootItem.get()) ? item->parentItem()->timestamp() : 0;
-                }
+                // Metadata rows are children — show delta relative to parent
+                uint64_t prev = (item->parentItem() != m_rootItem.get()) ? item->parentItem()->timestamp() : 0;
                 return formatUnifiedTimestamp(current, prev);
             }
             case column_name: return item->metadataName();
@@ -366,14 +380,15 @@ QVariant UnifiedTraceViewModel::data_DisplayRole(const QModelIndex &index) const
         switch (index.column()) {
             case column_index: 
                 return (item->parentItem() == m_rootItem.get()) ? QVariant(item->globalIndex()) : QVariant();
-            case column_timestamp: 
+            case column_timestamp:
             {
-                uint64_t prev = 0;
-                if (index.row() > 0) {
-                    auto prevItem = item->parentItem()->child(index.row() - 1);
-                    if (prevItem) prev = prevItem->timestamp();
+                uint64_t prev;
+                if (item->parentItem() == m_rootItem.get()) {
+                    // Top-level raw frame — use per-ID delta
+                    prev = item->prevSameIdTimestamp();
                 } else {
-                    prev = (item->parentItem() != m_rootItem.get()) ? item->parentItem()->timestamp() : 0;
+                    // Child row (transport layer frame) — delta relative to parent
+                    prev = item->parentItem()->timestamp();
                 }
                 return formatUnifiedTimestamp(current, prev);
             }

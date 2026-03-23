@@ -63,6 +63,16 @@
        </spacer>
       </item>
       <item>
+       <widget class="QCheckBox" name="cbAutoscroll">
+        <property name="text">
+         <string>Autoscroll</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="TraceClearpushButton">
         <property name="text">
          <string>Clear</string>
