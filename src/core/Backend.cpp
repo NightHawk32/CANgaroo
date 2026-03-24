@@ -199,28 +199,25 @@ CanInterfaceIdList Backend::getInterfaceList()
 
 CanDriver *Backend::getDriverById(CanInterfaceId id)
 {
-    CanDriver *driver = _drivers.value((id>>8) & 0xFF);
-    if (!driver) {
+    int driverIdx = (id >> 8) & 0xFF;
+    if (driverIdx >= _drivers.size())
+    {
         log_critical(QString(tr("Unable to get driver for interface id: %1. This should never happen.")).arg(QString().number(id)));
+        return nullptr;
     }
-    return driver;
+    return _drivers.value(driverIdx);
 }
 
 CanInterface *Backend::getInterfaceById(CanInterfaceId id)
 {
     CanDriver *driver = getDriverById(id);
-    return driver ? driver->getInterfaceById(id) : 0;
+    return driver ? driver->getInterfaceById(id) : nullptr;
 }
 
 QString Backend::getInterfaceName(CanInterfaceId id)
 {
     CanInterface *intf = getInterfaceById(id);
-    if (intf) {
-        return intf->getName();
-    } else {
-        log_critical(QString(tr("Trying to get name from unknown interface id: %1. This should never happen.")).arg(QString().number(id)));
-        return "";
-    }
+    return intf ? intf->getName() : QString();
 }
 
 QString Backend::getDriverName(CanInterfaceId id)

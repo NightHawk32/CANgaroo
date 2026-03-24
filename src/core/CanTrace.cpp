@@ -23,6 +23,7 @@
 #include <QMutexLocker>
 #include <QFile>
 #include <QTextStream>
+#include <QDataStream>
 
 #include <core/Backend.h>
 #include <core/CanMessage.h>
@@ -219,6 +220,219 @@ void CanTrace::saveVectorAsc(QFile &file)
     }
 
     stream << "End TriggerBlock" << Qt::endl;
+}
+
+void CanTrace::saveVectorMdf(QFile &file)
+{
+    QMutexLocker locker(&_mutex);
+    if (_dataRowsUsed == 0) return;
+
+    QDataStream ds(&file);
+    ds.setByteOrder(QDataStream::LittleEndian);
+    ds.setFloatingPointPrecision(QDataStream::DoublePrecision);
+
+    // Record layout per CAN frame:
+    //   timestamp (float64, 8) + CAN_ID (uint32, 4) + DLC (uint8, 1)
+    //   + Dir (uint8, 1) + DataBytes (8 bytes) = 22 bytes
+    const quint32 recordSize = 22;
+    const quint64 recordCount = _dataRowsUsed;
+
+    // --- Helper: TXBLOCK size (24-byte header + text + NUL, 8-byte aligned) ---
+    auto txSize = [](const QByteArray &t) -> quint64 {
+        return ((24 + t.size() + 1) + 7) & ~7ULL;
+    };
+
+    // --- Pre-compute all block sizes ---
+    const quint64 szId = 64;
+    const quint64 szHd = 88;   // 24 + 6*8 + 16
+    const quint64 szFh = 56;   // 24 + 2*8 + 16
+    const quint64 szDg = 64;   // 24 + 4*8 + 8
+    const quint64 szCg = 104;  // 24 + 6*8 + 32
+    const quint64 szCn = 160;  // 24 + 8*8 + 72
+
+    QByteArray txFhStr   = "CANgaroo MDF4 export";
+    QByteArray txCgStr   = "CAN";
+    QByteArray txTime    = "t";
+    QByteArray txTimeSec = "s";
+    QByteArray txId      = "CAN_ID";
+    QByteArray txDlc     = "DLC";
+    QByteArray txDir     = "Dir";
+    QByteArray txData    = "DataBytes";
+
+    // --- Pre-compute all block offsets ---
+    quint64 off = 0;
+    quint64 oId         = off; off += szId;
+    quint64 oHd         = off; off += szHd;
+    quint64 oFh         = off; off += szFh;
+    quint64 oTxFh       = off; off += txSize(txFhStr);
+    quint64 oDg         = off; off += szDg;
+    quint64 oCg         = off; off += szCg;
+    quint64 oTxCg       = off; off += txSize(txCgStr);
+    quint64 oCnTime     = off; off += szCn;
+    quint64 oTxTime     = off; off += txSize(txTime);
+    quint64 oTxTimeSec  = off; off += txSize(txTimeSec);
+    quint64 oCnId       = off; off += szCn;
+    quint64 oTxId       = off; off += txSize(txId);
+    quint64 oCnDlc      = off; off += szCn;
+    quint64 oTxDlc      = off; off += txSize(txDlc);
+    quint64 oCnDir      = off; off += szCn;
+    quint64 oTxDir      = off; off += txSize(txDir);
+    quint64 oCnData     = off; off += szCn;
+    quint64 oTxData     = off; off += txSize(txData);
+    quint64 oDt         = off;
+
+    (void)oId; // suppress unused
+
+    // --- Helpers ---
+    auto writeBlockHeader = [&ds](const char *id, quint64 length, quint64 linkCount) {
+        ds.writeRawData(id, 4);
+        ds << (quint32)0;
+        ds << length;
+        ds << linkCount;
+    };
+
+    auto writePad = [&ds](int bytes) {
+        for (int i = 0; i < bytes; i++) ds << (quint8)0;
+    };
+
+    auto writeTx = [&](const QByteArray &text) {
+        quint64 sz = txSize(text);
+        writeBlockHeader("##TX", sz, 0);
+        ds.writeRawData(text.constData(), text.size());
+        ds << (quint8)0;
+        int pad = sz - 24 - text.size() - 1;
+        writePad(pad);
+    };
+
+    auto writeCn = [&](quint64 nextCn, quint64 nameOff, quint64 unitOff,
+                       quint8 cnType, quint8 syncType, quint8 dataType,
+                       quint32 byteOff, quint32 bitCount) {
+        writeBlockHeader("##CN", szCn, 8);
+        ds << nextCn;          // cn_cn_next
+        ds << (quint64)0;     // cn_composition
+        ds << nameOff;         // cn_tx_name
+        ds << (quint64)0;     // cn_si_source
+        ds << (quint64)0;     // cn_cc_conversion
+        ds << (quint64)0;     // cn_data
+        ds << unitOff;         // cn_md_unit
+        ds << (quint64)0;     // cn_md_comment
+        // Data section (72 bytes)
+        ds << cnType;          // cn_type
+        ds << syncType;        // cn_sync_type
+        ds << dataType;        // cn_data_type
+        ds << (quint8)0;       // cn_bit_offset
+        ds << byteOff;         // cn_byte_offset
+        ds << bitCount;        // cn_bit_count
+        ds << (quint32)0;      // cn_flags
+        ds << (quint32)0;      // cn_inval_bit_pos
+        ds << (quint8)0;       // cn_precision
+        ds << (quint8)0;       // reserved
+        ds << (quint16)0;      // cn_attachment_count
+        double zero = 0.0;
+        for (int i = 0; i < 6; i++) ds << zero; // range/limit fields
+    };
+
+    // ===== IDBLOCK (64 bytes, no standard block header) =====
+    ds.writeRawData("MDF     ", 8);
+    ds.writeRawData("4.10    ", 8);
+    ds.writeRawData("CANgaroo", 8);
+    ds << (quint32)0;          // reserved
+    ds << (quint16)410;        // version number
+    ds << (quint16)0;          // reserved
+    ds << (quint16)0;          // unfinalized flags
+    ds << (quint16)0;          // custom unfin flags
+    writePad(28);
+
+    // ===== HDBLOCK (88 bytes) =====
+    quint64 startTimeNs = static_cast<quint64>(_data[0].getTimestamp_us()) * 1000ULL;
+    writeBlockHeader("##HD", szHd, 6);
+    ds << oDg;                 // hd_dg_first
+    ds << oFh;                 // hd_fh_first
+    ds << (quint64)0;         // hd_ch_first
+    ds << (quint64)0;         // hd_at_first
+    ds << (quint64)0;         // hd_ev_first
+    ds << (quint64)0;         // hd_md_comment
+    ds << startTimeNs;         // start_time_ns
+    ds << (qint16)0;           // tz_offset_min
+    ds << (qint16)0;           // dst_offset_min
+    ds << (quint8)2;           // time_flags (local time)
+    ds << (quint8)0;           // time_class
+    ds << (quint8)0;           // flags
+    ds << (quint8)0;           // reserved
+
+    // ===== FHBLOCK (56 bytes) =====
+    writeBlockHeader("##FH", szFh, 2);
+    ds << (quint64)0;         // fh_fh_next
+    ds << oTxFh;               // fh_md_comment
+    ds << startTimeNs;         // time_ns
+    ds << (qint16)0;           // tz_offset_min
+    ds << (qint16)0;           // dst_offset_min
+    ds << (quint8)2;           // time_flags
+    writePad(3);               // reserved
+
+    // ===== TX: FH comment =====
+    writeTx(txFhStr);
+
+    // ===== DGBLOCK (64 bytes) =====
+    writeBlockHeader("##DG", szDg, 4);
+    ds << (quint64)0;         // dg_dg_next
+    ds << oCg;                 // dg_cg_first
+    ds << oDt;                 // dg_data
+    ds << (quint64)0;         // dg_md_comment
+    ds << (quint8)0;           // rec_id_size
+    writePad(7);               // reserved
+
+    // ===== CGBLOCK (104 bytes) =====
+    writeBlockHeader("##CG", szCg, 6);
+    ds << (quint64)0;         // cg_cg_next
+    ds << oCnTime;             // cg_cn_first
+    ds << oTxCg;               // cg_tx_acq_name
+    ds << (quint64)0;         // cg_si_acq_source
+    ds << (quint64)0;         // cg_sr_first
+    ds << (quint64)0;         // cg_md_comment
+    ds << (quint64)0;         // record_id
+    ds << recordCount;         // cycle_count
+    ds << (quint16)0;          // flags
+    ds << (quint16)0;          // path_separator
+    ds << (quint32)0;          // reserved
+    ds << recordSize;          // data_bytes
+    ds << (quint32)0;          // inval_bytes
+
+    // ===== TX: CG name =====
+    writeTx(txCgStr);
+
+    // ===== CN channels (chained via cn_cn_next) =====
+    // cn_type: 0=fixed, 2=master; cn_sync_type: 1=time; cn_data_type: 0=uint_le, 4=real_le, 10=byte_array
+    writeCn(oCnId,  oTxTime,    oTxTimeSec, 2, 1, 4,  0,  64); // timestamp
+    writeTx(txTime);
+    writeTx(txTimeSec);
+
+    writeCn(oCnDlc, oTxId,      0,          0, 0, 0,  8,  32); // CAN_ID
+    writeTx(txId);
+
+    writeCn(oCnDir, oTxDlc,     0,          0, 0, 0,  12,  8); // DLC
+    writeTx(txDlc);
+
+    writeCn(oCnData, oTxDir,    0,          0, 0, 0,  13,  8); // Dir
+    writeTx(txDir);
+
+    writeCn(0,       oTxData,   0,          0, 0, 10, 14, 64); // DataBytes
+    writeTx(txData);
+
+    // ===== DTBLOCK =====
+    writeBlockHeader("##DT", 24 + recordCount * recordSize, 0);
+
+    double t_start = _data[0].getFloatTimestamp();
+    for (int i = 0; i < _dataRowsUsed; i++) {
+        CanMessage &msg = _data[i];
+        ds << (msg.getFloatTimestamp() - t_start); // 8 bytes
+        ds << msg.getRawId();                       // 4 bytes
+        ds << msg.getLength();                      // 1 byte
+        ds << static_cast<quint8>(msg.isRX() ? 0 : 1); // 1 byte
+        for (int j = 0; j < 8; j++) {              // 8 bytes
+            ds << msg.getByte(j);
+        }
+    }
 }
 
 bool CanTrace::getMuxedSignalFromCache(const CanDbSignal *signal, uint64_t *raw_value)

@@ -51,6 +51,7 @@ public:
 
     void saveCanDump(QFile &file);
     void saveVectorAsc(QFile &file);
+    void saveVectorMdf(QFile &file);
 
     bool getMuxedSignalFromCache(const CanDbSignal *signal, uint64_t *raw_value);
 

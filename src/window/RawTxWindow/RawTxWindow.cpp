@@ -31,6 +31,7 @@ RawTxWindow::RawTxWindow(QWidget *parent, Backend &backend) :
     ConfigurableWidget(parent),
     ui(new Ui::RawTxWindow),
     _backend(backend),
+    _slavedInterfaceId(0),
     _currentDbMsg(nullptr)
 {
     ui->setupUi(this);

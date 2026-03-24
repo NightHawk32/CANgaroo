@@ -8,6 +8,7 @@ class PythonEngine;
 class QPlainTextEdit;
 class QPushButton;
 class QCheckBox;
+class QLineEdit;
 class QSplitter;
 
 class ScriptWindow : public ConfigurableWidget
@@ -50,6 +51,7 @@ private:
     QPushButton *_btnLoad;
     QPushButton *_btnSave;
     QCheckBox *_chkAutoRun;
+    QLineEdit *_fileLabel;
     QString _scriptFilePath;
     QDateTime _lastLoadTime;
 

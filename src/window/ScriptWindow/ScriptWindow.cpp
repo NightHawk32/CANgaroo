@@ -7,6 +7,7 @@
 #include <QPushButton>
 #include <QCheckBox>
 #include <QFileDialog>
+#include <QLineEdit>
 #include <QTextStream>
 #include <QDomDocument>
 #include <QFileInfo>
@@ -47,6 +48,13 @@ ScriptWindow::ScriptWindow(QWidget *parent, Backend &backend)
     toolbar->addWidget(_btnClear);
 
     mainLayout->addLayout(toolbar);
+
+    // File path display
+    _fileLabel = new QLineEdit(this);
+    _fileLabel->setReadOnly(true);
+    _fileLabel->setPlaceholderText(tr("No script loaded"));
+    _fileLabel->setFrame(false);
+    mainLayout->addWidget(_fileLabel);
 
     // Splitter: editor (top) + console (bottom)
     _splitter = new QSplitter(Qt::Vertical, this);
@@ -138,6 +146,7 @@ void ScriptWindow::loadScriptFile(const QString &filename)
         QTextStream in(&file);
         _editor->setPlainText(in.readAll());
         _scriptFilePath = filename;
+        _fileLabel->setText(filename);
         _lastLoadTime = QFileInfo(filename).lastModified();
     }
 }
@@ -173,6 +182,7 @@ void ScriptWindow::onSaveClicked()
         QTextStream out(&file);
         out << _editor->toPlainText();
         _scriptFilePath = filename;
+        _fileLabel->setText(filename);
     }
 }
 

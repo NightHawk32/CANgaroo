@@ -152,6 +152,7 @@
      <addaction name="actionTransmit_View"/>
      <addaction name="actionGenerator_View"/>
      <addaction name="actionScript_View"/>
+     <addaction name="actionReplay_View"/>
     </widget>
     <addaction name="menu_New"/>
    </widget>
@@ -326,6 +327,11 @@
   <action name="actionScript_View">
    <property name="text">
     <string>Script View</string>
+   </property>
+  </action>
+  <action name="actionReplay_View">
+   <property name="text">
+    <string>Replay View</string>
    </property>
   </action>
   <action name="actionRestore_Window">

@@ -70,6 +70,7 @@ public slots:
     QDockWidget *addStatusWidget(QMainWindow *parent=0);
     QDockWidget *addTxGeneratorWidget(QMainWindow *parent=0);
     QDockWidget *addScriptWidget(QMainWindow *parent=0);
+    QDockWidget *addReplayWidget(QMainWindow *parent=0);
 
     bool showSetupDialog();
     void showAboutDialog();
@@ -89,6 +90,7 @@ private slots:
     void on_actionCan_Status_View_triggered();
     void on_actionGenerator_View_triggered();
     void on_actionScript_View_triggered();
+    void on_actionReplay_View_triggered();
     void showSettingsDialog();
 
     void switchLanguage(QAction *action);

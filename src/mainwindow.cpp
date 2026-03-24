@@ -48,6 +48,7 @@
 #include <window/RawTxWindow/RawTxWindow.h>
 #include <window/TxGeneratorWindow/TxGeneratorWindow.h>
 #include <window/ScriptWindow/ScriptWindow.h>
+#include <window/ReplayWindow/ReplayWindow.h>
 #include <window/SettingsDialog.h>
 
 #include <driver/SLCANDriver/SLCANDriver.h>
@@ -87,6 +88,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     connect(ui->actionTransmit_View, SIGNAL(triggered()), this, SLOT(addRawTxWidget()));
     connect(ui->actionGenerator_View, SIGNAL(triggered()), this, SLOT(on_actionGenerator_View_triggered()));
     connect(ui->actionScript_View, &QAction::triggered, this, &MainWindow::on_actionScript_View_triggered);
+    connect(ui->actionReplay_View, &QAction::triggered, this, &MainWindow::on_actionReplay_View_triggered);
     connect(ui->actionSettings, &QAction::triggered, this, &MainWindow::showSettingsDialog);
 
     QAction *actionStandaloneGraph = new QAction(tr("Standalone Graph"), this);
@@ -784,6 +786,7 @@ QMainWindow *MainWindow::createTraceWindow(QString title)
     QDockWidget *dockGeneratorWidget = addTxGeneratorWidget(mm);
     QDockWidget *dockGraphWidget = addGraphWidget(mm);
     QDockWidget *dockScriptWidget = addScriptWidget(mm);
+    QDockWidget *dockReplayWidget = addReplayWidget(mm);
 
     TxGeneratorWindow *gen = qobject_cast<TxGeneratorWindow*>(dockGeneratorWidget->widget());
     RawTxWindow *rawtx = qobject_cast<RawTxWindow*>(dockRawTxWidget->widget());
@@ -797,21 +800,23 @@ QMainWindow *MainWindow::createTraceWindow(QString title)
     mm->splitDockWidget(dockGeneratorWidget,dockLogWidget,Qt::Horizontal);
     mm->splitDockWidget(dockGraphWidget,dockLogWidget,Qt::Horizontal);
     mm->splitDockWidget(dockScriptWidget,dockLogWidget,Qt::Horizontal);
+    mm->splitDockWidget(dockReplayWidget,dockLogWidget,Qt::Horizontal);
     mm->tabifyDockWidget(dockGeneratorWidget, dockRawTxWidget); // Generator first, Message next
     mm->tabifyDockWidget(dockRawTxWidget, dockGraphWidget);
     mm->tabifyDockWidget(dockGraphWidget, dockScriptWidget);
+    mm->tabifyDockWidget(dockScriptWidget, dockReplayWidget);
     mm->splitDockWidget(dockStatusWidget,dockLogWidget,Qt::Horizontal);
     mm->tabifyDockWidget(dockStatusWidget, dockLogWidget); // Status first, Log next
 
     // Use QTimer to resize docks and ensure correct focus/visibility after layout is complete
-    QTimer::singleShot(0, mm, [mm, dockLogWidget, dockRawTxWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget]() {
+    QTimer::singleShot(0, mm, [mm, dockLogWidget, dockRawTxWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget, dockReplayWidget]() {
         dockStatusWidget->show();
         dockStatusWidget->raise();
         dockGeneratorWidget->show();
         dockGeneratorWidget->raise();
 
-        mm->resizeDocks({dockLogWidget, dockRawTxWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget}, {600, 600, 600, 600, 600}, Qt::Vertical);
-        mm->resizeDocks({dockLogWidget, dockRawTxWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget}, {1200, 1200, 1200, 1200, 1200}, Qt::Horizontal);
+        mm->resizeDocks({dockLogWidget, dockRawTxWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget, dockReplayWidget}, {600, 600, 600, 600, 600, 600}, Qt::Vertical);
+        mm->resizeDocks({dockLogWidget, dockRawTxWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget, dockReplayWidget}, {1200, 1200, 1200, 1200, 1200, 1200}, Qt::Horizontal);
     });
 
     ui->mainTabs->setCurrentWidget(mm);
@@ -950,6 +955,21 @@ QDockWidget *MainWindow::addScriptWidget(QMainWindow *parent)
     return dock;
 }
 
+QDockWidget *MainWindow::addReplayWidget(QMainWindow *parent)
+{
+    if (!parent)
+    {
+        parent = currentTab();
+    }
+    QDockWidget *dock = new QDockWidget(tr("Replay"), parent);
+    dock->setObjectName(QStringLiteral("dock_replay"));
+    dock->setWidget(new ReplayWindow(dock, backend()));
+    parent->addDockWidget(Qt::BottomDockWidgetArea, dock);
+    setupDockFloatReparent(dock, parent);
+
+    return dock;
+}
+
 void MainWindow::setupDockFloatReparent(QDockWidget *dock, QMainWindow *innerParent)
 {
     (void) innerParent;
@@ -1053,13 +1073,12 @@ void MainWindow::stopMeasurement()
 
 void MainWindow::saveTraceToFile()
 {
-    QString filters("Vector ASC (*.asc);;Linux candump (*.candump))");
+    QString filters("Vector ASC (*.asc);;Vector MDF4 (*.mf4);;Linux candump (*.candump)");
     QString defaultFilter("Vector ASC (*.asc)");
 
-    QFileDialog fileDialog(0, "Save Trace to file", QDir::currentPath(), filters);
+    QFileDialog fileDialog(0, tr("Save Trace to file"), QDir::currentPath(), filters);
     fileDialog.setAcceptMode(QFileDialog::AcceptSave);
     fileDialog.setOption(QFileDialog::DontConfirmOverwrite, false);
-    // fileDialog.setConfirmOverwrite(true);
     fileDialog.selectNameFilter(defaultFilter);
     fileDialog.setDefaultSuffix("asc");
     if (fileDialog.exec())
@@ -1072,6 +1091,10 @@ void MainWindow::saveTraceToFile()
             {
                 backend().getTrace()->saveCanDump(file);
             }
+            else if (filename.endsWith(".mf4", Qt::CaseInsensitive))
+            {
+                backend().getTrace()->saveVectorMdf(file);
+            }
             else
             {
                 backend().getTrace()->saveVectorAsc(file);
@@ -1081,7 +1104,7 @@ void MainWindow::saveTraceToFile()
         }
         else
         {
-            // TODO error message
+            QMessageBox::warning(this, tr("Error"), tr("Cannot open file for writing."));
         }
     }
 }
@@ -1120,6 +1143,11 @@ void MainWindow::on_actionGenerator_View_triggered()
 void MainWindow::on_actionScript_View_triggered()
 {
     addScriptWidget();
+}
+
+void MainWindow::on_actionReplay_View_triggered()
+{
+    addReplayWidget();
 }
 
 void MainWindow::switchLanguage(QAction *action)
