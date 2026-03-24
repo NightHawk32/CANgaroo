@@ -56,8 +56,9 @@ include($$PWD/window/ScriptWindow/ScriptWindow.pri)
 include($$PWD/helpers/helpers.pri)
 
 
-unix:PKGCONFIG += python3-embed
+PKGCONFIG += python3-embed
 unix:INCLUDEPATH += /usr/include/pybind11
+win32:INCLUDEPATH += $$system(python3 -c "import pybind11; print(pybind11.get_include())")
 
 unix:PKGCONFIG += libnl-3.0
 unix:PKGCONFIG += libnl-route-3.0
