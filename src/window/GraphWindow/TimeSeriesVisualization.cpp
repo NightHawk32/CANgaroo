@@ -120,51 +120,50 @@ void TimeSeriesVisualization::addMessage(const CanMessage &msg)
         if (signal->isPresentInMessage(msg)) {
             double value = signal->extractPhysicalFromMessage(msg);
             if (_seriesMap.contains(signal)) {
-                QLineSeries *series = _seriesMap[signal];
-                series->append(t, value);
+                _pointBuffers[signal].append(QPointF(t, value));
                 _signalBusMap[signal] = msg.getInterfaceId();
-                
-                // Rolling buffer: History preserved for "All" view. Only prune if memory safety is at risk.
-                if (series->count() > 100000) {
-                    series->remove(0);
-                }
+                _bufferDirty = true;
             }
         }
     }
+}
 
-    if (_autoScroll && !_chart->axes(Qt::Horizontal).isEmpty()) {
-        _isUpdatingRange = true;
-        QAbstractAxis *axisX = _chart->axes(Qt::Horizontal).first();
-        if (_windowDuration > 0) {
-            double windowSize = static_cast<double>(_windowDuration);
-            if (t > windowSize) {
-                // strict sliding: Tail moves with Head
-                axisX->setRange(t - windowSize, t);
-            } else {
-                // Startup Phase: Stay pinned at 0 to Duration until filled
-                axisX->setRange(0, windowSize);
-            }
-        } else {
-            // "All" View: Expand from 0 to current time
-            axisX->setRange(0, qMax(10.0, t));
+void TimeSeriesVisualization::flushBuffers()
+{
+    if (!_bufferDirty) return;
+
+    for (auto it = _pointBuffers.begin(); it != _pointBuffers.end(); ++it) {
+        QVector<QPointF> &buf = it.value();
+        if (buf.isEmpty()) continue;
+
+        // Trim with hysteresis to avoid frequent O(n) shifts
+        if (buf.size() > TRIM_THRESHOLD) {
+            int excess = buf.size() - MAX_POINTS;
+            buf.remove(0, excess);
         }
-        _isUpdatingRange = false;
-    }
 
-    updateYAxisRange();
+        QLineSeries *series = _seriesMap.value(it.key());
+        if (series) {
+            series->replace(buf);
+        }
+    }
+    _bufferDirty = false;
 }
 
 void TimeSeriesVisualization::onActivated()
 {
+    flushBuffers();
+
     if (!_autoScroll || _chart->axes(Qt::Horizontal).isEmpty()) return;
 
     double latestMsgT = 0;
-    for (auto series : _seriesMap.values()) {
-        if (series->count() > 0) {
-            latestMsgT = qMax(latestMsgT, series->at(series->count() - 1).x());
+    for (auto it = _pointBuffers.constBegin(); it != _pointBuffers.constEnd(); ++it) {
+        const QVector<QPointF> &buf = it.value();
+        if (!buf.isEmpty()) {
+            latestMsgT = qMax(latestMsgT, buf.last().x());
         }
     }
-    
+
     double t = latestMsgT;
 
     _isUpdatingRange = true;
@@ -177,10 +176,11 @@ void TimeSeriesVisualization::onActivated()
             axisX->setRange(0, windowSize);
         }
     } else {
-        // "All" Mode: Show from 0 to current timestamp
         axisX->setRange(0, qMax(10.0, t));
     }
     _isUpdatingRange = false;
+
+    updateYAxisRange();
 }
 
 void TimeSeriesVisualization::setSignalColor(CanDbSignal *signal, const QColor &color)
@@ -196,23 +196,42 @@ void TimeSeriesVisualization::setSignalColor(CanDbSignal *signal, const QColor &
 
 void TimeSeriesVisualization::updateYAxisRange()
 {
-    if (_chart->axes(Qt::Vertical).isEmpty() || _seriesMap.isEmpty()) return;
+    if (_chart->axes(Qt::Vertical).isEmpty() || _pointBuffers.isEmpty()) return;
+
+    QValueAxis *axisX = qobject_cast<QValueAxis*>(_chart->axes(Qt::Horizontal).first());
+    if (!axisX) return;
+    double minX = axisX->min();
+    double maxX = axisX->max();
 
     double minY = DBL_MAX;
     double maxY = -DBL_MAX;
     bool hasData = false;
 
-    QValueAxis *axisX = qobject_cast<QValueAxis*>(_chart->axes(Qt::Horizontal).first());
-    double minX = axisX->min();
-    double maxX = axisX->max();
+    for (auto it = _pointBuffers.constBegin(); it != _pointBuffers.constEnd(); ++it) {
+        const QVector<QPointF> &pts = it.value();
+        if (pts.isEmpty()) continue;
 
-    for (auto series : _seriesMap.values()) {
-        for (const QPointF &p : series->points()) {
-            if (p.x() >= minX && p.x() <= maxX) {
-                minY = qMin(minY, static_cast<double>(p.y()));
-                maxY = qMax(maxY, static_cast<double>(p.y()));
-                hasData = true;
-            }
+        // Binary search for first point with x >= minX
+        int lo = 0, hi = pts.size();
+        while (lo < hi) {
+            int mid = (lo + hi) / 2;
+            if (pts[mid].x() < minX) lo = mid + 1; else hi = mid;
+        }
+        int start = lo;
+
+        // Binary search for first point with x > maxX
+        lo = start; hi = pts.size();
+        while (lo < hi) {
+            int mid = (lo + hi) / 2;
+            if (pts[mid].x() <= maxX) lo = mid + 1; else hi = mid;
+        }
+        int end = lo;
+
+        for (int i = start; i < end; ++i) {
+            double y = pts[i].y();
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+            hasData = true;
         }
     }
 
@@ -234,6 +253,10 @@ void TimeSeriesVisualization::clear()
     for (auto series : _seriesMap.values()) {
         series->clear();
     }
+    for (auto &buf : _pointBuffers) {
+        buf.clear();
+    }
+    _bufferDirty = false;
     _startTime = -1;
 }
 
@@ -248,6 +271,8 @@ void TimeSeriesVisualization::clearSignals()
     }
     _tracers.clear();
     _seriesMap.clear();
+    _pointBuffers.clear();
+    _bufferDirty = false;
     _signals.clear();
     _signalBusMap.clear();
     _startTime = -1;
@@ -343,6 +368,7 @@ void TimeSeriesVisualization::addSignal(CanDbSignal *signal)
     }
 
     _seriesMap[signal] = series;
+    _pointBuffers[signal].reserve(MAX_POINTS);
 
     QGraphicsEllipseItem *tracer = new QGraphicsEllipseItem(-4, -4, 8, 8, _chart);
     tracer->setBrush(series->color());

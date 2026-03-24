@@ -89,7 +89,7 @@ private slots:
     void on_actionCan_Status_View_triggered();
     void on_actionGenerator_View_triggered();
     void on_actionScript_View_triggered();
-    void showThemeDialog();
+    void showSettingsDialog();
 
     void switchLanguage(QAction *action);
     void exportFullTrace();
@@ -138,7 +138,6 @@ private:
     void createLanguageMenu();
     void setupDockFloatReparent(QDockWidget *dock, QMainWindow *innerParent);
     QTranslator m_translator;
-    QMenu *m_languageMenu = nullptr;
     QActionGroup *m_languageActionGroup = nullptr;
    
 };

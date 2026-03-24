@@ -25,6 +25,7 @@
 #include <QtCharts/QChartView>
 #include <QtCharts/QScatterSeries>
 #include <QtCharts/QValueAxis>
+#include <QVector>
 
 #ifdef QT_CHARTS_USE_NAMESPACE
 QT_CHARTS_USE_NAMESPACE
@@ -57,6 +58,7 @@ public slots:
     QGraphicsRectItem* tooltipBox() const { return _tooltipBox; }
     QGraphicsTextItem* tooltipText() const { return _tooltipText; }
     QMap<CanDbSignal*, QScatterSeries*> seriesMap() const { return _seriesMap; }
+    const QMap<CanDbSignal*, QVector<QPointF>>& pointBuffers() const { return _pointBuffers; }
     QMap<CanDbSignal*, QGraphicsEllipseItem*> tracers() const { return _tracers; }
     int getBusId(CanDbSignal* sig) const { return _signalBusMap.value(sig, 0); }
 
@@ -78,8 +80,13 @@ private:
     int _windowDuration;
     bool _autoScroll;
     bool _isUpdatingRange;
-    static const int MAX_POINTS = 100000;
+    bool _bufferDirty = false;
 
+    static constexpr int MAX_POINTS = 100000;
+    static constexpr int TRIM_THRESHOLD = MAX_POINTS + 10000;
+    QMap<CanDbSignal*, QVector<QPointF>> _pointBuffers;
+
+    void flushBuffers();
     void updateAxes();
 
     QGraphicsLineItem *_cursorLine;

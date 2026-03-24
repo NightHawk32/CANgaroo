@@ -348,15 +348,15 @@ void GraphWindow::onMessageEnqueued(int idx)
         }
     }
 
-    // Live visualizations always get data
-    for (auto v : _visualizations) {
-        v->addMessage(msg);
+    // Only feed the active visualization (not all 4 types)
+    if (_activeVisualization) {
+        _activeVisualization->addMessage(msg);
     }
 
     // Conditional visualizations only get data if trigger is met
     if (_backend.getConditionalLoggingManager()->isConditionMet()) {
-        for (auto v : _conditionalVisualizations) {
-            v->addMessage(msg);
+        if (_activeConditionalVisualization) {
+            _activeConditionalVisualization->addMessage(msg);
         }
     }
 }
@@ -419,13 +419,14 @@ void GraphWindow::onMouseMove(QMouseEvent *event)
     
     if (tsv) {
         auto seriesMap = tsv->seriesMap();
+        const auto &buffers = tsv->pointBuffers();
         auto tracers = tsv->tracers();
         for (auto it = seriesMap.begin(); it != seriesMap.end(); ++it) {
             CanDbSignal *sig = it.key();
             QXYSeries *series = it.value();
             QGraphicsEllipseItem *tracer = tracers.value(sig);
 
-            const QList<QPointF> points = series->points();
+            const QVector<QPointF> &points = buffers.value(sig);
             if (points.isEmpty()) { if (tracer) tracer->hide(); continue; }
 
             int left = 0, right = points.size() - 1;
@@ -451,17 +452,16 @@ void GraphWindow::onMouseMove(QMouseEvent *event)
         }
     } else if (sv) {
         auto seriesMap = sv->seriesMap();
+        const auto &buffers = sv->pointBuffers();
         auto tracers = sv->tracers();
         for (auto it = seriesMap.begin(); it != seriesMap.end(); ++it) {
             CanDbSignal *sig = it.key();
             QXYSeries *series = it.value();
             QGraphicsEllipseItem *tracer = tracers.value(sig);
 
-            const QList<QPointF> points = series->points();
+            const QVector<QPointF> &points = buffers.value(sig);
             if (points.isEmpty()) { if (tracer) tracer->hide(); continue; }
 
-            // Scatter points might not be sorted by X if it's a "Distribution View" but we added them in temporal order.
-            // Let's assume temporal order for now.
             int left = 0, right = points.size() - 1;
             while (left < right) {
                 int mid = (left + right) / 2;
@@ -474,8 +474,7 @@ void GraphWindow::onMouseMove(QMouseEvent *event)
             QValueAxis *axisX = qobject_cast<QValueAxis*>(chart->axes(Qt::Horizontal).first());
             if (!axisX) { if (tracer) tracer->hide(); continue; }
             double xRange = axisX->max() - axisX->min();
-            
-            // For scatter, maybe use a smaller/stricter proximity?
+
             if (qAbs(points[nearestIdx].x() - t) < xRange * 0.05) {
                 html += QString("<span style='color:%1; font-size: 14px;'>●</span> (Bus %2) %3: <b>%4</b> %5<br/>")
                         .arg(series->color().name()).arg(sv->getBusId(sig)).arg(sig->name())

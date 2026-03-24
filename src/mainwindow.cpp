@@ -48,6 +48,7 @@
 #include <window/RawTxWindow/RawTxWindow.h>
 #include <window/TxGeneratorWindow/TxGeneratorWindow.h>
 #include <window/ScriptWindow/ScriptWindow.h>
+#include <window/SettingsDialog.h>
 
 #include <driver/SLCANDriver/SLCANDriver.h>
 #include <driver/GrIPDriver/GrIPDriver.h>
@@ -86,15 +87,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     connect(ui->actionTransmit_View, SIGNAL(triggered()), this, SLOT(addRawTxWidget()));
     connect(ui->actionGenerator_View, SIGNAL(triggered()), this, SLOT(on_actionGenerator_View_triggered()));
     connect(ui->actionScript_View, &QAction::triggered, this, &MainWindow::on_actionScript_View_triggered);
+    connect(ui->actionSettings, &QAction::triggered, this, &MainWindow::showSettingsDialog);
 
     QAction *actionStandaloneGraph = new QAction(tr("Standalone Graph"), this);
     actionStandaloneGraph->setShortcut(QKeySequence("Ctrl+Shift+B"));
     ui->menuWindow->addAction(actionStandaloneGraph);
     connect(actionStandaloneGraph, &QAction::triggered, this, &MainWindow::createStandaloneGraphWindow);
-
-    QAction *actionTheme = new QAction(tr("Theme..."), this);
-    ui->menuWindow->addAction(actionTheme);
-    connect(actionTheme, &QAction::triggered, this, &MainWindow::showThemeDialog);
 
     connect(ui->actionStart_Measurement, SIGNAL(triggered()), this, SLOT(startMeasurement()));
     connect(ui->btnStartMeasurement, SIGNAL(released()), this, SLOT(startMeasurement()));
@@ -1155,8 +1153,6 @@ void MainWindow::changeEvent(QEvent *event)
 
         _baseWindowTitle = tr("CANgaroo");
         setWorkspaceModified(_workspaceModified);
-
-        m_languageMenu->setTitle(tr("&Language"));
     }
 
     QMainWindow::changeEvent(event);
@@ -1164,12 +1160,7 @@ void MainWindow::changeEvent(QEvent *event)
 
 void MainWindow::createLanguageMenu()
 {
-    m_languageMenu = new QMenu(tr("&Language"));
-    QAction *aboutAction = ui->actionAbout;
-    ui->menuHelp->insertMenu(aboutAction, m_languageMenu);
-
     m_languageActionGroup = new QActionGroup(this);
-
     connect(m_languageActionGroup, &QActionGroup::triggered, this, &MainWindow::switchLanguage);
 
     QString savedLocale = settings.value("ui/language", "en_US").toString();
@@ -1177,25 +1168,21 @@ void MainWindow::createLanguageMenu()
     QAction *actionEn = new QAction(tr("English"), this);
     actionEn->setCheckable(true);
     actionEn->setData("en_US");
-    m_languageMenu->addAction(actionEn);
     m_languageActionGroup->addAction(actionEn);
 
     QAction *actionEs = new QAction(tr("Español"), this);
     actionEs->setCheckable(true);
     actionEs->setData("es_ES");
-    m_languageMenu->addAction(actionEs);
     m_languageActionGroup->addAction(actionEs);
 
     QAction *actionDe = new QAction(tr("Deutsch"), this);
     actionDe->setCheckable(true);
     actionDe->setData("de_DE");
-    m_languageMenu->addAction(actionDe);
     m_languageActionGroup->addAction(actionDe);
 
     QAction *actionCN = new QAction(tr("Chinese"), this);
     actionCN->setCheckable(true);
     actionCN->setData("zh_cn");
-    m_languageMenu->addAction(actionCN);
     m_languageActionGroup->addAction(actionCN);
 
     // Restore saved language selection
@@ -1373,89 +1360,48 @@ void MainWindow::importFullTrace()
     agg->layoutChanged();*/
 }
 
-void MainWindow::showThemeDialog()
+
+void MainWindow::showSettingsDialog()
 {
-    QDialog *themeDialog = new QDialog(this);
-    themeDialog->setWindowTitle(tr("Theme Selection"));
-    themeDialog->setModal(true);
-    themeDialog->setMinimumWidth(350);
+    SettingsDialog dlg(settings, m_languageActionGroup, this);
 
-    QVBoxLayout *mainLayout = new QVBoxLayout(themeDialog);
-
-    // Label
-    QLabel *label = new QLabel(tr("Select application theme:"), themeDialog);
-    mainLayout->addWidget(label);
-
-    // ComboBox with available styles
-    QComboBox *styleComboBox = new QComboBox(themeDialog);
-    QStringList availableStyles = QStyleFactory::keys();
-    styleComboBox->addItems(availableStyles);
-
-    // Set current style as selected
-    QString currentStyle = QApplication::style()->objectName();
-    int currentIndex = -1;
-    for (int i = 0; i < availableStyles.size(); ++i)
+    if (dlg.exec() != QDialog::Accepted)
     {
-        if (availableStyles[i].compare(currentStyle, Qt::CaseInsensitive) == 0)
-        {
-            currentIndex = i;
-            break;
-        }
-    }
-    if (currentIndex >= 0)
-    {
-        styleComboBox->setCurrentIndex(currentIndex);
+        return;
     }
 
-    mainLayout->addWidget(styleComboBox);
-
-    // Info label
-    QLabel *infoLabel = new QLabel(tr("Current style: %1").arg(currentStyle), themeDialog);
-    infoLabel->setStyleSheet("color: gray; font-size: 10px;");
-    mainLayout->addWidget(infoLabel);
-
-    mainLayout->addSpacing(20);
-
-    // Buttons
-    QDialogButtonBox *buttonBox = new QDialogButtonBox(
-        QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
-        themeDialog);
-
-    connect(buttonBox, &QDialogButtonBox::accepted, themeDialog, &QDialog::accept);
-    connect(buttonBox, &QDialogButtonBox::rejected, themeDialog, &QDialog::reject);
-
-    mainLayout->addWidget(buttonBox);
-
-    // Connect style change preview
-    connect(styleComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            [styleComboBox, infoLabel](int index)
-            {
-                QString selectedStyle = styleComboBox->itemText(index);
-                infoLabel->setText(QObject::tr("Selected: %1").arg(selectedStyle));
-            });
-
-    // Execute dialog
-    if (themeDialog->exec() == QDialog::Accepted)
+    // Apply theme
+    QString newTheme = dlg.selectedTheme();
+    QString currentTheme = QApplication::style()->objectName();
+    if (newTheme.compare(currentTheme, Qt::CaseInsensitive) != 0)
     {
-        QString selectedStyle = styleComboBox->currentText();
+        QApplication::setStyle(QStyleFactory::create(newTheme));
+        settings.setValue("ui/applicationStyle", newTheme);
 
-        // Apply the selected style
-        QApplication::setStyle(QStyleFactory::create(selectedStyle));
-
-        // Save to settings
-        settings.setValue("ui/applicationStyle", selectedStyle);
-
-        if(isDarkMode())
+        if (isDarkMode())
         {
             ThemeManager::instance().applyTheme(ThemeManager::Dark);
         }
-
-        QMessageBox::information(this,
-                                 tr("Theme Changed"),
-                                 tr("The theme has been changed to %1.\n"
-                                    "Some changes may require an application restart.").arg(selectedStyle));
     }
 
-    themeDialog->deleteLater();
+    // Apply language
+    QString newLocale = dlg.selectedLanguage();
+    QString currentLocale = settings.value("ui/language", "en_US").toString();
+    if (newLocale != currentLocale)
+    {
+        for (QAction *action : m_languageActionGroup->actions())
+        {
+            if (action->data().toString() == newLocale)
+            {
+                action->setChecked(true);
+                switchLanguage(action);
+                break;
+            }
+        }
+    }
+
+    // Apply restore window setting
+    ui->actionRestore_Window->setChecked(dlg.restoreWindowEnabled());
+    settings.setValue("ui/restoreWindowGeometry", dlg.restoreWindowEnabled());
 }
 
