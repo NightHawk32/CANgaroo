@@ -246,10 +246,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
 
     qApp->installTranslator(&m_translator);
     createLanguageMenu();
-    if (!m_languageActionGroup->actions().isEmpty())
-    {
-        m_languageActionGroup->actions().first()->trigger();
-    }
 
     // Load saved application style/theme
     QString savedStyle = settings.value("ui/applicationStyle", "").toString();
@@ -1143,12 +1139,12 @@ void MainWindow::switchLanguage(QAction *action)
         QString qmPath = ":/translations/i18n_" + locale + ".qm";
         if (!m_translator.load(qmPath))
         {
-            // todo: launch error
             qDebug() << "Could not load translation: " << qmPath;
         }
     }
 
     qApp->installTranslator(&m_translator);
+    settings.setValue("ui/language", locale);
 }
 
 void MainWindow::changeEvent(QEvent *event)
@@ -1176,9 +1172,10 @@ void MainWindow::createLanguageMenu()
 
     connect(m_languageActionGroup, &QActionGroup::triggered, this, &MainWindow::switchLanguage);
 
+    QString savedLocale = settings.value("ui/language", "en_US").toString();
+
     QAction *actionEn = new QAction(tr("English"), this);
     actionEn->setCheckable(true);
-    actionEn->setChecked(true);
     actionEn->setData("en_US");
     m_languageMenu->addAction(actionEn);
     m_languageActionGroup->addAction(actionEn);
@@ -1200,6 +1197,20 @@ void MainWindow::createLanguageMenu()
     actionCN->setData("zh_cn");
     m_languageMenu->addAction(actionCN);
     m_languageActionGroup->addAction(actionCN);
+
+    // Restore saved language selection
+    for (QAction *action : m_languageActionGroup->actions())
+    {
+        if (action->data().toString() == savedLocale)
+        {
+            action->setChecked(true);
+            if (savedLocale != "en_US")
+            {
+                switchLanguage(action);
+            }
+            break;
+        }
+    }
 }
 
 void MainWindow::exportFullTrace()
