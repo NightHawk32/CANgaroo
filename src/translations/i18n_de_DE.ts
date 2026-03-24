@@ -4,47 +4,47 @@
 <context>
     <name>Backend</name>
     <message>
-        <location filename="../core/Backend.cpp" line="74"/>
+        <location filename="../core/Backend.cpp" line="77" />
         <source>Starting measurement</source>
         <translation>Messung wird gestartet</translation>
     </message>
     <message>
-        <location filename="../core/Backend.cpp" line="88"/>
+        <location filename="../core/Backend.cpp" line="89" />
         <source>Listening on interface: %1</source>
         <translation>Höre auf Schnittstelle: %1</translation>
     </message>
     <message>
-        <location filename="../core/Backend.cpp" line="109"/>
+        <location filename="../core/Backend.cpp" line="110" />
         <source>Closing interface: %1</source>
         <translation>Schnittstelle wird geschlossen: %1</translation>
     </message>
     <message>
-        <location filename="../core/Backend.cpp" line="116"/>
+        <location filename="../core/Backend.cpp" line="117" />
         <source>Measurement stopped</source>
         <translation>Messung gestoppt</translation>
     </message>
     <message>
-        <location filename="../core/Backend.cpp" line="139"/>
+        <location filename="../core/Backend.cpp" line="140" />
         <source>Network </source>
         <translation>Netzwerk </translation>
     </message>
     <message>
-        <location filename="../core/Backend.cpp" line="202"/>
+        <location filename="../core/Backend.cpp" line="204" />
         <source>Unable to get driver for interface id: %1. This should never happen.</source>
         <translation>Treiber für Schnittstellen-ID %1 kann nicht ermittelt werden. Das sollte nie vorkommen.</translation>
     </message>
     <message>
-        <location filename="../core/Backend.cpp" line="219"/>
+        <location filename="../core/Backend.cpp" line="221" />
         <source>Trying to get name from unknown interface id: %1. This should never happen.</source>
         <translation>Versuch, Namen einer unbekannten Schnittstellen-ID %1 abzurufen. Das sollte nie vorkommen.</translation>
     </message>
     <message>
-        <location filename="../core/Backend.cpp" line="258"/>
+        <location filename="../core/Backend.cpp" line="260" />
         <source>File not found or not readable.</source>
         <translation>Datei nicht gefunden oder nicht lesbar.</translation>
     </message>
     <message>
-        <location filename="../core/Backend.cpp" line="268"/>
+        <location filename="../core/Backend.cpp" line="270" />
         <source>Failed to parse DBC file. Please check the log for details.</source>
         <translation>DBC-Datei konnte nicht analysiert werden. Details bitte im Protokoll prüfen.</translation>
     </message>
@@ -52,60 +52,70 @@
 <context>
     <name>BaseTraceViewModel</name>
     <message>
-        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="52"/>
+        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="53" />
         <source>Index</source>
         <translation>Index</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="54"/>
+        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="55" />
         <source>Timestamp</source>
         <translation>Zeitstempel</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="56"/>
+        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="57" />
         <source>Channel</source>
         <translation>Kanal</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="58"/>
+        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="59" />
         <source>RX/TX</source>
         <translation>RX/TX</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="60"/>
+        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="61" />
         <source>Type</source>
         <translation>Typ</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="64"/>
+        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="65" />
         <source>Sender</source>
         <translation>Sender</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="66"/>
+        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="67" />
         <source>Name</source>
         <translation>Name</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="70"/>
+        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="71" />
         <source>Data</source>
         <translation>Daten</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="72"/>
+        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="73" />
         <source>Comment</source>
         <translation>Kommentar</translation>
+    </message>
+    <message>
+        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="201" />
+        <source>RX</source>
+        <translation>RX</translation>
+    </message>
+    <message>
+        <location filename="../window/TraceWindow/BaseTraceViewModel.cpp" line="201" />
+        <source>TX</source>
+        <translation>TX</translation>
     </message>
 </context>
 <context>
     <name>CANBlasterInterface</name>
     <message>
-        <location filename="../driver/CANBlastDriver/CANBlasterInterface.cpp" line="64"/>
+        <location filename="../driver/CANBlastDriver/CANBlasterInterface.cpp" line="64" />
         <source>CANBlaster client with CANFD support</source>
         <translation>CANBlaster-Client mit CAN-FD-Unterstützung</translation>
     </message>
     <message>
-        <location filename="../driver/CANBlastDriver/CANBlasterInterface.cpp" line="68"/>
+        <location filename="../driver/CANBlastDriver/CANBlasterInterface.cpp" line="68" />
         <source>CANBlaster client with standard CAN support</source>
         <translation>CANBlaster-Client mit Standard-CAN-Unterstützung</translation>
     </message>
@@ -113,42 +123,42 @@
 <context>
     <name>CanInterface</name>
     <message>
-        <location filename="../driver/CanInterface.cpp" line="83"/>
+        <location filename="../driver/CanInterface.cpp" line="84" />
         <source>ready</source>
         <translation>betriebsbereit</translation>
     </message>
     <message>
-        <location filename="../driver/CanInterface.cpp" line="84"/>
+        <location filename="../driver/CanInterface.cpp" line="85" />
         <source>warning</source>
         <translation>Warnung</translation>
     </message>
     <message>
-        <location filename="../driver/CanInterface.cpp" line="85"/>
+        <location filename="../driver/CanInterface.cpp" line="86" />
         <source>error passive</source>
         <translation>Fehler passiv</translation>
     </message>
     <message>
-        <location filename="../driver/CanInterface.cpp" line="86"/>
+        <location filename="../driver/CanInterface.cpp" line="87" />
         <source>bus off</source>
         <translation>Bus aus</translation>
     </message>
     <message>
-        <location filename="../driver/CanInterface.cpp" line="87"/>
+        <location filename="../driver/CanInterface.cpp" line="88" />
         <source>stopped</source>
         <translation>gestoppt</translation>
     </message>
     <message>
-        <location filename="../driver/CanInterface.cpp" line="88"/>
+        <location filename="../driver/CanInterface.cpp" line="89" />
         <source>unknown</source>
         <translation>unbekannt</translation>
     </message>
     <message>
-        <location filename="../driver/CanInterface.cpp" line="89"/>
+        <location filename="../driver/CanInterface.cpp" line="90" />
         <source>tx success</source>
         <translation>Tx OK</translation>
     </message>
     <message>
-        <location filename="../driver/CanInterface.cpp" line="90"/>
+        <location filename="../driver/CanInterface.cpp" line="91" />
         <source>tx fail</source>
         <translation>Tx Fehler</translation>
     </message>
@@ -156,12 +166,16 @@
 <context>
     <name>CanListener</name>
     <message>
-        <location filename="../driver/CanListener.cpp" line="68"/>
         <source>interface: %1, Version: %2</source>
-        <translation>Schnittstelle: %1, Version: %2</translation>
+        <translation type="vanished">Schnittstelle: %1, Version: %2</translation>
     </message>
     <message>
-        <location filename="../driver/CanListener.cpp" line="81"/>
+        <location filename="../driver/CanListener.cpp" line="68" />
+        <source>Interface #%1: %2, Version: %3</source>
+        <translation>Schnittstelle #%1: %2, Version: %3</translation>
+    </message>
+    <message>
+        <location filename="../driver/CanListener.cpp" line="81" />
         <source>Error on interface: %1, Closed!!!</source>
         <translation>Fehler an Schnittstelle: %1, geschlossen!</translation>
     </message>
@@ -169,164 +183,281 @@
 <context>
     <name>CanStatusWindow</name>
     <message>
-        <location filename="../window/CanStatusWindow/CanStatusWindow.ui" line="14"/>
+        <location filename="../window/CanStatusWindow/CanStatusWindow.ui" line="14" />
         <source>Can Status</source>
         <translation>CAN-Status</translation>
     </message>
     <message>
-        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="41"/>
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="43" />
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="86" />
         <source>Driver</source>
         <translation>Treiber</translation>
     </message>
     <message>
-        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="41"/>
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="43" />
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="86" />
         <source>Interface</source>
         <translation>Schnittstelle</translation>
     </message>
     <message>
-        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="41"/>
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="43" />
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="86" />
         <source>State</source>
         <translation>Zustand</translation>
     </message>
     <message>
-        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="42"/>
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="44" />
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="87" />
         <source>Rx Frames</source>
         <translation>Empfangene Frames</translation>
     </message>
     <message>
-        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="42"/>
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="44" />
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="87" />
         <source>Rx Errors</source>
         <translation>Empfangsfehler</translation>
     </message>
     <message>
-        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="42"/>
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="44" />
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="87" />
         <source>Rx Overrun</source>
         <translation>Empfangs-Overrun</translation>
     </message>
     <message>
-        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="43"/>
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="45" />
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="88" />
         <source>Tx Frames</source>
         <translation>Gesendete Frames</translation>
     </message>
     <message>
-        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="43"/>
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="45" />
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="88" />
         <source>Tx Errors</source>
         <translation>Sendefehler</translation>
     </message>
     <message>
-        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="43"/>
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="45" />
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="88" />
         <source>Tx Dropped</source>
         <translation>Verworfene Sendungen</translation>
+    </message>
+    <message>
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="46" />
+        <source>Load (%)</source>
+        <translation>Auslastung (%)</translation>
+    </message>
+    <message>
+        <location filename="../window/CanStatusWindow/CanStatusWindow.cpp" line="46" />
+        <source>Bits</source>
+        <translation>Bits</translation>
+    </message>
+</context>
+<context>
+    <name>ConditionalLoggingDialog</name>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="25" />
+        <source>Conditional Logging Configuration</source>
+        <translation>Konfiguration für bedingtes Logging</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="89" />
+        <source>Conditions (Trigger Logging)</source>
+        <translation>Bedingungen (Trigger-Logging)</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="92" />
+        <source>Signal</source>
+        <translation>Signal</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="92" />
+        <source>Operator</source>
+        <translation>Operator</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="92" />
+        <source>Threshold</source>
+        <translation>Schwellwert</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="97" />
+        <source>Add Condition</source>
+        <translation>Bedingung hinzufügen</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="98" />
+        <source>Remove Condition</source>
+        <translation>Bedingung entfernen</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="102" />
+        <source>Use AND logic for all conditions</source>
+        <translation>UND-Logik für alle Bedingungen verwenden</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="108" />
+        <source>CAN Selection (Network / Message / Signal)</source>
+        <translation>CAN-Auswahl (Netzwerk / Nachricht / Signal)</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="111" />
+        <source>Hierarchy</source>
+        <translation>Hierarchie</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="116" />
+        <source>Log File Path (Optional for filtering):</source>
+        <translation>Log-Dateipfad (optional zum Filtern):</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="120" />
+        <source>Browse...</source>
+        <translation>Durchsuchen...</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="124" />
+        <source>Enable Conditional Logging (File Output)</source>
+        <translation>Bedingtes Logging aktivieren (Dateiausgabe)</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="129" />
+        <source>OK</source>
+        <translation>OK</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="130" />
+        <source>Cancel</source>
+        <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="272" />
+        <source>Select Log File</source>
+        <translation>Log-Datei auswählen</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="272" />
+        <source>CSV Files (*.csv)</source>
+        <translation>CSV-Dateien (*.csv)</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="313" />
+        <source>Warning</source>
+        <translation>Warnung</translation>
+    </message>
+    <message>
+        <location filename="../window/ConditionalLoggingDialog.cpp" line="313" />
+        <source>Please select an output file for logging.</source>
+        <translation>Bitte wählen Sie eine Ausgabedatei für das Logging.</translation>
     </message>
 </context>
 <context>
     <name>GenericCanSetupPage</name>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="19"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="19" />
         <source>Form</source>
         <translation>Formular</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="37"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="37" />
         <source>Driver:</source>
         <translation>Treiber:</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="50"/>
-        <location filename="../driver/GenericCanSetupPage.ui" line="82"/>
-        <location filename="../driver/GenericCanSetupPage.ui" line="114"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="50" />
+        <location filename="../driver/GenericCanSetupPage.ui" line="82" />
+        <location filename="../driver/GenericCanSetupPage.ui" line="114" />
         <source>TextLabel</source>
         <translation>TextLabel</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="69"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="69" />
         <source>Interface:</source>
         <translation>Schnittstelle:</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="101"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="101" />
         <source>Interface Details:</source>
         <translation>Schnittstellendetails:</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="133"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="133" />
         <source>Bitrate:</source>
         <translation>Bitrate:</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="162"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="162" />
         <source>Sample Point:</source>
         <translation>Samplepunkt:</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="191"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="191" />
         <source>Data Bitrate:</source>
         <translation>Daten-Bitrate:</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="220"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="220" />
         <source>Data Sample Point:</source>
         <translation>Daten-Samplepunkt:</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="249"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="249" />
         <source>Options:</source>
         <translation>Optionen:</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="265"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="265" />
         <source>Configured by OS</source>
         <translation>Vom Betriebssystem konfiguriert</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="272"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="272" />
         <source>Bus Monitoring Mode (Listen Only)</source>
         <translation>Bus-Monitoring-Modus (nur Empfang)</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="279"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="279" />
         <source>One-Shot Mode</source>
         <translation>One-Shot-Modus</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="293"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="293" />
         <source>Auto-Restart on Bus-Off Condition</source>
         <translation>Automatischer Neustart bei Bus-Off</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="286"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="286" />
         <source>Triple Sampling</source>
         <translation>Dreifach-Abtastung</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="300"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="300" />
         <source>Custom Bitrate + Sample Point</source>
         <translation>Benutzerdefinierte Bitrate + Samplepunkt</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="307"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="307" />
         <source>Custom CAN FD Data Bitrate + Sample Point</source>
         <translation>Benutzerdefinierte CAN-FD-Datenbitrate + Samplepunkt</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="326"/>
-        <location filename="../driver/GenericCanSetupPage.ui" line="389"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="326" />
+        <location filename="../driver/GenericCanSetupPage.ui" line="389" />
         <source>HHHHHH</source>
         <translation>HHHHHH</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="360"/>
-        <location filename="../driver/GenericCanSetupPage.ui" line="373"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="360" />
+        <location filename="../driver/GenericCanSetupPage.ui" line="373" />
         <source>Div+Seg1+Seg2 (Hex)</source>
         <translation>Div+Seg1+Seg2 (Hex)</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="430"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="430" />
         <source>CAN FD Data Phase Setting</source>
         <translation>CAN-FD-Datenphase-Einstellung</translation>
     </message>
     <message>
-        <location filename="../driver/GenericCanSetupPage.ui" line="450"/>
+        <location filename="../driver/GenericCanSetupPage.ui" line="450" />
         <source>CAN Setting / CAN FD Arbitration Phase Setting</source>
         <translation>CAN-Einstellung / CAN-FD-Arbitrierungsphase</translation>
     </message>
@@ -334,17 +465,17 @@
 <context>
     <name>GrIPInterface</name>
     <message>
-        <location filename="../driver/GrIPDriver/GrIPInterface.cpp" line="94"/>
+        <location filename="../driver/GrIPDriver/GrIPInterface.cpp" line="79" />
         <source>CANIL with CANFD support</source>
         <translation>CANIL mit CAN-FD-Unterstützung</translation>
     </message>
     <message>
-        <location filename="../driver/GrIPDriver/GrIPInterface.cpp" line="98"/>
+        <location filename="../driver/GrIPDriver/GrIPInterface.cpp" line="80" />
         <source>CANIL with standard CAN support</source>
         <translation>CANIL mit Standard-CAN-Unterstützung</translation>
     </message>
     <message>
-        <location filename="../driver/GrIPDriver/GrIPInterface.cpp" line="103"/>
+        <location filename="../driver/GrIPDriver/GrIPInterface.cpp" line="82" />
         <source>Not Supported</source>
         <translation>Nicht unterstützt</translation>
     </message>
@@ -352,135 +483,168 @@
 <context>
     <name>GraphWindow</name>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="14"/>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="14" />
         <source>Visualization View</source>
         <translation>Visualisierungsansicht</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="22"/>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="22" />
         <source>View Type:</source>
         <translation>Ansichtstyp:</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="32"/>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="32" />
         <source>Duration:</source>
         <translation>Anzeigedauer:</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="40"/>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="40" />
         <source>All</source>
         <translation>Alle</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="45"/>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="45" />
         <source>1 min</source>
         <translation>1 min</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="50"/>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="50" />
         <source>5 min</source>
         <translation>5 min</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="55"/>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="55" />
         <source>10 min</source>
         <translation>10 min</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="60"/>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="60" />
         <source>15 min</source>
         <translation>15 min</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="65"/>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="65" />
         <source>30 min</source>
         <translation>30 min</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="73"/>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="73" />
         <source>🔍+</source>
         <translation>🔍+</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="76"/>
-        <source>Zoom In</source>
-        <translation>Vergrößern</translation>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="158" />
+        <source>Conditional Logging</source>
+        <translation>Bedingtes Logging</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="83"/>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="165" />
+        <source>Enable Trigger</source>
+        <translation>Trigger aktivieren</translation>
+    </message>
+    <message>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="172" />
+        <source>Configure Conditions...</source>
+        <translation>Bedingungen konfigurieren...</translation>
+    </message>
+    <message>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="179" />
+        <source>Status:</source>
+        <translation>Status:</translation>
+    </message>
+    <message>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="191" />
+        <location filename="../window/GraphWindow/GraphWindow.cpp" line="298" />
+        <source>Condition not met</source>
+        <translation>Bedingung nicht erfüllt</translation>
+    </message>
+    <message>
+        <source>Zoom In</source>
+        <translation type="vanished">Vergrößern</translation>
+    </message>
+    <message>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="80" />
         <source>🔍-</source>
         <translation>🔍-</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="86"/>
         <source>Zoom Out</source>
-        <translation>Verkleinern</translation>
+        <translation type="vanished">Verkleinern</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="93"/>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="87" />
         <source>↺</source>
         <translation>↺</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="96"/>
         <source>Reset Zoom</source>
-        <translation>Zoom zurücksetzen</translation>
+        <translation type="vanished">Zoom zurücksetzen</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="116"/>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="101" />
         <source>Add Signal...</source>
         <translation>Signal hinzufügen …</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/GraphWindow.ui" line="123"/>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="108" />
+        <source>Reset</source>
+        <translation>Zurücksetzen</translation>
+    </message>
+    <message>
+        <location filename="../window/GraphWindow/GraphWindow.ui" line="115" />
         <source>Clear</source>
         <translation>Löschen</translation>
+    </message>
+    <message>
+        <location filename="../window/GraphWindow/GraphWindow.cpp" line="295" />
+        <source>CONDITION MET - LOGGING</source>
+        <translation>BEDINGUNG ERFÜLLT - AUFZEICHNUNG</translation>
     </message>
 </context>
 <context>
     <name>LogModel</name>
     <message>
-        <location filename="../core/LogModel.cpp" line="82"/>
+        <location filename="../core/LogModel.cpp" line="82" />
         <source>Time</source>
         <translation>Zeit</translation>
     </message>
     <message>
-        <location filename="../core/LogModel.cpp" line="84"/>
+        <location filename="../core/LogModel.cpp" line="84" />
         <source>Level</source>
         <translation>Stufe</translation>
     </message>
     <message>
-        <location filename="../core/LogModel.cpp" line="86"/>
+        <location filename="../core/LogModel.cpp" line="86" />
         <source>Message</source>
         <translation>Meldung</translation>
     </message>
     <message>
-        <location filename="../core/LogModel.cpp" line="174"/>
+        <location filename="../core/LogModel.cpp" line="174" />
         <source>debug</source>
         <translation>Debug</translation>
     </message>
     <message>
-        <location filename="../core/LogModel.cpp" line="175"/>
+        <location filename="../core/LogModel.cpp" line="175" />
         <source>info</source>
         <translation>Info</translation>
     </message>
     <message>
-        <location filename="../core/LogModel.cpp" line="176"/>
+        <location filename="../core/LogModel.cpp" line="176" />
         <source>warning</source>
         <translation>Warnung</translation>
     </message>
     <message>
-        <location filename="../core/LogModel.cpp" line="177"/>
+        <location filename="../core/LogModel.cpp" line="177" />
         <source>error</source>
         <translation>Fehler</translation>
     </message>
     <message>
-        <location filename="../core/LogModel.cpp" line="178"/>
+        <location filename="../core/LogModel.cpp" line="178" />
         <source>critical</source>
         <translation>Kritisch</translation>
     </message>
     <message>
-        <location filename="../core/LogModel.cpp" line="179"/>
+        <location filename="../core/LogModel.cpp" line="179" />
         <source>fatal</source>
         <translation>Fatal</translation>
     </message>
@@ -488,27 +652,27 @@
 <context>
     <name>LogWindow</name>
     <message>
-        <location filename="../window/LogWindow/LogWindow.ui" line="20"/>
+        <location filename="../window/LogWindow/LogWindow.ui" line="20" />
         <source>Log</source>
         <translation>Protokoll</translation>
     </message>
     <message>
-        <location filename="../window/LogWindow/LogWindow.ui" line="69"/>
+        <location filename="../window/LogWindow/LogWindow.ui" line="69" />
         <source>Export Logs...</source>
         <translation>Protokoll exportieren …</translation>
     </message>
     <message>
-        <location filename="../window/LogWindow/LogWindow.ui" line="79"/>
+        <location filename="../window/LogWindow/LogWindow.ui" line="79" />
         <source>Clear</source>
         <translation>Löschen</translation>
     </message>
     <message>
-        <location filename="../window/LogWindow/LogWindow.cpp" line="82"/>
+        <location filename="../window/LogWindow/LogWindow.cpp" line="87" />
         <source>Export Logs</source>
         <translation>Protokoll exportieren</translation>
     </message>
     <message>
-        <location filename="../window/LogWindow/LogWindow.cpp" line="82"/>
+        <location filename="../window/LogWindow/LogWindow.cpp" line="87" />
         <source>Log Files (*.log);;Text Files (*.txt);;All Files (*)</source>
         <translation>Log-Dateien (*.log);;Textdateien (*.txt);;Alle Dateien (*)</translation>
     </message>
@@ -516,448 +680,889 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../mainwindow.ui" line="17"/>
-        <location filename="../mainwindow.cpp" line="883"/>
+        <location filename="../mainwindow.ui" line="17" />
+        <location filename="../mainwindow.cpp" line="1160" />
         <source>CANgaroo</source>
         <translation>CANgaroo</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="56"/>
+        <location filename="../mainwindow.ui" line="56" />
         <source>Start</source>
         <translation>Starten</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="63"/>
+        <location filename="../mainwindow.ui" line="63" />
         <source>Stop</source>
         <translation>Stoppen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="70"/>
+        <location filename="../mainwindow.ui" line="70" />
         <source>Setup Interface...</source>
         <translation>Schnittstelle einrichten …</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="127"/>
+        <location filename="../mainwindow.ui" line="127" />
         <source>&amp;File</source>
         <translation>&amp;Datei</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="139"/>
+        <location filename="../mainwindow.ui" line="139" />
         <source>&amp;Window</source>
         <translation>&amp;Fenster</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="143"/>
+        <location filename="../mainwindow.ui" line="143" />
         <source>&amp;New</source>
         <translation>&amp;Neu</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="158"/>
+        <location filename="../mainwindow.ui" line="159" />
         <source>&amp;Measurement</source>
         <translation>&amp;Messung</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="162"/>
+        <location filename="../mainwindow.ui" line="163" />
         <source>Driver</source>
         <translation>Treiber</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="174"/>
+        <location filename="../mainwindow.ui" line="175" />
         <source>&amp;Help</source>
         <translation>&amp;Hilfe</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="180"/>
+        <location filename="../mainwindow.ui" line="181" />
         <source>&amp;Trace</source>
         <translation>&amp;Trace</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="194"/>
+        <location filename="../mainwindow.ui" line="195" />
         <source>E&amp;xit</source>
         <translation>Be&amp;enden</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="197"/>
+        <location filename="../mainwindow.ui" line="198" />
         <source>Alt+F4</source>
         <translation>Alt+F4</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="202"/>
+        <location filename="../mainwindow.ui" line="203" />
         <source>&amp;Trace View</source>
         <translation>&amp;Trace-Ansicht</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="205"/>
+        <location filename="../mainwindow.ui" line="206" />
         <source>Ctrl+Shift+T</source>
         <translation>Ctrl+Shift+T</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="210"/>
+        <location filename="../mainwindow.ui" line="211" />
         <source>&amp;Log View</source>
         <translation>&amp;Protokoll-Ansicht</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="213"/>
+        <location filename="../mainwindow.ui" line="214" />
         <source>Ctrl+Shift+L</source>
         <translation>Ctrl+Shift+L</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="218"/>
+        <location filename="../mainwindow.ui" line="219" />
         <source>&amp;Setup...</source>
         <translation>&amp;Einrichtung …</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="221"/>
+        <location filename="../mainwindow.ui" line="222" />
         <source>Ctrl+Alt+S</source>
         <translation>Ctrl+Alt+S</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="226"/>
+        <location filename="../mainwindow.ui" line="227" />
         <source>Star&amp;t Measurement</source>
         <translation>Messung &amp;starten</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="229"/>
+        <location filename="../mainwindow.ui" line="230" />
         <source>F5</source>
         <translation>F5</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="234"/>
+        <location filename="../mainwindow.ui" line="235" />
         <source>Sto&amp;p Measurement</source>
         <translation>Messung &amp;stoppen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="237"/>
+        <location filename="../mainwindow.ui" line="238" />
         <source>Shift+F5</source>
         <translation>Umschalt+F5</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="242"/>
+        <location filename="../mainwindow.ui" line="243" />
         <source>&amp;About</source>
         <translation>&amp;Über</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="247"/>
+        <location filename="../mainwindow.ui" line="248" />
         <source>&amp;Save Trace to file...</source>
         <translation>Trace &amp;speichern unter …</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="255"/>
+        <location filename="../mainwindow.ui" line="256" />
         <source>&amp;Graph View</source>
         <translation>&amp;Diagramm-Ansicht</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="258"/>
+        <location filename="../mainwindow.ui" line="259" />
         <source>Ctrl+Shift+G</source>
         <translation>Ctrl+Shift+G</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="266"/>
+        <location filename="../mainwindow.ui" line="267" />
         <source>&amp;New Workspace...</source>
         <translation>Neuer &amp;Workspace …</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="269"/>
+        <location filename="../mainwindow.ui" line="270" />
         <source>Ctrl+N</source>
         <translation>Ctrl+N</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="274"/>
+        <location filename="../mainwindow.ui" line="275" />
         <source>&amp;Save Workspace</source>
         <translation>Workspace &amp;speichern</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="277"/>
+        <location filename="../mainwindow.ui" line="278" />
         <source>Ctrl+S</source>
         <translation>Ctrl+S</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="282"/>
+        <location filename="../mainwindow.ui" line="283" />
         <source>Save Workspace &amp;As...</source>
         <translation>Workspace speichern &amp;unter …</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="285"/>
+        <location filename="../mainwindow.ui" line="286" />
         <source>Ctrl+Shift+S</source>
         <translation>Ctrl+Shift+S</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="290"/>
+        <location filename="../mainwindow.ui" line="291" />
         <source>&amp;Open Workspace...</source>
         <translation>Workspace &amp;öffnen …</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="293"/>
+        <location filename="../mainwindow.ui" line="294" />
         <source>Ctrl+O</source>
         <translation>Ctrl+O</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="298"/>
+        <location filename="../mainwindow.ui" line="299" />
         <source>&amp;Clear</source>
         <translation>&amp;Löschen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="301"/>
+        <location filename="../mainwindow.ui" line="302" />
         <source>Esc</source>
         <translation>Esc</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="306"/>
+        <location filename="../mainwindow.ui" line="307" />
         <source>Can &amp;Status View</source>
         <translation>CAN-&amp;Status-Ansicht</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="311"/>
+        <location filename="../mainwindow.ui" line="312" />
         <source>Graph View</source>
         <translation>Diagramm-Ansicht</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="316"/>
-        <location filename="../mainwindow.cpp" line="682"/>
-        <source>Transmit View</source>
-        <translation>Sende-Ansicht</translation>
+        <location filename="../mainwindow.ui" line="317" />
+        <location filename="../mainwindow.cpp" line="876" />
+        <source>Message View</source>
+        <translation>Nachrichtenansicht</translation>
     </message>
     <message>
-        <location filename="../mainwindow.ui" line="321"/>
-        <location filename="../mainwindow.cpp" line="718"/>
+        <location filename="../mainwindow.ui" line="327" />
+        <source>Script View</source>
+        <translation>Skriptansicht</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.ui" line="335" />
+        <source>Restore Window on startup</source>
+        <translation>Fenster beim Start wiederherstellen</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.ui" line="338" />
+        <source>Restore Window Position on startup</source>
+        <translation>Fensterposition beim Start wiederherstellen</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.ui" line="346" />
+        <source>CANblaster</source>
+        <translation>CANblaster</translation>
+    </message>
+    <message>
+        <source>Transmit View</source>
+        <translation type="vanished">Sende-Ansicht</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.ui" line="322" />
+        <location filename="../mainwindow.cpp" line="928" />
         <source>Generator View</source>
         <translation>Generator-Ansicht</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="391"/>
+        <location filename="../mainwindow.cpp" line="680" />
         <source>Open workspace configuration</source>
         <translation>Workspace-Konfiguration öffnen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="391"/>
-        <location filename="../mainwindow.cpp" line="413"/>
+        <location filename="../mainwindow.cpp" line="680" />
+        <location filename="../mainwindow.cpp" line="702" />
         <source>Workspace config files (*.cangaroo)</source>
         <translation>Workspace-Konfigurationsdateien (*.cangaroo)</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="413"/>
+        <location filename="../mainwindow.cpp" line="702" />
         <source>Save workspace configuration</source>
         <translation>Workspace-Konfiguration speichern</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="446"/>
+        <location filename="../mainwindow.cpp" line="740" />
         <source>The current workspace has been modified.</source>
         <translation>Der aktuelle Workspace wurde geändert.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="447"/>
+        <location filename="../mainwindow.cpp" line="741" />
         <source>Do you want to save your changes?</source>
         <translation>Möchten Sie die Änderungen speichern?</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="886"/>
-        <location filename="../mainwindow.cpp" line="894"/>
+        <location filename="../mainwindow.cpp" line="1163" />
+        <location filename="../mainwindow.cpp" line="1171" />
         <source>&amp;Language</source>
         <translation>&amp;Sprache</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="900"/>
+        <location filename="../mainwindow.cpp" line="1179" />
         <source>English</source>
         <translation>Englisch</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="907"/>
+        <location filename="../mainwindow.cpp" line="1186" />
         <source>Español</source>
         <translation>Spanisch</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="913"/>
+        <location filename="../mainwindow.cpp" line="1192" />
+        <source>Deutsch</source>
+        <translation>Deutsch</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="1198" />
         <source>Chinese</source>
         <translation>Chinesisch</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="925"/>
-        <location filename="../mainwindow.cpp" line="995"/>
         <source>No Trace window active</source>
-        <translation>Kein Trace-Fenster aktiv</translation>
+        <translation type="vanished">Kein Trace-Fenster aktiv</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="83"/>
-        <location filename="../mainwindow.cpp" line="934"/>
+        <location filename="../mainwindow.cpp" line="113" />
         <source>Export full trace</source>
         <translation>Komplette Trace exportieren</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="936"/>
-        <location filename="../mainwindow.cpp" line="1006"/>
         <source>CANgaroo Trace (*.ctrace)</source>
-        <translation>CANgaroo Trace (*.ctrace)</translation>
+        <translation type="vanished">CANgaroo Trace (*.ctrace)</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="925"/>
-        <location filename="../mainwindow.cpp" line="945"/>
-        <location filename="../mainwindow.cpp" line="995"/>
-        <location filename="../mainwindow.cpp" line="1014"/>
         <source>Error</source>
-        <translation>Fehler</translation>
+        <translation type="vanished">Fehler</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="945"/>
         <source>Cannot write file</source>
-        <translation>Datei kann nicht geschrieben werden</translation>
+        <translation type="vanished">Datei kann nicht geschrieben werden</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="86"/>
-        <location filename="../mainwindow.cpp" line="1004"/>
+        <location filename="../mainwindow.cpp" line="116" />
         <source>Import full trace</source>
         <translation>Komplette Trace importieren</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="1014"/>
         <source>Cannot read file</source>
-        <translation>Datei kann nicht gelesen werden</translation>
+        <translation type="vanished">Datei kann nicht gelesen werden</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="478"/>
+        <location filename="../mainwindow.cpp" line="781" />
         <source>Trace</source>
         <translation>Trace</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="501"/>
-        <location filename="../mainwindow.cpp" line="516"/>
+        <location filename="../mainwindow.cpp" line="283" />
+        <location filename="../mainwindow.cpp" line="832" />
+        <location filename="../mainwindow.cpp" line="861" />
         <source>Graph</source>
         <translation>Diagramm</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="539"/>
+        <location filename="../mainwindow.cpp" line="90" />
+        <location filename="../mainwindow.cpp" line="844" />
+        <source>Standalone Graph</source>
+        <translation>Eigenständiges Diagramm</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="95" />
+        <source>Theme...</source>
+        <translation>Design...</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="121" />
+        <source>Open Recent</source>
+        <translation>Zuletzt geöffnet</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="285" />
+        <source>Open Standalone Graph Window (Ctrl+Shift+B)</source>
+        <translation>Eigenständiges Diagrammfenster öffnen (Ctrl+Shift+B)</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="333" />
+        <source>Clear Recent Files</source>
+        <translation>Zuletzt geöffnete Dateien löschen</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="535" />
+        <source>Cannot open workspace settings file: %1</source>
+        <translation>Arbeitsbereichsdatei kann nicht geöffnet werden: %1</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="543" />
+        <source>Cannot load settings from file: %1</source>
+        <translation>Einstellungen können nicht aus Datei geladen werden: %1</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="564" />
+        <source>Could not read window %1 from file: %2</source>
+        <translation>Fenster %1 konnte nicht aus Datei gelesen werden: %2</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="577" />
+        <source>Unable to read measurement setup from workspace config file: %1</source>
+        <translation>Messeinrichtung konnte nicht aus Arbeitsbereichsdatei gelesen werden: %1</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="606" />
+        <source>Cannot save window settings to file: %1</source>
+        <translation>Fenstereinstellungen können nicht in Datei gespeichert werden: %1</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="637" />
+        <source>Cannot save measurement setup to file: %1</source>
+        <translation>Messeinrichtung kann nicht in Datei gespeichert werden: %1</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="651" />
+        <source>Saved workspace settings to file: %1</source>
+        <translation>Arbeitsbereichseinstellungen in Datei gespeichert: %1</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="656" />
+        <source>Cannot open workspace file for writing: %1</source>
+        <translation>Arbeitsbereichsdatei kann nicht zum Schreiben geöffnet werden: %1</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="898" />
         <source>Log</source>
         <translation>Protokoll</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="551"/>
+        <location filename="../mainwindow.cpp" line="913" />
         <source>CAN Status</source>
         <translation>CAN-Status</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="760"/>
+        <location filename="../mainwindow.cpp" line="950" />
+        <source>Python Script</source>
+        <translation>Python-Skript</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="1015" />
         <source>About CANgaroo</source>
         <translation>Über CANgaroo</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="1368" />
+        <source>Theme Selection</source>
+        <translation>Designauswahl</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="1375" />
+        <source>Select application theme:</source>
+        <translation>Anwendungsdesign auswählen:</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="1402" />
+        <source>Current style: %1</source>
+        <translation>Aktuelles Design: %1</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="1443" />
+        <source>Theme Changed</source>
+        <translation>Design geändert</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="1444" />
+        <source>The theme has been changed to %1.
+Some changes may require an application restart.</source>
+        <translation>Das Design wurde auf %1 geändert.
+Einige Änderungen erfordern möglicherweise einen Neustart.</translation>
     </message>
 </context>
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../window/SetupDialog/SetupDialogTreeItem.cpp" line="103"/>
+        <location filename="../window/SetupDialog/SetupDialogTreeItem.cpp" line="103" />
         <source>Setup</source>
         <translation>Einrichtung</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialogTreeItem.cpp" line="105"/>
+        <location filename="../window/SetupDialog/SetupDialogTreeItem.cpp" line="105" />
         <source>Interfaces</source>
         <translation>Schnittstellen</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialogTreeItem.cpp" line="107"/>
+        <location filename="../window/SetupDialog/SetupDialogTreeItem.cpp" line="107" />
         <source>Can Databases</source>
         <translation>CAN-Datenbanken</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="1423" />
+        <source>Selected: %1</source>
+        <translation>Ausgewählt: %1</translation>
     </message>
 </context>
 <context>
     <name>RawTxWindow</name>
     <message>
-        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="38"/>
         <source>Raw Transmit</source>
-        <translation>Direkt senden</translation>
+        <translation type="vanished">Direkt senden</translation>
     </message>
     <message>
-        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="50"/>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="72" />
         <source>Send</source>
         <translation>Senden</translation>
     </message>
     <message>
-        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="63"/>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="88" />
         <source>Send Repeat</source>
         <translation>Wiederholt senden</translation>
     </message>
     <message>
-        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="79"/>
         <source>ms</source>
-        <translation>ms</translation>
+        <translation type="vanished">ms</translation>
     </message>
     <message>
-        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="100"/>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="112" />
         <source>HHHHHHHH</source>
         <translation>HHHHHHHH</translation>
     </message>
     <message>
-        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="134"/>
         <source>Address(Hex)</source>
-        <translation>Adresse (Hex)</translation>
+        <translation type="vanished">Adresse (Hex)</translation>
     </message>
     <message>
-        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="147"/>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="32" />
+        <source>Message View</source>
+        <translation>Nachrichtenansicht</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="45" />
+        <source>Signal Name</source>
+        <translation>Signalname</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="50" />
+        <source>Value</source>
+        <translation>Wert</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="55" />
+        <source>Unit</source>
+        <translation>Einheit</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="146" />
+        <source>ID (Hex)</source>
+        <translation>ID (Hex)</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="159" />
         <source>DLC</source>
         <translation>DLC</translation>
     </message>
     <message>
-        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="176"/>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="191" />
         <source>RTR</source>
         <translation>RTR</translation>
     </message>
     <message>
-        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="189"/>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="204" />
         <source>Extended ID</source>
         <translation>Erweiterte ID</translation>
     </message>
     <message>
-        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="212"/>
-        <source>Interface:</source>
-        <translation>Schnittstelle:</translation>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="253" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="288" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="307" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="326" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="345" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="364" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="383" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="402" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="421" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="456" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="475" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="510" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="529" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="548" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="567" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="586" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="605" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="640" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="659" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="678" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="697" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="716" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="767" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="802" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="821" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="856" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="875" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="894" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="913" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="948" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="967" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1002" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1021" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1040" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1059" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1094" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1113" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1148" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1167" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1186" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1205" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1224" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1243" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1262" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1281" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1300" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1319" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1338" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1357" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1376" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1395" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1414" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1433" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1452" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1471" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1490" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1509" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1528" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1595" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1614" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1633" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1652" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1671" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1690" />
+        <source>hh</source>
+        <extracomment>Hex Only</extracomment>
+        <translation>hh</translation>
     </message>
     <message>
-        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="228"/>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="256" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="291" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="310" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="329" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="348" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="367" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="386" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="405" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="424" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="459" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="478" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="513" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="532" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="551" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="570" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="589" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="608" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="643" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="662" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="681" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="700" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="719" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="770" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="805" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="824" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="859" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="878" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="897" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="916" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="951" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="970" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1005" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1024" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1043" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1062" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1097" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1116" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1151" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1170" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1189" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1208" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1227" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1246" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1265" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1284" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1303" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1322" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1341" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1360" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1379" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1398" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1417" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1436" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1455" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1474" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1493" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1512" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1531" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1598" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1617" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1636" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1655" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1674" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1693" />
+        <source>00</source>
+        <translation>00</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="272" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1725" />
+        <source>7</source>
+        <translation>7</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="440" />
+        <source>56</source>
+        <translation>56</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="494" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="932" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1837" />
+        <source>0</source>
+        <translation>0</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="624" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1757" />
+        <source>2</source>
+        <translation>2</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="735" />
+        <source>8</source>
+        <translation>8</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="751" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1773" />
+        <source>6</source>
+        <translation>6</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="786" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1789" />
+        <source>4</source>
+        <translation>4</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="840" />
+        <source>16</source>
+        <translation>16</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="986" />
+        <source>32</source>
+        <translation>32</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1078" />
+        <source>24</source>
+        <translation>24</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1132" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1741" />
+        <source>3</source>
+        <translation>3</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1547" />
+        <source>40</source>
+        <translation>40</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1563" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1805" />
+        <source>1</source>
+        <translation>1</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1579" />
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1821" />
+        <source>5</source>
+        <translation>5</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="1709" />
+        <source>48</source>
+        <translation>48</translation>
+    </message>
+    <message>
+        <source>Interface:</source>
+        <translation type="vanished">Schnittstelle:</translation>
+    </message>
+    <message>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="217" />
         <source>BRS</source>
         <translation>BRS</translation>
     </message>
     <message>
-        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="241"/>
+        <location filename="../window/RawTxWindow/RawTxWindow.ui" line="230" />
         <source>FD</source>
         <translation>FD</translation>
     </message>
-    <!-- Platzhalter für Hex- und Default-Werte bleiben unverändert -->
 </context>
 <context>
     <name>SLCANInterface</name>
     <message>
-        <location filename="../driver/SLCANDriver/SLCANInterface.cpp" line="96"/>
+        <location filename="../driver/SLCANDriver/SLCANInterface.cpp" line="96" />
         <source>CANable with CANFD support</source>
         <translation>CANable mit CAN-FD-Unterstützung</translation>
     </message>
     <message>
-        <location filename="../driver/SLCANDriver/SLCANInterface.cpp" line="100"/>
+        <location filename="../driver/SLCANDriver/SLCANInterface.cpp" line="100" />
         <source>CANable with standard CAN support</source>
         <translation>CANable mit Standard-CAN-Unterstützung</translation>
     </message>
     <message>
-        <location filename="../driver/SLCANDriver/SLCANInterface.cpp" line="107"/>
+        <location filename="../driver/SLCANDriver/SLCANInterface.cpp" line="107" />
         <source>WeAct Studio USB2CAN with CANFD support</source>
         <translation>WeAct Studio USB2CAN mit CAN-FD-Unterstützung</translation>
     </message>
     <message>
-        <location filename="../driver/SLCANDriver/SLCANInterface.cpp" line="111"/>
+        <location filename="../driver/SLCANDriver/SLCANInterface.cpp" line="111" />
         <source>WeAct Studio USB2CAN with standard CAN support</source>
         <translation>WeAct Studio USB2CAN mit Standard-CAN-Unterstützung</translation>
     </message>
     <message>
-        <location filename="../driver/SLCANDriver/SLCANInterface.cpp" line="116"/>
+        <location filename="../driver/SLCANDriver/SLCANInterface.cpp" line="116" />
         <source>Not Supported</source>
         <translation>Nicht unterstützt</translation>
     </message>
 </context>
 <context>
+    <name>ScriptWindow</name>
+    <message>
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="31" />
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="107" />
+        <source>Run</source>
+        <translation>Ausführen</translation>
+    </message>
+    <message>
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="32" />
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="108" />
+        <source>Stop</source>
+        <translation>Stoppen</translation>
+    </message>
+    <message>
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="33" />
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="109" />
+        <source>Clear</source>
+        <translation>Löschen</translation>
+    </message>
+    <message>
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="34" />
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="110" />
+        <source>Load</source>
+        <translation>Laden</translation>
+    </message>
+    <message>
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="35" />
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="111" />
+        <source>Save</source>
+        <translation>Speichern</translation>
+    </message>
+    <message>
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="37" />
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="112" />
+        <source>AutoRun</source>
+        <translation>AutoRun</translation>
+    </message>
+    <message>
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="38" />
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="113" />
+        <source>Start/Stop script with measurement</source>
+        <translation>Skript mit Messung starten/stoppen</translation>
+    </message>
+    <message>
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="59" />
+        <source># Python script
+import cangaroo
+
+for msg in cangaroo.get_trace(10):
+    print(msg)</source>
+        <translation># Python-Skript
+import cangaroo
+
+for msg in cangaroo.get_trace(10):
+    print(msg)</translation>
+    </message>
+    <message>
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="65" />
+        <source>Script output...</source>
+        <translation>Skriptausgabe...</translation>
+    </message>
+    <message>
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="158" />
+        <source>Load Python Script</source>
+        <translation>Python-Skript laden</translation>
+    </message>
+    <message>
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="159" />
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="167" />
+        <source>Python Files (*.py);;All Files (*)</source>
+        <translation>Python-Dateien (*.py);;Alle Dateien (*)</translation>
+    </message>
+    <message>
+        <location filename="../window/ScriptWindow/ScriptWindow.cpp" line="166" />
+        <source>Save Python Script</source>
+        <translation>Python-Skript speichern</translation>
+    </message>
+</context>
+<context>
     <name>SelectCanInterfacesDialog</name>
     <message>
-        <location filename="../window/SetupDialog/SelectCanInterfacesDialog.ui" line="14"/>
+        <location filename="../window/SetupDialog/SelectCanInterfacesDialog.ui" line="14" />
         <source>Select CAN Interface(s)</source>
         <translation>CAN-Schnittstelle(n) auswählen</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SelectCanInterfacesDialog.ui" line="82"/>
+        <location filename="../window/SetupDialog/SelectCanInterfacesDialog.ui" line="82" />
         <source>&amp;Create Interface...</source>
         <translation>Schnittstelle &amp;erstellen …</translation>
     </message>
@@ -965,68 +1570,68 @@
 <context>
     <name>SetupDialog</name>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.ui" line="14"/>
+        <location filename="../window/SetupDialog/SetupDialog.ui" line="14" />
         <source>Measurement Setup</source>
         <translation>Messaufbau</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.ui" line="91"/>
+        <location filename="../window/SetupDialog/SetupDialog.ui" line="91" />
         <source>Add Network</source>
         <translation>Netzwerk hinzufügen</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.ui" line="98"/>
+        <location filename="../window/SetupDialog/SetupDialog.ui" line="98" />
         <source>Remove Network</source>
         <translation>Netzwerk entfernen</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.ui" line="105"/>
+        <location filename="../window/SetupDialog/SetupDialog.ui" line="105" />
         <source>Refresh</source>
         <translation>Aktualisieren</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.ui" line="130"/>
+        <location filename="../window/SetupDialog/SetupDialog.ui" line="130" />
         <source>Network name:</source>
         <translation>Netzwerkname:</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.ui" line="156"/>
+        <location filename="../window/SetupDialog/SetupDialog.ui" line="156" />
         <source>CAN interfaces assigned to this network:</source>
         <translation>Dem Netzwerk zugeordnete CAN-Schnittstellen:</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.ui" line="181"/>
+        <location filename="../window/SetupDialog/SetupDialog.ui" line="181" />
         <source>Add &amp;Interface...</source>
         <translation>Schnittstelle &amp;hinzufügen …</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.ui" line="188"/>
+        <location filename="../window/SetupDialog/SetupDialog.ui" line="188" />
         <source>&amp;Remove Interface</source>
         <translation>Schnittstelle &amp;entfernen</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.ui" line="239"/>
+        <location filename="../window/SetupDialog/SetupDialog.ui" line="239" />
         <source>Add &amp;Database...</source>
         <translation>&amp;Datenbank hinzufügen …</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.ui" line="246"/>
+        <location filename="../window/SetupDialog/SetupDialog.ui" line="246" />
         <source>&amp;Remove Database</source>
         <translation>Datenbank &amp;entfernen</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.ui" line="253"/>
+        <location filename="../window/SetupDialog/SetupDialog.ui" line="253" />
         <source>Reload Databases</source>
         <translation>Datenbanken neu laden</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.cpp" line="283"/>
-        <location filename="../window/SetupDialog/SetupDialog.cpp" line="359"/>
+        <location filename="../window/SetupDialog/SetupDialog.cpp" line="285" />
+        <location filename="../window/SetupDialog/SetupDialog.cpp" line="361" />
         <source>DBC Error</source>
         <translation>DBC-Fehler</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.cpp" line="284"/>
+        <location filename="../window/SetupDialog/SetupDialog.cpp" line="286" />
         <source>Failed to reload one or more DBC files:
 
 %1</source>
@@ -1035,12 +1640,12 @@
 %1</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.cpp" line="319"/>
+        <location filename="../window/SetupDialog/SetupDialog.cpp" line="321" />
         <source>Duplicate DBC</source>
         <translation>Duplizierte DBC</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.cpp" line="320"/>
+        <location filename="../window/SetupDialog/SetupDialog.cpp" line="322" />
         <source>The file is already loaded:
 %1
 
@@ -1051,12 +1656,12 @@ Do you want to reload it?</source>
 Möchten Sie sie neu laden?</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.cpp" line="342"/>
+        <location filename="../window/SetupDialog/SetupDialog.cpp" line="344" />
         <source>Reload Failed</source>
         <translation>Neu laden fehlgeschlagen</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.cpp" line="343"/>
+        <location filename="../window/SetupDialog/SetupDialog.cpp" line="345" />
         <source>Failed to reload DBC:
 %1
 
@@ -1067,12 +1672,12 @@ Reason: %2</source>
 Grund: %2</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.cpp" line="356"/>
+        <location filename="../window/SetupDialog/SetupDialog.cpp" line="358" />
         <source>DBC Warning</source>
         <translation>DBC-Warnung</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialog.cpp" line="360"/>
+        <location filename="../window/SetupDialog/SetupDialog.cpp" line="362" />
         <source>Failed to load DBC file:
 %1
 
@@ -1086,32 +1691,32 @@ Grund: %2</translation>
 <context>
     <name>SetupDialogTreeModel</name>
     <message>
-        <location filename="../window/SetupDialog/SetupDialogTreeModel.cpp" line="59"/>
+        <location filename="../window/SetupDialog/SetupDialogTreeModel.cpp" line="59" />
         <source>Device</source>
         <translation>Gerät</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialogTreeModel.cpp" line="60"/>
+        <location filename="../window/SetupDialog/SetupDialogTreeModel.cpp" line="60" />
         <source>Driver</source>
         <translation>Treiber</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialogTreeModel.cpp" line="61"/>
+        <location filename="../window/SetupDialog/SetupDialogTreeModel.cpp" line="61" />
         <source>Bitrate</source>
         <translation>Bitrate</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialogTreeModel.cpp" line="62"/>
+        <location filename="../window/SetupDialog/SetupDialogTreeModel.cpp" line="62" />
         <source>Filename</source>
         <translation>Dateiname</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialogTreeModel.cpp" line="63"/>
+        <location filename="../window/SetupDialog/SetupDialogTreeModel.cpp" line="63" />
         <source>Path</source>
         <translation>Pfad</translation>
     </message>
     <message>
-        <location filename="../window/SetupDialog/SetupDialogTreeModel.cpp" line="120"/>
+        <location filename="../window/SetupDialog/SetupDialogTreeModel.cpp" line="120" />
         <source>Network </source>
         <translation>Netzwerk </translation>
     </message>
@@ -1119,47 +1724,47 @@ Grund: %2</translation>
 <context>
     <name>SignalSelectorDialog</name>
     <message>
-        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="22"/>
+        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="35" />
         <source>Select Data</source>
         <translation>Daten auswählen</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="30"/>
+        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="43" />
         <source>Search signals or messages...</source>
         <translation>Signale oder Nachrichten suchen …</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="33"/>
+        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="46" />
         <source>Show selection only</source>
         <translation>Nur Auswahl anzeigen</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="40"/>
+        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="53" />
         <source>Name</source>
         <translation>Name</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="40"/>
+        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="53" />
         <source>Details</source>
         <translation>Details</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="40"/>
+        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="53" />
         <source>Comment</source>
         <translation>Kommentar</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="61"/>
+        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="83" />
         <source>CAN Networks</source>
         <translation>CAN-Netzwerke</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="78"/>
+        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="101" />
         <source>Unsigned</source>
         <translation>Vorzeichenlos</translation>
     </message>
     <message>
-        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="78"/>
+        <location filename="../window/GraphWindow/SignalSelectorDialog.cpp" line="101" />
         <source>Signed</source>
         <translation>Vorzeichenbehaftet</translation>
     </message>
@@ -1167,52 +1772,76 @@ Grund: %2</translation>
 <context>
     <name>TraceWindow</name>
     <message>
-        <location filename="../window/TraceWindow/TraceWindow.ui" line="14"/>
+        <location filename="../window/TraceWindow/TraceWindow.ui" line="14" />
         <source>Trace View</source>
         <translation>Trace-Ansicht</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/TraceWindow.ui" line="35"/>
+        <location filename="../window/TraceWindow/TraceWindow.ui" line="35" />
         <source>View:</source>
         <translation>Ansicht:</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/TraceWindow.ui" line="45"/>
+        <location filename="../window/TraceWindow/TraceWindow.ui" line="45" />
         <source>Timestamps:</source>
         <translation>Zeitstempel:</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/TraceWindow.ui" line="68"/>
+        <location filename="../window/TraceWindow/TraceWindow.ui" line="68" />
+        <source>Autoscroll</source>
+        <translation>Autoscroll</translation>
+    </message>
+    <message>
+        <location filename="../window/TraceWindow/TraceWindow.ui" line="78" />
         <source>Clear</source>
         <translation>Löschen</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/TraceWindow.ui" line="85"/>
+        <location filename="../window/TraceWindow/TraceWindow.ui" line="94" />
         <source>Filter: </source>
         <translation>Filter: </translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/TraceWindow.cpp" line="76"/>
+        <location filename="../window/TraceWindow/TraceWindow.ui" line="127" />
+        <source>Monitor</source>
+        <translation>Monitor</translation>
+    </message>
+    <message>
+        <location filename="../window/TraceWindow/TraceWindow.ui" line="141" />
+        <source>UDS Protocol</source>
+        <translation>UDS-Protokoll</translation>
+    </message>
+    <message>
+        <location filename="../window/TraceWindow/TraceWindow.ui" line="155" />
+        <source>J1939</source>
+        <translation>J1939</translation>
+    </message>
+    <message>
+        <location filename="../window/TraceWindow/TraceWindow.cpp" line="96" />
         <source>Aggregated</source>
         <translation>Zusammengefasst</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/TraceWindow.cpp" line="77"/>
         <source>Unified</source>
-        <translation>Vereinheitlicht</translation>
+        <translation type="vanished">Vereinheitlicht</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/TraceWindow.cpp" line="79"/>
+        <location filename="../window/TraceWindow/TraceWindow.cpp" line="97" />
+        <source>Rolling Log</source>
+        <translation>Laufendes Protokoll</translation>
+    </message>
+    <message>
+        <location filename="../window/TraceWindow/TraceWindow.cpp" line="99" />
         <source>Absolute</source>
         <translation>Absolut</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/TraceWindow.cpp" line="80"/>
+        <location filename="../window/TraceWindow/TraceWindow.cpp" line="100" />
         <source>Relative</source>
         <translation>Relativ</translation>
     </message>
     <message>
-        <location filename="../window/TraceWindow/TraceWindow.cpp" line="81"/>
+        <location filename="../window/TraceWindow/TraceWindow.cpp" line="101" />
         <source>Delta</source>
         <translation>Delta</translation>
     </message>
@@ -1220,151 +1849,215 @@ Grund: %2</translation>
 <context>
     <name>TxGeneratorWindow</name>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="20"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="20" />
         <source>Generator</source>
         <translation>Generator</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="28"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="28" />
         <source>Interface:</source>
         <translation>Schnittstelle:</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="45"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="45" />
         <source>Show TX Frames</source>
         <translation>Gesendete Frames anzeigen</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="74"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="74" />
         <source>Available Messages (DBC)</source>
         <translation>Verfügbare Nachrichten (DBC)</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="84"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="84" />
         <source>Message List</source>
         <translation>Nachrichtenliste</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="90"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="90" />
         <source>Message Name or ID...</source>
         <translation>Nachrichtenname oder ID …</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="98"/>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="290"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="98" />
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="296" />
         <source>ID</source>
         <translation>ID</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="112"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="112" />
         <source>Layout View</source>
         <translation>Layout-Ansicht</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="120"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="120" />
         <source>Zoom:</source>
         <translation>Zoom:</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="143"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="143" />
         <source>Compact Mode</source>
         <translation>Kompakter Modus</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="202"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="202" />
         <source>Add Selected DBC Message</source>
         <translation>Ausgewählte DBC-Nachricht hinzufügen</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="222"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="222" />
         <source>ID (Hex):</source>
         <translation>ID (Hex):</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="235"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="235" />
         <source>HHHHHHHH</source>
         <translation>HHHHHHHH</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="238"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="238" />
         <source>000</source>
         <translation>000</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="245"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="245" />
         <source>DLC:</source>
         <translation>DLC:</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="262"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="268" />
         <source>Add Manual</source>
         <translation>Manuell hinzufügen</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="272"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="278" />
         <source>Active Cyclic Transmissions</source>
         <translation>Aktive zyklische Übertragungen</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="285"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="291" />
         <source>Status</source>
         <translation>Status</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="300"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="306" />
         <source>Interface</source>
         <translation>Schnittstelle</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="305"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="311" />
         <source>DLC</source>
         <translation>DLC</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="310"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="316" />
         <source>Interval (ms)</source>
         <translation>Intervall (ms)</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="320"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="326" />
         <source>RUN</source>
-        <translation>AUSFÜHREN</translation>
+        <translation>RUN</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="330"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="336" />
         <source>STOP</source>
-        <translation>STOPPEN</translation>
+        <translation>STOP</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="340"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="346" />
         <source>Interval:</source>
         <translation>Intervall:</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="373"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="395" />
         <source>Send</source>
         <translation>Senden</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="380"/>
-        <source>Select All</source>
-        <translation>Alle auswählen</translation>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="402" />
+        <source>Select All Rows</source>
+        <translation>Alle Zeilen auswählen</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="387"/>
+        <source>Select All</source>
+        <translation type="vanished">Alle auswählen</translation>
+    </message>
+    <message>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="409" />
         <source>Deselect All</source>
         <translation>Alle abwählen</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="394"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="416" />
         <source>Remove</source>
         <translation>Entfernen</translation>
     </message>
     <message>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="103"/>
-        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="295"/>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="103" />
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.ui" line="301" />
         <source>Name</source>
         <translation>Name</translation>
+    </message>
+    <message>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.cpp" line="68" />
+        <source>Randomize Payload</source>
+        <translation>Payload randomisieren</translation>
+    </message>
+    <message>
+        <location filename="../window/TxGeneratorWindow/TxGeneratorWindow.cpp" line="69" />
+        <source>Randomize data bytes for selected messages</source>
+        <translation>Datenbytes der ausgewählten Nachrichten randomisieren</translation>
+    </message>
+</context>
+<context>
+    <name>UnifiedTraceViewModel</name>
+    <message>
+        <location filename="../window/TraceWindow/UnifiedTraceViewModel.cpp" line="348" />
+        <location filename="../window/TraceWindow/UnifiedTraceViewModel.cpp" line="396" />
+        <source>RX</source>
+        <translation>RX</translation>
+    </message>
+    <message>
+        <location filename="../window/TraceWindow/UnifiedTraceViewModel.cpp" line="348" />
+        <location filename="../window/TraceWindow/UnifiedTraceViewModel.cpp" line="396" />
+        <source>TX</source>
+        <translation>TX</translation>
+    </message>
+    <message>
+        <location filename="../window/TraceWindow/UnifiedTraceViewModel.cpp" line="352" />
+        <source>Tester</source>
+        <translation>Tester</translation>
+    </message>
+    <message>
+        <location filename="../window/TraceWindow/UnifiedTraceViewModel.cpp" line="352" />
+        <source>ECU</source>
+        <translation>ECU</translation>
+    </message>
+    <message>
+        <location filename="../window/TraceWindow/UnifiedTraceViewModel.cpp" line="406" />
+        <source>[tp] Single Frame</source>
+        <translation>[tp] Single Frame</translation>
+    </message>
+    <message>
+        <location filename="../window/TraceWindow/UnifiedTraceViewModel.cpp" line="407" />
+        <source>[tp] First Frame</source>
+        <translation>[tp] First Frame</translation>
+    </message>
+    <message>
+        <location filename="../window/TraceWindow/UnifiedTraceViewModel.cpp" line="408" />
+        <source>[tp] Consecutive Frame (SN: %1)</source>
+        <translation>[tp] Consecutive Frame (SN: %1)</translation>
+    </message>
+    <message>
+        <location filename="../window/TraceWindow/UnifiedTraceViewModel.cpp" line="409" />
+        <source>[tp] Flow Control</source>
+        <translation>[tp] Flow Control</translation>
+    </message>
+    <message>
+        <location filename="../window/TraceWindow/UnifiedTraceViewModel.cpp" line="411" />
+        <source>[raw]</source>
+        <translation>[raw]</translation>
     </message>
 </context>
 </TS>

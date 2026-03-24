@@ -345,11 +345,11 @@ QVariant UnifiedTraceViewModel::data_DisplayRole(const QModelIndex &index) const
             case column_comment: return pmsg.description;
             case column_data: return pmsg.payload.toHex(' ');
             case column_dlc: return pmsg.payload.size();
-            case column_direction: return pmsg.rawFrames.isEmpty() ? "" : (pmsg.rawFrames.first().isRX() ? "RX" : "TX");
+            case column_direction: return pmsg.rawFrames.isEmpty() ? "" : (pmsg.rawFrames.first().isRX() ? tr("RX") : tr("TX"));
             case column_channel: return pmsg.rawFrames.isEmpty() ? "" : backend()->getInterfaceName(pmsg.rawFrames.first().getInterfaceId());
             case column_sender:
                 if (pmsg.protocol.compare("uds", Qt::CaseInsensitive) == 0) {
-                    return (pmsg.type == MessageType::Request) ? "Tester" : "ECU";
+                    return (pmsg.type == MessageType::Request) ? tr("Tester") : tr("ECU");
                 }
                 return "";
             default: return QVariant();
@@ -393,7 +393,7 @@ QVariant UnifiedTraceViewModel::data_DisplayRole(const QModelIndex &index) const
                 return formatUnifiedTimestamp(current, prev);
             }
             case column_channel: return backend()->getInterfaceName(msg.getInterfaceId());
-            case column_direction: return msg.isRX() ? "RX" : "TX";
+            case column_direction: return msg.isRX() ? tr("RX") : tr("TX");
             case column_type: return QString(msg.isFD()? "FD.":"") + QString(msg.isExtended()? "EXT." : "STD.") + QString(msg.isRTR()?"RTR":"") + QString((msg.isBRS()?"BRS":""));
             case column_canid: return QString("0x%1").arg(msg.getId(), 0, 16);
             case column_dlc: return msg.getLength();
@@ -403,12 +403,12 @@ QVariant UnifiedTraceViewModel::data_DisplayRole(const QModelIndex &index) const
                     // This is a child row - show transport layer info
                     uint8_t firstByte = msg.getByte(0);
                     uint8_t type = (firstByte >> 4) & 0x0F;
-                    if (type == 0x0) return "[tp] Single Frame";
-                    if (type == 0x1) return "[tp] First Frame";
-                    if (type == 0x2) return QString("[tp] Consecutive Frame (SN: %1)").arg(firstByte & 0x0F);
-                    if (type == 0x3) return "[tp] Flow Control";
+                    if (type == 0x0) return tr("[tp] Single Frame");
+                    if (type == 0x1) return tr("[tp] First Frame");
+                    if (type == 0x2) return tr("[tp] Consecutive Frame (SN: %1)").arg(firstByte & 0x0F);
+                    if (type == 0x3) return tr("[tp] Flow Control");
                 }
-                return (dbmsg) ? dbmsg->getName() : "[raw]";
+                return (dbmsg) ? dbmsg->getName() : tr("[raw]");
             case column_comment: return (dbmsg) ? dbmsg->getComment() : "";
             case column_sender: return ""; // Child rows don't show sender as per requirements
             default: return QVariant();

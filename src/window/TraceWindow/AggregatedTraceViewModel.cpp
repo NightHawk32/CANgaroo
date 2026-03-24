@@ -165,10 +165,8 @@ void AggregatedTraceViewModel::afterClear()
 
 AggregatedTraceViewModel::unique_key_t AggregatedTraceViewModel::makeUniqueKey(const CanMessage &msg) const
 {
-    return static_cast<uint64_t>(msg.getInterfaceId()) << 32 | static_cast<uint64_t>(msg.isRX()) << 31 | msg.getRawId();
+    return static_cast<uint64_t>(msg.getInterfaceId()) << 32 | static_cast<uint64_t>(msg.isRX()) << 63 | msg.getRawId();
 }
-
-
 
 QModelIndex AggregatedTraceViewModel::index(int row, int column, const QModelIndex &parent) const
 {
