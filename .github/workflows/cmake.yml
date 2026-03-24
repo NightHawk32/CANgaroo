@@ -21,24 +21,24 @@ jobs:
         sudo apt install -y build-essential git cmake \
           qt6-base-dev qt6-base-private-dev qt6-tools-dev \
           libqt6serialport6-dev libqt6charts6-dev \
-          adwaita-qt6 libadwaitaqt6-1 \
+          adwaita-qt6 libadwaitaqt6-1 pybind11-dev \
           libnl-3-dev libnl-route-3-dev libgl1-mesa-dev fuse libfuse2 wget
 
     - name: Verify Qt6 and Adwaita installation
       run: |
         echo "=== Qt6 Version ==="
         qmake6 --version
-        
+
         echo "=== Qt6 Plugin Path ==="
         QT6_PLUGIN_PATH=$(qmake6 -query QT_INSTALL_PLUGINS)
         echo "Qt6 Plugins: $QT6_PLUGIN_PATH"
-        
+
         echo "=== Available Styles ==="
         ls -la $QT6_PLUGIN_PATH/styles/ || echo "No styles directory"
-        
+
         echo "=== Platform Themes ==="
         ls -la $QT6_PLUGIN_PATH/platformthemes/ || echo "No platformthemes directory"
-        
+
         echo "=== Adwaita Libraries ==="
         ls -la /usr/lib/x86_64-linux-gnu/libadwaitaqt6*.so* || echo "No Adwaita libraries found"
 
@@ -64,7 +64,7 @@ jobs:
     - name: Copy Adwaita plugins to AppDir
       run: |
           QT6_PLUGIN_PATH=$(qmake6 -query QT_INSTALL_PLUGINS)
-          
+
           echo "=== Copying Adwaita style plugin ==="
           ls $QT6_PLUGIN_PATH/styles/
           if [ -f "$QT6_PLUGIN_PATH/styles/adwaita.so" ]; then
@@ -73,7 +73,7 @@ jobs:
           else
             echo "Warning: Adwaita style not found"
           fi
-          
+
           echo "=== Copying QGnomePlatform plugin ==="
           if [ -f "$QT6_PLUGIN_PATH/platformthemes/libqgnomeplatform.so" ]; then
             cp -v "$QT6_PLUGIN_PATH/platformthemes/libqgnomeplatform.so" AppDir/usr/plugins/platformthemes/
@@ -81,7 +81,7 @@ jobs:
           else
             echo "Warning: QGnomePlatform not found"
           fi
-          
+
           echo "=== Copying Adwaita libraries ==="
           mkdir -p AppDir/usr/lib
           for lib in /usr/lib/x86_64-linux-gnu/libadwaitaqt6*.so*; do
@@ -99,7 +99,7 @@ jobs:
           Libraries = ../lib
           Prefix = ../
           EOF
-          
+
           echo "=== qt.conf created ==="
           cat AppDir/usr/bin/qt.conf
 
@@ -229,7 +229,7 @@ jobs:
             | while IFS= read -r file; do
               # Convert Windows path to Linux path
               linux_path=$(echo "$file" | sed -E 's|([A-Za-z]):\\|/\L\1/|; s|\\|/|g')
-    
+
               echo "Copying $linux_path"
               cp "$linux_path" dist/ || echo "Skipped $linux_path"
               done
