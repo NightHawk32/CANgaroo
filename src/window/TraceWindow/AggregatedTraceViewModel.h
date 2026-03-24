@@ -57,6 +57,7 @@ private:
     CanIdMap _map;
     AggregatedTraceViewItem *_rootItem;
     QTimer _fadeTimer;
+    qint64 _fadeNowMs = 0;
     QList<CanMessage> _pendingMessageUpdates;
     QMap<unique_key_t, CanMessage> _pendingMessageInserts;
 

@@ -52,7 +52,7 @@ class CanDbMessage
         CanDbSignal *getSignal(int num);
         CanDbSignal *getSignalByName(QString signal_name);
 
-        CanDbSignalList getSignals() { return _signals; }
+        const CanDbSignalList &getSignals() const { return _signals; }
 
         QString getComment() const;
         void setComment(const QString &comment);

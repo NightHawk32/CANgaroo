@@ -223,10 +223,10 @@ void CanTrace::saveVectorAsc(QFile &file)
 
 bool CanTrace::getMuxedSignalFromCache(const CanDbSignal *signal, uint64_t *raw_value)
 {
-    if (_muxCache.contains(signal)) {
-        *raw_value = _muxCache[signal];
+    auto it = _muxCache.constFind(signal);
+    if (it != _muxCache.constEnd()) {
+        *raw_value = it.value();
         return true;
-    } else {
-        return false;
     }
+    return false;
 }

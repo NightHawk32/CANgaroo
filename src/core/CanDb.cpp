@@ -61,14 +61,11 @@ size_t CanDb::getNumberOfMessages()
 
 CanDbMessage *CanDb::getMessageById(uint32_t raw_id)
 {
-    if (_messages.contains(raw_id)) {
-        return _messages[raw_id];
-    } else {
-        return 0;
-    }
+    auto it = _messages.find(raw_id);
+    return (it != _messages.end()) ? it.value() : nullptr;
 }
 
-CanDbMessageList CanDb::getMessageList()
+const CanDbMessageList &CanDb::getMessageList() const
 {
     return _messages;
 }

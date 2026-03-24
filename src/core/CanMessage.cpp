@@ -57,11 +57,7 @@ void CanMessage::cloneFrom(const CanMessage &msg)
     _isRX = msg._isRX;
     _isShow = msg._isShow;
 
-    // Copy data
-    for(int i=0; i<64; i++)
-    {
-        _u8[i] = msg._u8[i];
-    }
+    memcpy(_u8, msg._u8, sizeof(_u8));
 
     _interface = msg._interface;
     _timestamp_us = msg._timestamp_us;
@@ -363,15 +359,21 @@ QString CanMessage::getIdString() const
 QString CanMessage::getDataHexString() const
 {
     if(getLength() == 0)
-        return "";
+        return QString();
 
     if(isErrorFrame())
-        return "ERROR";
+        return QStringLiteral("ERROR");
 
-    QString outstr = "";
-    for(int i=0; i<getLength(); i++)
+    static const char hex[] = "0123456789ABCDEF";
+    int len = getLength();
+    QString outstr(len * 3, Qt::Uninitialized);
+    QChar *p = outstr.data();
+    for(int i = 0; i < len; i++)
     {
-        outstr += QString().asprintf("%02X ", getByte(i));
+        uint8_t b = getByte(i);
+        *p++ = QLatin1Char(hex[b >> 4]);
+        *p++ = QLatin1Char(hex[b & 0x0F]);
+        *p++ = QLatin1Char(' ');
     }
 
     return outstr;

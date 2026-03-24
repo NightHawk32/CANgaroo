@@ -42,6 +42,7 @@ void MeasurementSetup::clear()
 {
     qDeleteAll(_networks);
     _networks.clear();
+    _messageCache.clear();
     emit onSetupChanged();
 }
 
@@ -53,6 +54,7 @@ void MeasurementSetup::cloneFrom(MeasurementSetup &origin)
         network_copy->cloneFrom(*network);
         _networks.append(network_copy);
     }
+    rebuildMessageCache();
     emit onSetupChanged();
 }
 
@@ -80,6 +82,7 @@ bool MeasurementSetup::loadXML(Backend &backend, QDomElement &el)
         }
     }
 
+    rebuildMessageCache();
     emit onSetupChanged();
     return true;
 }
@@ -100,19 +103,26 @@ void MeasurementSetup::removeNetwork(MeasurementNetwork *network)
 }
 
 
-CanDbMessage *MeasurementSetup::findDbMessage(const CanMessage &msg) const
+void MeasurementSetup::rebuildMessageCache()
 {
-    CanDbMessage *result = 0;
-
+    _messageCache.clear();
     for (auto *network : _networks) {
         for (const auto &db : network->_canDbs) {
-            result = db->getMessageById(msg.getRawId());
-            if (result != 0) {
-                return result;
+            const CanDbMessageList &msgs = db->getMessageList();
+            for (auto it = msgs.constBegin(); it != msgs.constEnd(); ++it) {
+                _messageCache.insert(it.key(), it.value());
             }
         }
     }
-    return result;
+}
+
+CanDbMessage *MeasurementSetup::findDbMessage(const CanMessage &msg) const
+{
+    auto it = _messageCache.constFind(msg.getRawId());
+    if (it != _messageCache.constEnd()) {
+        return it.value();
+    }
+    return nullptr;
 }
 
 QString MeasurementSetup::getInterfaceName(const CanInterface &interface) const

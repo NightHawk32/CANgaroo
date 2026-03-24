@@ -45,6 +45,7 @@ AggregatedTraceViewModel::AggregatedTraceViewModel(Backend &backend)
         int rows = _rootItem->childCount();
         if (rows > 0)
         {
+            _fadeNowMs = QDateTime::currentMSecsSinceEpoch();
             emit dataChanged(index(0, 0, QModelIndex()),
                              index(rows - 1, columnCount(QModelIndex()) - 1, QModelIndex()),
                              {Qt::ForegroundRole});
@@ -252,7 +253,7 @@ QVariant AggregatedTraceViewModel::data_TextColorRole(const QModelIndex &index, 
         : item->parent()->_lastmsg;
 
     // Fade stale messages via alpha based on time since last reception
-    qint64 now_ms = QDateTime::currentMSecsSinceEpoch();
+    qint64 now_ms = _fadeNowMs > 0 ? _fadeNowMs : QDateTime::currentMSecsSinceEpoch();
     double diff_sec = (now_ms - msg.getTimestamp_ms()) / 1000.0;
 
     int alpha = 255 - static_cast<int>(diff_sec * 100);

@@ -58,7 +58,7 @@ class CanDb
         size_t getNumberOfMessages();
 
         CanDbMessage *getMessageById(uint32_t raw_id);
-        CanDbMessageList getMessageList();
+        const CanDbMessageList &getMessageList() const;
 
         void addMessage(CanDbMessage *msg);
 

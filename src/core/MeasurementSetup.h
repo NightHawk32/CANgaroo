@@ -23,6 +23,7 @@
 
 #include <QObject>
 #include <QList>
+#include <QHash>
 #include <QDomDocument>
 
 class Backend;
@@ -42,6 +43,7 @@ public:
     void clear();
 
     CanDbMessage *findDbMessage(const CanMessage &msg) const;
+    void rebuildMessageCache();
     QString getInterfaceName(const CanInterface &interface) const;
 
     int countNetworks() const;
@@ -60,4 +62,5 @@ signals:
 
 private:
     QList<MeasurementNetwork*> _networks;
+    mutable QHash<uint32_t, CanDbMessage*> _messageCache;
 };
