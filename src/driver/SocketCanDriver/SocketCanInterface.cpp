@@ -527,8 +527,10 @@ void SocketCanInterface::sendMessage(const CanMessage &msg) {
         if (len > 8) len = 8;
         frame.can_dlc = len;
 
-        for (int i=0; i<len; i++) {
-            frame.data[i] = msg.getByte(i);
+        if (!msg.isRTR()) {
+            for (int i=0; i<len; i++) {
+                frame.data[i] = msg.getByte(i);
+            }
         }
 
         if (::write(_fd, &frame, sizeof(struct can_frame)) < 0) {

@@ -96,6 +96,7 @@ private slots:
     void switchLanguage(QAction *action);
     void exportFullTrace();
     void importFullTrace();
+    void reloadInterfaces();
 
 private:
     Ui::MainWindow *ui;

@@ -31,6 +31,7 @@
 #include "TraceFilterModel.h"
 #include <QCheckBox>
 #include <QScrollBar>
+#include <QHeaderView>
 #include <core/Backend.h>
 
 
@@ -52,10 +53,10 @@ TraceWindow::TraceWindow(QWidget *parent, Backend &backend) :
     _aggMonitorFilterModel->setSourceModel(_aggregatedProxyModel);
 
     // Initialize the 4 rolling categories
-    UnifiedTraceViewModel::Category cats[] = { 
-        UnifiedTraceViewModel::Cat_All, 
-        UnifiedTraceViewModel::Cat_UDS, 
-        UnifiedTraceViewModel::Cat_J1939 
+    UnifiedTraceViewModel::Category cats[] = {
+        UnifiedTraceViewModel::Cat_All,
+        UnifiedTraceViewModel::Cat_UDS,
+        UnifiedTraceViewModel::Cat_J1939
     };
 
     QTreeView* trees[] = { ui->treeAgg, ui->treeUds, ui->treeJ1939 };
@@ -84,7 +85,7 @@ TraceWindow::TraceWindow(QWidget *parent, Backend &backend) :
         tree->setColumnWidth(BaseTraceViewModel::column_sender, 150);
         tree->setColumnWidth(BaseTraceViewModel::column_name, 150);
         tree->setColumnWidth(BaseTraceViewModel::column_dlc, 50);
-        tree->setColumnWidth(BaseTraceViewModel::column_data, 250);
+        tree->setColumnWidth(BaseTraceViewModel::column_data, 260);
         tree->setColumnWidth(BaseTraceViewModel::column_comment, 120);
 
         connect(_filterModels[i], &QAbstractItemModel::rowsInserted, this, &TraceWindow::onRowsInserted);
@@ -132,8 +133,10 @@ void TraceWindow::setMode(TraceWindow::mode_t mode)
         ui->treeAgg->setSortingEnabled(true);
         ui->treeAgg->sortByColumn(BaseTraceViewModel::column_canid, Qt::AscendingOrder);
     } else {
-        ui->treeAgg->setModel(_filterModels[Cat_Aggregated]);
         ui->treeAgg->setSortingEnabled(false);
+        ui->treeAgg->header()->setSortIndicator(-1, Qt::AscendingOrder);
+        _filterModels[Cat_Aggregated]->sort(-1);
+        ui->treeAgg->setModel(_filterModels[Cat_Aggregated]);
         ui->treeAgg->setRootIsDecorated(true);
     }
 

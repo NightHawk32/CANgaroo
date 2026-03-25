@@ -72,6 +72,14 @@ void Backend::addCanDriver(CanDriver &driver)
     _drivers.append(&driver);
 }
 
+void Backend::refreshInterfaces()
+{
+    for (auto *driver : _drivers) {
+        driver->update();
+    }
+    emit onSetupChanged();
+}
+
 bool Backend::startMeasurement()
 {
     log_info(tr("Starting measurement"));
@@ -217,7 +225,7 @@ CanInterface *Backend::getInterfaceById(CanInterfaceId id)
 QString Backend::getInterfaceName(CanInterfaceId id)
 {
     CanInterface *intf = getInterfaceById(id);
-    return intf ? intf->getName() : QString();
+    return intf ? intf->getName() : QString::number(id);
 }
 
 QString Backend::getDriverName(CanInterfaceId id)

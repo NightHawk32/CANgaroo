@@ -3,7 +3,6 @@
 #include <core/ConfigurableWidget.h>
 #include <core/Backend.h>
 #include <QElapsedTimer>
-#include <QSet>
 #include <QMap>
 
 class QLineEdit;
@@ -15,6 +14,7 @@ class QTimer;
 class QDoubleSpinBox;
 class QTreeWidget;
 class QTreeWidgetItem;
+class QCheckBox;
 class QComboBox;
 
 class ReplayWindow : public ConfigurableWidget
@@ -39,6 +39,8 @@ private slots:
     void onSelectAllClicked();
     void onDeselectAllClicked();
     void onFilterItemChanged(QTreeWidgetItem *item, int column);
+    void onBeginMeasurement();
+    void onEndMeasurement();
 
 private:
     Backend *_backend;
@@ -54,6 +56,7 @@ private:
     QLabel *_posLabel;
     QPlainTextEdit *_infoBox;
     QTreeWidget *_filterTree;
+    QCheckBox *_cbAutoplay;
     QTimer *_timer;
 
     QString _traceFilePath;
@@ -64,8 +67,12 @@ private:
     QElapsedTimer _elapsed;
     double _traceStartTime;
 
-    // Filter: interface -> set of enabled CAN IDs
-    QMap<QString, QSet<uint32_t>> _enabledIds;
+    // Filter: interface -> (CAN ID -> direction flags)
+    // Bit 0 = RX enabled, Bit 1 = TX enabled
+    static constexpr uint8_t DirRx = 0x01;
+    static constexpr uint8_t DirTx = 0x02;
+    static constexpr uint32_t ErrorFrameId = 0xFFFFFFFF;
+    QMap<QString, QMap<uint32_t, uint8_t>> _enabledDirs;
 
     // Channel mapping: trace channel name -> combo box
     QMap<QString, QComboBox*> _channelCombos;

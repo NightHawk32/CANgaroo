@@ -102,6 +102,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     connect(ui->btnStopMeasurement, SIGNAL(released()), this, SLOT(stopMeasurement()));
     connect(ui->btnSetupMeasurement, SIGNAL(released()), this, SLOT(showSetupDialog()));
 
+    connect(ui->actionReload_Interfaces, &QAction::triggered, this, &MainWindow::reloadInterfaces);
+
     connect(&backend(), SIGNAL(beginMeasurement()), this, SLOT(updateMeasurementActions()));
     connect(&backend(), SIGNAL(endMeasurement()), this, SLOT(updateMeasurementActions()));
     updateMeasurementActions();
@@ -1021,6 +1023,11 @@ bool MainWindow::showSetupDialog()
     {
         return false;
     }
+}
+
+void MainWindow::reloadInterfaces()
+{
+    backend().refreshInterfaces();
 }
 
 void MainWindow::showAboutDialog()

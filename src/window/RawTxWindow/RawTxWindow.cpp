@@ -895,6 +895,7 @@ void RawTxWindow::setMessage(const CanMessage &msg, const QString &name, CanInte
     }
 
     ui->checkBox_IsExtended->setChecked(isExtended);
+    ui->checkBox_IsRTR->setChecked(msg.isRTR());
     ui->checkbox_FD->setChecked(isFD);
     ui->checkbox_BRS->setChecked(isBRS);
 

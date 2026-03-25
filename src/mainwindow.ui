@@ -170,6 +170,7 @@
     <addaction name="actionStop_Measurement"/>
     <addaction name="separator"/>
     <addaction name="actionSetup"/>
+    <addaction name="actionReload_Interfaces"/>
     <addaction name="menuDriver"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
@@ -238,6 +239,11 @@
    </property>
    <property name="shortcut">
     <string>Shift+F5</string>
+   </property>
+  </action>
+  <action name="actionReload_Interfaces">
+   <property name="text">
+    <string>&amp;Reload Interfaces</string>
    </property>
   </action>
   <action name="actionAbout">

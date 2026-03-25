@@ -50,6 +50,7 @@ public:
     virtual ~Backend();
 
     void addCanDriver(CanDriver &driver);
+    void refreshInterfaces();
 
     bool startMeasurement();
     bool stopMeasurement();

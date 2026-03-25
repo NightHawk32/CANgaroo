@@ -94,6 +94,7 @@ bool TxGeneratorWindow::saveXML(Backend &backend, QDomDocument &xml, QDomElement
 {
     if (!ConfigurableWidget::saveXML(backend, xml, root)) { return false; }
     root.setAttribute("type", "TxGeneratorWindow");
+    root.setAttribute("splitterState", QString(ui->splitter->saveState().toBase64()));
 
     for (const CyclicMessage &cm : _cyclicMessages)
     {
@@ -135,6 +136,11 @@ bool TxGeneratorWindow::saveXML(Backend &backend, QDomDocument &xml, QDomElement
 bool TxGeneratorWindow::loadXML(Backend &backend, QDomElement &el)
 {
     if (!ConfigurableWidget::loadXML(backend, el)) { return false; }
+
+    QString splitterState = el.attribute("splitterState");
+    if (!splitterState.isEmpty()) {
+        ui->splitter->restoreState(QByteArray::fromBase64(splitterState.toLatin1()));
+    }
 
     _cyclicMessages.clear();
 

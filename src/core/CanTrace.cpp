@@ -157,13 +157,37 @@ void CanTrace::saveCanDump(QFile &file)
         QString line;
         line.append(QString().asprintf("(%.6f) ", msg->getFloatTimestamp()));
         line.append(_backend.getInterfaceName(msg->getInterfaceId()));
-        if (msg->isExtended()) {
-            line.append(QString().asprintf(" %08X#", msg->getId()));
+        if (msg->isErrorFrame()) {
+            // Error frame: error flag in ID, 8 bytes of zero data
+            line.append(QString().asprintf(" %08X#", 0x20000000 | msg->getId()));
+            line.append("0000000000000000");
+        } else if (msg->isFD()) {
+            // CANFD: use ## separator with flags byte (bit 0 = BRS, bit 1 = ESI)
+            uint8_t flags = msg->isBRS() ? 1 : 0;
+            if (msg->isExtended()) {
+                line.append(QString().asprintf(" %08X##%X", msg->getId(), flags));
+            } else {
+                line.append(QString().asprintf(" %03X##%X", msg->getId(), flags));
+            }
+            for (int i=0; i<msg->getLength(); i++) {
+                line.append(QString().asprintf("%02X", msg->getByte(i)));
+            }
+        } else if (msg->isRTR()) {
+            // RTR: #R followed by DLC
+            if (msg->isExtended()) {
+                line.append(QString().asprintf(" %08X#R%d", msg->getId(), msg->getLength()));
+            } else {
+                line.append(QString().asprintf(" %03X#R%d", msg->getId(), msg->getLength()));
+            }
         } else {
-            line.append(QString().asprintf(" %03X#", msg->getId()));
-        }
-        for (int i=0; i<msg->getLength(); i++) {
-            line.append(QString().asprintf("%02X", msg->getByte(i)));
+            if (msg->isExtended()) {
+                line.append(QString().asprintf(" %08X#", msg->getId()));
+            } else {
+                line.append(QString().asprintf(" %03X#", msg->getId()));
+            }
+            for (int i=0; i<msg->getLength(); i++) {
+                line.append(QString().asprintf("%02X", msg->getByte(i)));
+            }
         }
         stream << line << Qt::endl;
     }
@@ -192,10 +216,32 @@ void CanTrace::saveVectorAsc(QFile &file)
     stream << "Begin Triggerblock " << dt_start << Qt::endl;
     stream << "   0.000000 Start of measurement" << Qt::endl;
 
+    // Build sequential channel numbers from interface IDs
+    QMap<CanInterfaceId, int> channelMap;
+    int nextChannel = 1;
+    for (unsigned int i = 0; i < size(); i++) {
+        CanInterfaceId ifaceId = _data[i].getInterfaceId();
+        if (!channelMap.contains(ifaceId)) {
+            channelMap[ifaceId] = nextChannel++;
+        }
+    }
+
     for (unsigned int i=0; i<size(); i++) {
         CanMessage &msg = _data[i];
 
         double t_current = msg.getFloatTimestamp();
+        int channel = channelMap.value(msg.getInterfaceId(), 1);
+
+        if (msg.isErrorFrame()) {
+            QString line = QString().asprintf(
+                "%11.6lf %d  ErrorFrame",
+                t_current-t_start,
+                channel
+            );
+            stream << line << Qt::endl;
+            continue;
+        }
+
         QString id_hex_str = QString().asprintf("%x", msg.getId());
         QString id_dec_str = QString().asprintf("%d", msg.getId());
         if (msg.isExtended()) {
@@ -203,18 +249,40 @@ void CanTrace::saveVectorAsc(QFile &file)
             id_dec_str.append("x");
         }
 
-        // TODO how to handle RTR flag?
-        QString line = QString().asprintf(
-            "%11.6lf 1  %-15s %s   d %d %s  Length = %d BitCount = %d ID = %s",
-            t_current-t_start,
-            id_hex_str.toStdString().c_str(),
-            "Rx", // TODO handle Rx/Tx
-            msg.getLength(),
-            msg.getDataHexString().toStdString().c_str(),
-            0, // TODO Length (transfer time in ns)
-            0, // TODO BitCount (overall frame length, including stuff bits)
-            id_dec_str.toStdString().c_str()
-        );
+        QString line;
+        if (msg.isFD()) {
+            // Vector ASC CANFD format:
+            // timestamp CANFD channel Rx/Tx ID_hex flags 0 0 DLC DataLength data
+            // flags: bit 0 = BRS, bit 2 = ESI
+            int flags = 0;
+            if (msg.isBRS()) { flags |= 0x1; }
+
+            line = QString().asprintf(
+                "%11.6lf CANFD %3d %s %15s %d 0 0 %d %d %s",
+                t_current-t_start,
+                channel,
+                msg.isRX() ? "Rx" : "Tx",
+                id_hex_str.toStdString().c_str(),
+                flags,
+                msg.getLength(),
+                msg.getLength(),
+                msg.getDataHexString().toStdString().c_str()
+            );
+        } else {
+            line = QString().asprintf(
+                "%11.6lf %d  %-15s %s   %c %d %s  Length = %d BitCount = %d ID = %s",
+                t_current-t_start,
+                channel,
+                id_hex_str.toStdString().c_str(),
+                msg.isRX() ? "Rx" : "Tx",
+                msg.isRTR() ? 'r' : 'd',
+                msg.getLength(),
+                msg.getDataHexString().toStdString().c_str(),
+                0, // TODO Length (transfer time in ns)
+                0, // TODO BitCount (overall frame length, including stuff bits)
+                id_dec_str.toStdString().c_str()
+            );
+        }
 
         stream << line << Qt::endl;
     }
