@@ -5,6 +5,7 @@
 
 class QComboBox;
 class QCheckBox;
+class QSpinBox;
 class QActionGroup;
 
 class SettingsDialog : public QDialog
@@ -17,9 +18,11 @@ public:
     QString selectedTheme() const;
     QString selectedLanguage() const;
     bool restoreWindowEnabled() const;
+    int selectedFontSize() const;
 
 private:
     QComboBox *m_themeCombo;
     QComboBox *m_languageCombo;
     QCheckBox *m_restoreWindowCheck;
+    QSpinBox *m_fontSizeSpin;
 };

@@ -4,6 +4,7 @@
 #include <QFormLayout>
 #include <QComboBox>
 #include <QCheckBox>
+#include <QSpinBox>
 #include <QDialogButtonBox>
 #include <QStyleFactory>
 #include <QApplication>
@@ -55,6 +56,15 @@ SettingsDialog::SettingsDialog(QSettings &settings, QActionGroup *languageGroup,
     m_languageCombo->setCurrentIndex(langIdx);
     form->addRow(tr("Language:"), m_languageCombo);
 
+    // --- Font size ---
+    m_fontSizeSpin = new QSpinBox(this);
+    m_fontSizeSpin->setRange(6, 24);
+    int defaultSize = QApplication::font().pointSize();
+    if (defaultSize < 6) { defaultSize = 9; }
+    m_fontSizeSpin->setValue(settings.value("ui/fontSize", defaultSize).toInt());
+    m_fontSizeSpin->setSuffix(" pt");
+    form->addRow(tr("Font size:"), m_fontSizeSpin);
+
     // --- Restore window ---
     m_restoreWindowCheck = new QCheckBox(tr("Restore window layout on startup"), this);
     m_restoreWindowCheck->setChecked(settings.value("ui/restoreWindowGeometry", false).toBool());
@@ -83,4 +93,9 @@ QString SettingsDialog::selectedLanguage() const
 bool SettingsDialog::restoreWindowEnabled() const
 {
     return m_restoreWindowCheck->isChecked();
+}
+
+int SettingsDialog::selectedFontSize() const
+{
+    return m_fontSizeSpin->value();
 }

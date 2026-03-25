@@ -140,6 +140,7 @@ private:
 
     void createLanguageMenu();
     void setupDockFloatReparent(QDockWidget *dock, QMainWindow *innerParent);
+    void applyFontSize(int pointSize);
     QTranslator m_translator;
     QActionGroup *m_languageActionGroup = nullptr;
    

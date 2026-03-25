@@ -277,6 +277,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
         }
     }
 
+    // Load saved font size
+    int savedFontSize = settings.value("ui/fontSize", 0).toInt();
+    if (savedFontSize > 0)
+    {
+        applyFontSize(savedFontSize);
+    }
+
     // Open Standalone Graph Button
     QPushButton *btnOpenGraph = new QPushButton(tr("Graph"), this);
     btnOpenGraph->setIcon(QIcon(":/assets/graph.svg"));
@@ -1435,8 +1442,31 @@ void MainWindow::showSettingsDialog()
         }
     }
 
+    // Apply font size
+    int newFontSize = dlg.selectedFontSize();
+    if (newFontSize != QApplication::font().pointSize())
+    {
+        applyFontSize(newFontSize);
+        settings.setValue("ui/fontSize", newFontSize);
+    }
+
     // Apply restore window setting
     ui->actionRestore_Window->setChecked(dlg.restoreWindowEnabled());
     settings.setValue("ui/restoreWindowGeometry", dlg.restoreWindowEnabled());
+}
+
+void MainWindow::applyFontSize(int pointSize)
+{
+    QFont font = QApplication::font();
+    font.setPointSize(pointSize);
+    QApplication::setFont(font);
+
+    // Propagate to all existing widgets
+    for (QWidget *w : QApplication::allWidgets())
+    {
+        QFont wf = w->font();
+        wf.setPointSize(pointSize);
+        w->setFont(wf);
+    }
 }
 

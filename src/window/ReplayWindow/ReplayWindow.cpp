@@ -661,13 +661,15 @@ CanInterfaceId ReplayWindow::getMappedInterface(const QString &channel) const
 
 void ReplayWindow::onPlayClicked()
 {
-    if (_messages.isEmpty() || _playbackIndex >= _messages.size()) { return; }
+    if (_messages.isEmpty()) { return; }
 
     _playing = true;
     _btnPlay->setEnabled(false);
     _btnStop->setEnabled(true);
     _btnLoad->setEnabled(false);
     _slider->setEnabled(false);
+    _playbackIndex = 0;
+    _slider->setValue(0);
 
     _traceStartTime = _messages[_playbackIndex].getFloatTimestamp();
     _elapsed.start();
