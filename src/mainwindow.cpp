@@ -791,41 +791,35 @@ QMainWindow *MainWindow::createTraceWindow(QString title)
 
     QDockWidget *dockLogWidget = addLogWidget(mm);
     QDockWidget *dockStatusWidget = addStatusWidget(mm);
-    QDockWidget *dockRawTxWidget = addRawTxWidget(mm);
     QDockWidget *dockGeneratorWidget = addTxGeneratorWidget(mm);
     QDockWidget *dockGraphWidget = addGraphWidget(mm);
     QDockWidget *dockScriptWidget = addScriptWidget(mm);
     QDockWidget *dockReplayWidget = addReplayWidget(mm);
 
     TxGeneratorWindow *gen = qobject_cast<TxGeneratorWindow*>(dockGeneratorWidget->widget());
-    RawTxWindow *rawtx = qobject_cast<RawTxWindow*>(dockRawTxWidget->widget());
-    if (gen && rawtx) {
-        connect(gen, &TxGeneratorWindow::messageSelected, rawtx, &RawTxWindow::setMessage);
-        connect(rawtx, &RawTxWindow::messageUpdated, gen, &TxGeneratorWindow::updateMessage);
+    if (gen) {
         connect(gen, &TxGeneratorWindow::loopbackFrame, trace, &TraceWindow::addMessage);
     }
 
-    mm->splitDockWidget(dockRawTxWidget,dockLogWidget,Qt::Horizontal);
     mm->splitDockWidget(dockGeneratorWidget,dockLogWidget,Qt::Horizontal);
     mm->splitDockWidget(dockGraphWidget,dockLogWidget,Qt::Horizontal);
     mm->splitDockWidget(dockScriptWidget,dockLogWidget,Qt::Horizontal);
     mm->splitDockWidget(dockReplayWidget,dockLogWidget,Qt::Horizontal);
-    mm->tabifyDockWidget(dockGeneratorWidget, dockRawTxWidget); // Generator first, Message next
-    mm->tabifyDockWidget(dockRawTxWidget, dockGraphWidget);
+    mm->tabifyDockWidget(dockGeneratorWidget, dockGraphWidget);
     mm->tabifyDockWidget(dockGraphWidget, dockScriptWidget);
     mm->tabifyDockWidget(dockScriptWidget, dockReplayWidget);
     mm->splitDockWidget(dockStatusWidget,dockLogWidget,Qt::Horizontal);
     mm->tabifyDockWidget(dockStatusWidget, dockLogWidget); // Status first, Log next
 
     // Use QTimer to resize docks and ensure correct focus/visibility after layout is complete
-    QTimer::singleShot(0, mm, [mm, dockLogWidget, dockRawTxWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget, dockReplayWidget]() {
+    QTimer::singleShot(0, mm, [mm, dockLogWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget, dockReplayWidget]() {
         dockStatusWidget->show();
         dockStatusWidget->raise();
         dockGeneratorWidget->show();
         dockGeneratorWidget->raise();
 
-        mm->resizeDocks({dockLogWidget, dockRawTxWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget, dockReplayWidget}, {600, 600, 600, 600, 600, 600}, Qt::Vertical);
-        mm->resizeDocks({dockLogWidget, dockRawTxWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget, dockReplayWidget}, {1200, 1200, 1200, 1200, 1200, 1200}, Qt::Horizontal);
+        mm->resizeDocks({dockLogWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget, dockReplayWidget}, {600, 600, 600, 600, 600}, Qt::Vertical);
+        mm->resizeDocks({dockLogWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget, dockReplayWidget}, {1200, 1200, 1200, 1200, 1200}, Qt::Horizontal);
     });
 
     ui->mainTabs->setCurrentWidget(mm);
@@ -888,12 +882,6 @@ QDockWidget *MainWindow::addRawTxWidget(QMainWindow *parent)
     parent->addDockWidget(Qt::BottomDockWidgetArea, dock);
     setupDockFloatReparent(dock, parent);
 
-    TxGeneratorWindow *gen = parent->findChild<TxGeneratorWindow*>();
-    if (gen) {
-        connect(gen, &TxGeneratorWindow::messageSelected, rawTx, &RawTxWindow::setMessage);
-        connect(rawTx, &RawTxWindow::messageUpdated, gen, &TxGeneratorWindow::updateMessage);
-    }
-
     return dock;
 }
 
@@ -939,12 +927,6 @@ QDockWidget *MainWindow::addTxGeneratorWidget(QMainWindow *parent)
     dock->setWidget(gen);
     parent->addDockWidget(Qt::BottomDockWidgetArea, dock);
     setupDockFloatReparent(dock, parent);
-
-    RawTxWindow *rawtx = parent->findChild<RawTxWindow*>();
-    if (rawtx) {
-        connect(gen, &TxGeneratorWindow::messageSelected, rawtx, &RawTxWindow::setMessage);
-        connect(rawtx, &RawTxWindow::messageUpdated, gen, &TxGeneratorWindow::updateMessage);
-    }
 
     return dock;
 }

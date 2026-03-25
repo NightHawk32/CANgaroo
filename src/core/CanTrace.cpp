@@ -34,11 +34,11 @@
 CanTrace::CanTrace(Backend &backend, QObject *parent, int flushInterval)
   : QObject(parent),
     _backend(backend),
+    _maxSize(50000),
     _isTimerRunning(false),
     _mutex(),
     _timerMutex(),
-    _flushTimer(this),
-    _maxSize(50000)
+    _flushTimer(this)
 {
     clear();
     _flushTimer.setSingleShot(true);

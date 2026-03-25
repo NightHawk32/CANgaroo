@@ -57,7 +57,7 @@ ScriptWindow::ScriptWindow(QWidget *parent, Backend &backend)
     mainLayout->addWidget(_fileLabel);
 
     // Splitter: editor (top) + console (bottom)
-    _splitter = new QSplitter(Qt::Vertical, this);
+    _splitter = new QSplitter(Qt::Horizontal, this);
 
     QFont mono("Monospace");
     mono.setStyleHint(QFont::TypeWriter);

@@ -75,6 +75,7 @@ int UnifiedTraceViewModel::rowCount(const QModelIndex &parent) const
 
 int UnifiedTraceViewModel::columnCount(const QModelIndex &parent) const
 {
+    Q_UNUSED(parent);
     return BaseTraceViewModel::column_count;
 }
 
@@ -124,6 +125,7 @@ void UnifiedTraceViewModel::beforeAppend(int num_messages)
     // Integration with ProtocolManager happens here
     // But beginInsertRows needs to know how many PARENT rows we are adding.
     // This is tricky because one ProtocolMessage might consume multiple frames.
+    Q_UNUSED(num_messages);
 }
 
 void UnifiedTraceViewModel::afterAppend()
@@ -251,6 +253,7 @@ void UnifiedTraceViewModel::beforeRemove(int count)
 void UnifiedTraceViewModel::afterRemove(int count)
 {
     // Nothing more needed here specifically for m_lastProcessedIndex
+    Q_UNUSED(count);
 }
 
 void UnifiedTraceViewModel::beforeClear()

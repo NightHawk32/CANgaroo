@@ -1,13 +1,18 @@
 #include "TxGeneratorWindow.h"
 #include "ui_TxGeneratorWindow.h"
 #include <QTreeWidgetItem>
+#include <QHeaderView>
 #include <QTimer>
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QDialogButtonBox>
 #include <core/Backend.h>
 #include <core/MeasurementNetwork.h>
 #include <core/MeasurementSetup.h>
 #include <core/MeasurementInterface.h>
 #include <driver/CanInterface.h>
 #include <driver/CanDriver.h>
+#include <window/RawTxWindow/RawTxWindow.h>
 #include <chrono>
 
 TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :
@@ -36,6 +41,7 @@ TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :
     ui->btnBulkStop->setStyleSheet("QPushButton { font-weight: bold; background: #c82333; color: white; border-radius: 4px; padding: 4px 8px; } QPushButton:hover { background: #dc3545; } QPushButton:pressed { background: #a71d2a; } QPushButton:disabled { background: #f1aeb5; }");
 
     connect(ui->treeActive, SIGNAL(itemChanged(QTreeWidgetItem*,int)), this, SLOT(on_treeActive_itemChanged(QTreeWidgetItem*,int)));
+    connect(ui->treeActive, &QTreeWidget::itemDoubleClicked, this, &TxGeneratorWindow::on_treeActive_itemDoubleClicked_edit);
     connect(ui->treeAvailable, SIGNAL(itemSelectionChanged()), this, SLOT(on_treeAvailable_itemSelectionChanged()));
 
     _bitMatrixWidget = new BitMatrixWidget(this);
@@ -51,6 +57,9 @@ TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :
     _bitMatrixWidget->setCellSize(50);
     _bitMatrixWidget->setFixedSize(_bitMatrixWidget->sizeHint());
 
+    ui->spinInterval->setSuffix(" ms");
+    ui->spinInterval->setMinimumWidth(0);
+
     ui->lineManualId->setInputMask("");
     ui->lineManualId->setValidator(new QRegularExpressionValidator(QRegularExpression("^[0-9A-Fa-f]{0,8}$"), this));
     connect(ui->lineManualId, &QLineEdit::textChanged, this, [this](const QString &text){
@@ -63,6 +72,14 @@ TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :
 
     ui->treeActive->setSelectionMode(QAbstractItemView::ExtendedSelection);
     ui->treeAvailable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
+    // Fit columns to content; let Name column stretch
+    ui->treeActive->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents); // Status
+    ui->treeActive->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents); // ID
+    ui->treeActive->header()->setSectionResizeMode(2, QHeaderView::Stretch);           // Name
+    ui->treeActive->header()->setSectionResizeMode(3, QHeaderView::ResizeToContents); // Interface
+    ui->treeActive->header()->setSectionResizeMode(4, QHeaderView::ResizeToContents); // DLC
+    ui->treeActive->header()->setSectionResizeMode(5, QHeaderView::ResizeToContents); // Interval
 
     // Add Random Payload button programmatically
     _btnRandomPayload = new QPushButton(tr("Randomize Payload"), this);
@@ -503,7 +520,7 @@ void TxGeneratorWindow::on_treeActive_itemSelectionChanged()
             ui->spinInterval->setValue(cm.interval);
             ui->spinInterval->blockSignals(false);
 
-            emit messageSelected(cm.msg, cm.name, cm.interfaceId, cm.dbMsg);
+
         }
     } else {
         int row = ui->treeActive->currentIndex().row();
@@ -520,10 +537,44 @@ void TxGeneratorWindow::on_treeActive_itemSelectionChanged()
             ui->spinInterval->setValue(cm.interval);
             ui->spinInterval->blockSignals(false);
 
-            emit messageSelected(cm.msg, cm.name, cm.interfaceId, cm.dbMsg);
+
         }
     }
     isLoading = false;
+}
+
+void TxGeneratorWindow::on_treeActive_itemDoubleClicked_edit(QTreeWidgetItem *item, int column)
+{
+    Q_UNUSED(column);
+    int row = ui->treeActive->indexOfTopLevelItem(item);
+    if (row < 0 || row >= _cyclicMessages.size()) { return; }
+
+    CyclicMessage &cm = _cyclicMessages[row];
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Edit Message: %1 - %2").arg(item->text(1), cm.name));
+    dlg.resize(750, 480);
+
+    auto *layout = new QVBoxLayout(&dlg);
+    auto *rawTx = new RawTxWindow(&dlg, _backend);
+    rawTx->setMessage(cm.msg, cm.name, cm.interfaceId, cm.dbMsg);
+    layout->addWidget(rawTx);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    layout->addWidget(buttons);
+    connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    CanMessage editedMsg = cm.msg;
+    connect(rawTx, &RawTxWindow::messageUpdated, this, [&editedMsg](const CanMessage &msg) {
+        editedMsg = msg;
+    });
+
+    if (dlg.exec() == QDialog::Accepted)
+    {
+        cm.msg = editedMsg;
+        updateRowUI(row);
+    }
 }
 
 void TxGeneratorWindow::on_treeActive_itemChanged(QTreeWidgetItem *item, int column)
@@ -723,22 +774,6 @@ void TxGeneratorWindow::updateRowUI(int row)
 }
 
 
-void TxGeneratorWindow::updateMessage(const CanMessage &msg)
-{
-    if (isLoading) return;
-
-    int row = ui->treeActive->currentIndex().row();
-    if (row >= 0 && row < _cyclicMessages.size()) {
-        _cyclicMessages[row].msg = msg;
-        // Also update the tree item text if ID changed
-        QTreeWidgetItem *item = ui->treeActive->topLevelItem(row);
-        if (item) {
-            item->setText(1, "0x" + QString("%1").arg(msg.getId(), 3, 16, QChar('0')).toUpper());
-            item->setText(4, QString::number(msg.getLength()));
-        }
-    }
-}
-
 void TxGeneratorWindow::stopAll()
 {
     for (int i = 0; i < _cyclicMessages.size(); ++i) {
@@ -775,7 +810,7 @@ void TxGeneratorWindow::onRandomPayloadReleased()
 
             // If this is the currently focused message in the bit matrix, update it
             if (item == ui->treeActive->currentItem()) {
-                emit messageSelected(cm.msg, cm.name, cm.interfaceId, cm.dbMsg);
+    
             }
         }
     }

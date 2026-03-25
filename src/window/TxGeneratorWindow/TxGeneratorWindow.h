@@ -54,11 +54,9 @@ protected:
 
 signals:
     void loopbackFrame(const CanMessage &msg);
-    void messageSelected(const CanMessage &msg, const QString &name, CanInterfaceId interfaceId, CanDbMessage *dbMsg);
     void interfaceChanged(CanInterfaceId interfaceId);
 
 public slots:
-    void updateMessage(const CanMessage &msg);
     void stopAll();
 
 private slots:
@@ -76,6 +74,7 @@ private slots:
     void on_treeAvailable_itemDoubleClicked(QTreeWidgetItem *item, int column);
     void on_treeAvailable_itemSelectionChanged();
     void on_treeActive_itemSelectionChanged();
+    void on_treeActive_itemDoubleClicked_edit(QTreeWidgetItem *item, int column);
     void onSendTimerTimeout();
     void onSetupChanged();
     void on_btnSelectAll_released();
