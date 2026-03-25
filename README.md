@@ -29,6 +29,7 @@
 *   **Powerful Data Visualization**: Integrated Graphing tools supporting Time-series, Scatter charts, Text-based monitoring, and interactive Gauge views with zoom and live tooltips.
 *   **Advanced Filtering & Logging**: Isolate critical data with live filters and export captures for offline analysis.
 *   **Python Scripting**: Built-in script editor with an embedded Python interpreter (via pybind11). Send and receive CAN messages, decode signals using loaded DBC files, and automate tasks. Scripts can be started manually or automatically with the measurement.
+*   **Trace Replay**: Replay captured CAN logs (Vector ASC and candump formats) with adjustable speed, per-message RX/TX direction filtering, channel mapping to live interfaces, and optional autoplay with the measurement. Supports classic CAN, CAN-FD, RTR, and error frames.
 *   **Modern Workspace**: A clean, dockable userinterface optimized for multi-monitor setups.
 
 <br>![Cangaroo Trace View](src/docs/view.png)<br>

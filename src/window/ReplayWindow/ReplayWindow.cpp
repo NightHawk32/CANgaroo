@@ -787,9 +787,35 @@ void ReplayWindow::updatePositionLabel()
 bool ReplayWindow::saveXML(Backend &backend, QDomDocument &xml, QDomElement &root)
 {
     (void) backend;
-    (void) xml;
     root.setAttribute("file", _traceFilePath);
     root.setAttribute("autoplay", _cbAutoplay->isChecked() ? "1" : "0");
+    root.setAttribute("speed", QString::number(_speedSpin->value()));
+
+    // Save filter states: interface -> (id -> dirFlags)
+    for (auto ifaceIt = _enabledDirs.constBegin(); ifaceIt != _enabledDirs.constEnd(); ++ifaceIt)
+    {
+        QDomElement ifaceEl = xml.createElement("filter");
+        ifaceEl.setAttribute("channel", ifaceIt.key());
+
+        // Save channel mapping combo selection
+        if (_channelCombos.contains(ifaceIt.key()))
+        {
+            QComboBox *combo = _channelCombos[ifaceIt.key()];
+            ifaceEl.setAttribute("mappedInterface", combo->currentText());
+        }
+
+        const QMap<uint32_t, uint8_t> &ids = ifaceIt.value();
+        for (auto idIt = ids.constBegin(); idIt != ids.constEnd(); ++idIt)
+        {
+            QDomElement idEl = xml.createElement("id");
+            idEl.setAttribute("value", QString::number(idIt.key()));
+            idEl.setAttribute("dirs", QString::number(idIt.value()));
+            ifaceEl.appendChild(idEl);
+        }
+
+        root.appendChild(ifaceEl);
+    }
+
     return true;
 }
 
@@ -797,10 +823,73 @@ bool ReplayWindow::loadXML(Backend &backend, QDomElement &el)
 {
     (void) backend;
     _cbAutoplay->setChecked(el.attribute("autoplay", "0") == "1");
+    _speedSpin->setValue(el.attribute("speed", "1.0").toDouble());
+
     QString filepath = el.attribute("file");
     if (!filepath.isEmpty())
     {
         loadTraceFile(filepath);
     }
+
+    // Restore filter states and channel mappings
+    QDomNodeList filters = el.elementsByTagName("filter");
+    for (int i = 0; i < filters.size(); i++)
+    {
+        QDomElement filterEl = filters.at(i).toElement();
+        QString channel = filterEl.attribute("channel");
+
+        // Restore channel mapping
+        if (_channelCombos.contains(channel))
+        {
+            QString mappedName = filterEl.attribute("mappedInterface");
+            QComboBox *combo = _channelCombos[channel];
+            int idx = combo->findText(mappedName);
+            if (idx >= 0) { combo->setCurrentIndex(idx); }
+        }
+
+        // Restore filter dir flags
+        if (_enabledDirs.contains(channel))
+        {
+            QDomNodeList idNodes = filterEl.elementsByTagName("id");
+            for (int j = 0; j < idNodes.size(); j++)
+            {
+                QDomElement idEl = idNodes.at(j).toElement();
+                uint32_t id = idEl.attribute("value").toUInt();
+                uint8_t dirs = static_cast<uint8_t>(idEl.attribute("dirs").toUInt());
+
+                if (_enabledDirs[channel].contains(id))
+                {
+                    _enabledDirs[channel][id] = dirs;
+                }
+            }
+
+            // Update tree checkboxes to match restored state
+            for (int t = 0; t < _filterTree->topLevelItemCount(); t++)
+            {
+                QTreeWidgetItem *ifaceItem = _filterTree->topLevelItem(t);
+                if (ifaceItem->text(0) != channel) { continue; }
+
+                for (int c = 0; c < ifaceItem->childCount(); c++)
+                {
+                    QTreeWidgetItem *idItem = ifaceItem->child(c);
+                    uint32_t id = idItem->data(0, Qt::UserRole).toUInt();
+                    if (!_enabledDirs[channel].contains(id)) { continue; }
+
+                    uint8_t dirs = _enabledDirs[channel][id];
+                    _filterTree->blockSignals(true);
+                    if (idItem->checkState(2) != Qt::Unchecked)
+                        idItem->setCheckState(2, (dirs & DirRx) ? Qt::Checked : Qt::Unchecked);
+                    if (idItem->checkState(3) != Qt::Unchecked)
+                        idItem->setCheckState(3, (dirs & DirTx) ? Qt::Checked : Qt::Unchecked);
+
+                    // Update main checkbox: unchecked if no dirs enabled
+                    bool anyEnabled = (dirs & (DirRx | DirTx)) != 0;
+                    idItem->setCheckState(0, anyEnabled ? Qt::Checked : Qt::Unchecked);
+                    _filterTree->blockSignals(false);
+                }
+            }
+        }
+    }
+
     return true;
 }
