@@ -55,10 +55,14 @@ ReplayWindow::ReplayWindow(QWidget *parent, Backend &backend)
     _cbAutoplay = new QCheckBox(tr("Autoplay"), this);
     _cbAutoplay->setToolTip(tr("Automatically start/stop replay with measurement"));
 
+    _cbLoop = new QCheckBox(tr("Loop"), this);
+    _cbLoop->setToolTip(tr("Restart replay after all messages were sent"));
+
     toolbar->addWidget(_btnLoad);
     toolbar->addWidget(_btnPlay);
     toolbar->addWidget(_btnStop);
     toolbar->addWidget(_cbAutoplay);
+    toolbar->addWidget(_cbLoop);
     toolbar->addStretch();
     toolbar->addWidget(new QLabel(tr("Speed:"), this));
     toolbar->addWidget(_speedSpin);
@@ -777,7 +781,17 @@ void ReplayWindow::onTimerTick()
 
     if (_playbackIndex >= _messages.size())
     {
-        onStopClicked();
+        if (_cbLoop->isChecked())
+        {
+            _playbackIndex = 0;
+            _slider->setValue(0);
+            _traceStartTime = _messages[0].getFloatTimestamp();
+            _elapsed.restart();
+        }
+        else
+        {
+            onStopClicked();
+        }
     }
 }
 
@@ -791,6 +805,7 @@ bool ReplayWindow::saveXML(Backend &backend, QDomDocument &xml, QDomElement &roo
     (void) backend;
     root.setAttribute("file", _traceFilePath);
     root.setAttribute("autoplay", _cbAutoplay->isChecked() ? "1" : "0");
+    root.setAttribute("loop", _cbLoop->isChecked() ? "1" : "0");
     root.setAttribute("speed", QString::number(_speedSpin->value()));
 
     // Save filter states: interface -> (id -> dirFlags)
@@ -825,6 +840,7 @@ bool ReplayWindow::loadXML(Backend &backend, QDomElement &el)
 {
     (void) backend;
     _cbAutoplay->setChecked(el.attribute("autoplay", "0") == "1");
+    _cbLoop->setChecked(el.attribute("loop", "0") == "1");
     _speedSpin->setValue(el.attribute("speed", "1.0").toDouble());
 
     QString filepath = el.attribute("file");

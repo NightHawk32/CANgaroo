@@ -57,6 +57,7 @@ private:
     QPlainTextEdit *_infoBox;
     QTreeWidget *_filterTree;
     QCheckBox *_cbAutoplay;
+    QCheckBox *_cbLoop;
     QTimer *_timer;
 
     QString _traceFilePath;

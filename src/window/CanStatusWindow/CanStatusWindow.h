@@ -23,6 +23,7 @@
 
 #include <core/ConfigurableWidget.h>
 #include <QEvent>
+#include <QMap>
 
 namespace Ui {
 class CanStatusWindow;

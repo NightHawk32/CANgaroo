@@ -62,6 +62,7 @@ TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :
 
     ui->lineManualId->setInputMask("");
     ui->lineManualId->setValidator(new QRegularExpressionValidator(QRegularExpression("^[0-9A-Fa-f]{0,8}$"), this));
+    ui->lineManualId->setText("001");
     connect(ui->lineManualId, &QLineEdit::textChanged, this, [this](const QString &text){
         if (text != text.toUpper()) {
             int cursorPos = ui->lineManualId->cursorPosition();
@@ -72,6 +73,7 @@ TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :
 
     ui->treeActive->setSelectionMode(QAbstractItemView::ExtendedSelection);
     ui->treeAvailable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    ui->btnAddToList->setEnabled(false);
 
     // Fit columns to content; let Name column stretch
     ui->treeActive->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents); // Status
@@ -291,6 +293,8 @@ void TxGeneratorWindow::on_lineEditSearchAvailable_textChanged(const QString &te
 
 void TxGeneratorWindow::on_treeAvailable_itemSelectionChanged()
 {
+    ui->btnAddToList->setEnabled(!ui->treeAvailable->selectedItems().isEmpty());
+
     QTreeWidgetItem *item = ui->treeAvailable->currentItem();
     if (item && _bitMatrixWidget) {
         CanDbMessage *dbMsg = (CanDbMessage*)item->data(0, Qt::UserRole).value<void*>();

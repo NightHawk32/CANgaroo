@@ -75,6 +75,7 @@ TraceWindow::TraceWindow(QWidget *parent, Backend &backend) :
         tree->setAlternatingRowColors(true);
         tree->setUniformRowHeights(false);
         tree->setRootIsDecorated(true);
+        tree->header()->setDefaultAlignment(Qt::AlignCenter | Qt::AlignVCenter);
 
         tree->setColumnWidth(BaseTraceViewModel::column_index, 70);
         tree->setColumnWidth(BaseTraceViewModel::column_timestamp, 100);

@@ -122,8 +122,52 @@ jobs:
     - name: Upload AppImage
       uses: actions/upload-artifact@v6
       with:
-          name: CANgaroo-Linux
+          name: CANgaroo-Linux-AppImage
           path: "CAN*.AppImage"
+
+    - name: Build DEB package
+      run: |
+          PKG_NAME=cangaroo
+          PKG_VERSION=$(git describe --tags --always 2>/dev/null || echo "0.0.1")
+          PKG_VERSION=$(echo "$PKG_VERSION" | sed 's/^v//')
+          PKG_ARCH=amd64
+
+          DEB_DIR="${PKG_NAME}_${PKG_VERSION}_${PKG_ARCH}"
+          mkdir -p "${DEB_DIR}/DEBIAN"
+          mkdir -p "${DEB_DIR}/usr/bin"
+          mkdir -p "${DEB_DIR}/usr/share/applications"
+          mkdir -p "${DEB_DIR}/usr/share/icons/hicolor/256x256/apps"
+
+          cp bin/cangaroo "${DEB_DIR}/usr/bin/"
+          chmod 755 "${DEB_DIR}/usr/bin/cangaroo"
+
+          cp cangaroo.desktop "${DEB_DIR}/usr/share/applications/"
+          cp src/assets/cangaroo.png "${DEB_DIR}/usr/share/icons/hicolor/256x256/apps/"
+
+          cat > "${DEB_DIR}/DEBIAN/control" << EOF
+          Package: ${PKG_NAME}
+          Version: ${PKG_VERSION}
+          Section: utils
+          Priority: optional
+          Architecture: ${PKG_ARCH}
+          Depends: libqt6core6t64, libqt6gui6t64, libqt6widgets6t64, libqt6serialport6, libqt6charts6, libnl-3-200, libnl-route-3-200
+          Maintainer: Schildkroet <https://github.com/Schildkroet>
+          Description: CAN bus analyzer and visualization tool
+           CANgaroo is an open-source CAN bus analyzer with support for
+           SocketCAN interfaces, DBC file parsing, trace recording,
+           and Python scripting.
+          EOF
+
+          # Remove leading whitespace from control file (heredoc indentation)
+          sed -i 's/^          //' "${DEB_DIR}/DEBIAN/control"
+
+          dpkg-deb --build --root-owner-group "${DEB_DIR}"
+
+    - name: Upload DEB package
+      uses: actions/upload-artifact@v6
+      with:
+          name: CANgaroo-Linux-DEB
+          path: "*.deb"
 
   build-windows:
     name: Build CANgaroo (Windows / MinGW / Qt6)

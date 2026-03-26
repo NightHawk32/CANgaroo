@@ -1027,7 +1027,7 @@ void MainWindow::showAboutDialog()
                        "Open Source CAN bus analyzer\n"
                        "https://github.com/Schildkroet/CANgaroo"
                        "\n"
-                       "v " VERSION_STRING "\n"
+                       "Version " VERSION_STRING "\n"
                        "\n"
                        "(c)2015-2017 Hubert Denkmair\n"
                        "(c)2018-2022 Ethan Zonca\n"
