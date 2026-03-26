@@ -103,9 +103,9 @@ TraceWindow::TraceWindow(QWidget *parent, Backend &backend) :
     ui->cbTimestampMode->addItem(tr("Delta"), 2);
     setTimestampMode(timestamp_mode_delta);
 
-    connect(ui->filterLineEdit, SIGNAL(textChanged(QString)), this, SLOT(on_cbFilterChanged()));
-    connect(ui->TraceClearpushButton, SIGNAL(released()), this, SLOT(on_cbTraceClearpushButton()));
-    connect(ui->cbViewMode, SIGNAL(currentIndexChanged(int)), this, SLOT(on_cbViewMode_currentIndexChanged(int)));
+    connect(ui->filterLineEdit, &QLineEdit::textChanged, this, &TraceWindow::on_cbFilterChanged);
+    connect(ui->TraceClearpushButton, &QPushButton::released, this, &TraceWindow::on_cbTraceClearpushButton);
+    connect(ui->cbViewMode, &QComboBox::currentIndexChanged, this, &TraceWindow::on_cbViewMode_currentIndexChanged);
 
     _scrollTimer.setInterval(100);
     _scrollTimer.setSingleShot(true);

@@ -38,7 +38,7 @@ GrIPDriver::GrIPDriver(Backend &backend)
   : CanDriver(backend),
     setupPage(new GenericCanSetupPage())
 {
-    QObject::connect(&backend, SIGNAL(onSetupDialogCreated(SetupDialog&)), setupPage, SLOT(onSetupDialogCreated(SetupDialog&)));
+    QObject::connect(&backend, &Backend::onSetupDialogCreated, setupPage, &GenericCanSetupPage::onSetupDialogCreated);
     m_GrIPHandler = nullptr;
 }
 

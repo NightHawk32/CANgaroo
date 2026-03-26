@@ -18,12 +18,12 @@ UnifiedTraceViewModel::UnifiedTraceViewModel(Backend &backend, Category category
     m_processTimer.setSingleShot(true);
     connect(&m_processTimer, &QTimer::timeout, this, &UnifiedTraceViewModel::processNewMessages);
 
-    connect(backend.getTrace(), SIGNAL(afterAppend()), this, SLOT(onTraceDirty()));
-    connect(backend.getTrace(), SIGNAL(beforeRemove(int)), this, SLOT(beforeRemove(int)));
-    connect(backend.getTrace(), SIGNAL(afterRemove(int)), this, SLOT(afterRemove(int)));
-    connect(backend.getTrace(), SIGNAL(beforeClear()), this, SLOT(beforeClear()));
-    connect(backend.getTrace(), SIGNAL(afterClear()), this, SLOT(afterClear()));
-    connect(&backend, SIGNAL(onSetupChanged()), this, SLOT(onSetupChanged()));
+    connect(backend.getTrace(), &CanTrace::afterAppend, this, &UnifiedTraceViewModel::onTraceDirty);
+    connect(backend.getTrace(), &CanTrace::beforeRemove, this, &UnifiedTraceViewModel::beforeRemove);
+    connect(backend.getTrace(), &CanTrace::afterRemove, this, &UnifiedTraceViewModel::afterRemove);
+    connect(backend.getTrace(), &CanTrace::beforeClear, this, &UnifiedTraceViewModel::beforeClear);
+    connect(backend.getTrace(), &CanTrace::afterClear, this, &UnifiedTraceViewModel::afterClear);
+    connect(&backend, &Backend::onSetupChanged, this, &UnifiedTraceViewModel::onSetupChanged);
 }
 
 UnifiedTraceViewModel::~UnifiedTraceViewModel()
@@ -493,7 +493,7 @@ QString UnifiedTraceViewModel::formatUnifiedTimestamp(uint64_t ts, uint64_t prev
             val = (prevTs > 0) ? static_cast<double>(ts - prevTs) / 1000000.0 : 0.0;
             break;
         default:
-            return QStringLiteral("0.000000");
+            return QStringLiteral("0.000");
     }
-    return QString::number(val, 'f', 6);
+    return QString::number(val, 'f', 3);
 }

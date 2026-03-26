@@ -27,10 +27,10 @@
 LinearTraceViewModel::LinearTraceViewModel(Backend &backend)
   : BaseTraceViewModel(backend)
 {
-    connect(backend.getTrace(), SIGNAL(beforeAppend(int)), this, SLOT(beforeAppend(int)));
-    connect(backend.getTrace(), SIGNAL(afterAppend()), this, SLOT(afterAppend()));
-    connect(backend.getTrace(), SIGNAL(beforeClear()), this, SLOT(beforeClear()));
-    connect(backend.getTrace(), SIGNAL(afterClear()), this, SLOT(afterClear()));
+    connect(backend.getTrace(), &CanTrace::beforeAppend, this, &LinearTraceViewModel::beforeAppend);
+    connect(backend.getTrace(), &CanTrace::afterAppend, this, &LinearTraceViewModel::afterAppend);
+    connect(backend.getTrace(), &CanTrace::beforeClear, this, &LinearTraceViewModel::beforeClear);
+    connect(backend.getTrace(), &CanTrace::afterClear, this, &LinearTraceViewModel::afterClear);
 }
 
 QModelIndex LinearTraceViewModel::index(int row, int column, const QModelIndex &parent) const

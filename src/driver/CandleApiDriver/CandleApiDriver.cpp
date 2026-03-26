@@ -29,7 +29,7 @@ CandleApiDriver::CandleApiDriver(Backend &backend)
   : CanDriver(backend),
     setupPage(new GenericCanSetupPage(0))
 {
-    QObject::connect(&backend, SIGNAL(onSetupDialogCreated(SetupDialog&)), setupPage, SLOT(onSetupDialogCreated(SetupDialog&)));
+    QObject::connect(&backend, &Backend::onSetupDialogCreated, setupPage, &GenericCanSetupPage::onSetupDialogCreated);
 }
 
 QString CandleApiDriver::getName()

@@ -15,22 +15,22 @@ GenericCanSetupPage::GenericCanSetupPage(QWidget *parent) :
     _enable_ui_updates(false)
 {
     ui->setupUi(this);
-    connect(ui->cbBitrate, SIGNAL(currentIndexChanged(int)), this, SLOT(updateUI()));
-    connect(ui->cbSamplePoint, SIGNAL(currentIndexChanged(int)), this, SLOT(updateUI()));
-    connect(ui->cbBitrateFD, SIGNAL(currentIndexChanged(int)), this, SLOT(updateUI()));
-    connect(ui->cbSamplePointFD, SIGNAL(currentIndexChanged(int)), this, SLOT(updateUI()));
+    connect(ui->cbBitrate, &QComboBox::currentIndexChanged, this, [this]() { updateUI(); });
+    connect(ui->cbSamplePoint, &QComboBox::currentIndexChanged, this, [this]() { updateUI(); });
+    connect(ui->cbBitrateFD, &QComboBox::currentIndexChanged, this, [this]() { updateUI(); });
+    connect(ui->cbSamplePointFD, &QComboBox::currentIndexChanged, this, [this]() { updateUI(); });
 
-    connect(ui->cbConfigOS, SIGNAL(stateChanged(int)), this, SLOT(updateUI()));
-    connect(ui->cbListenOnly, SIGNAL(stateChanged(int)), this, SLOT(updateUI()));
-    connect(ui->cbOneShot, SIGNAL(stateChanged(int)), this, SLOT(updateUI()));
-    connect(ui->cbTripleSampling, SIGNAL(stateChanged(int)), this, SLOT(updateUI()));
-    connect(ui->cbAutoRestart, SIGNAL(stateChanged(int)), this, SLOT(updateUI()));
+    connect(ui->cbConfigOS, &QCheckBox::stateChanged, this, [this]() { updateUI(); });
+    connect(ui->cbListenOnly, &QCheckBox::stateChanged, this, [this]() { updateUI(); });
+    connect(ui->cbOneShot, &QCheckBox::stateChanged, this, [this]() { updateUI(); });
+    connect(ui->cbTripleSampling, &QCheckBox::stateChanged, this, [this]() { updateUI(); });
+    connect(ui->cbAutoRestart, &QCheckBox::stateChanged, this, [this]() { updateUI(); });
 
-    connect(ui->cbCustomBitrate, SIGNAL(stateChanged(int)), this, SLOT(updateUI()));
-    connect(ui->cbCustomFdBitrate, SIGNAL(stateChanged(int)), this, SLOT(updateUI()));
+    connect(ui->cbCustomBitrate, &QCheckBox::stateChanged, this, [this]() { updateUI(); });
+    connect(ui->cbCustomFdBitrate, &QCheckBox::stateChanged, this, [this]() { updateUI(); });
 
-    connect(ui->CustomBitrateSet, SIGNAL(textChanged(QString)), this, SLOT(updateUI()));
-    connect(ui->CustomFdBitrateSet, SIGNAL(textChanged(QString)), this, SLOT(updateUI()));
+    connect(ui->CustomBitrateSet, &QLineEdit::textChanged, this, [this]() { updateUI(); });
+    connect(ui->CustomFdBitrateSet, &QLineEdit::textChanged, this, [this]() { updateUI(); });
 }
 
 GenericCanSetupPage::~GenericCanSetupPage()
@@ -41,7 +41,7 @@ GenericCanSetupPage::~GenericCanSetupPage()
 void GenericCanSetupPage::onSetupDialogCreated(SetupDialog &dlg)
 {
     dlg.addPage(this);
-    connect(&dlg, SIGNAL(onShowInterfacePage(SetupDialog&,MeasurementInterface*)), this, SLOT(onShowInterfacePage(SetupDialog&,MeasurementInterface*)));
+    connect(&dlg, &SetupDialog::onShowInterfacePage, this, &GenericCanSetupPage::onShowInterfacePage);
 }
 
 void GenericCanSetupPage::onShowInterfacePage(SetupDialog &dlg, MeasurementInterface *mi)

@@ -318,7 +318,7 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
             msg.setId(0);
             msg.setInterfaceId(channel.toInt());
             _messages.append(msg);
-            _messageInterfaces.append(tr("Ch %1").arg(channel));
+            _messageInterfaces.append(tr("CH %1").arg(channel));
             continue;
         }
 
@@ -363,7 +363,7 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
             }
 
             _messages.append(msg);
-            _messageInterfaces.append(tr("Ch %1").arg(channel));
+            _messageInterfaces.append(tr("CH %1").arg(channel));
             continue;
         }
 
@@ -397,7 +397,7 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
         }
 
         _messages.append(msg);
-        _messageInterfaces.append(tr("Ch %1").arg(channel));
+        _messageInterfaces.append(tr("CH %1").arg(channel));
     }
 
     return !_messages.isEmpty();

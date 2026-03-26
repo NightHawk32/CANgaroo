@@ -80,13 +80,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     QIcon icon(":/assets/cangaroo.png");
     setWindowIcon(icon);
 
-    connect(ui->action_Trace_View, SIGNAL(triggered()), this, SLOT(createTraceWindow()));
-    connect(ui->actionLog_View, SIGNAL(triggered()), this, SLOT(addLogWidget()));
-    connect(ui->actionGraph_View, SIGNAL(triggered()), this, SLOT(createGraphWindow()));
-    connect(ui->actionGraph_View_2, SIGNAL(triggered()), this, SLOT(addGraphWidget()));
-    connect(ui->actionSetup, SIGNAL(triggered()), this, SLOT(showSetupDialog()));
-    connect(ui->actionTransmit_View, SIGNAL(triggered()), this, SLOT(addRawTxWidget()));
-    connect(ui->actionGenerator_View, SIGNAL(triggered()), this, SLOT(on_actionGenerator_View_triggered()));
+    connect(ui->action_Trace_View, &QAction::triggered, this, [this]() { createTraceWindow(); });
+    connect(ui->actionLog_View, &QAction::triggered, this, [this]() { addLogWidget(); });
+    connect(ui->actionGraph_View, &QAction::triggered, this, [this]() { createGraphWindow(); });
+    connect(ui->actionGraph_View_2, &QAction::triggered, this, [this]() { addGraphWidget(); });
+    connect(ui->actionSetup, &QAction::triggered, this, &MainWindow::showSetupDialog);
+    connect(ui->actionTransmit_View, &QAction::triggered, this, [this]() { addRawTxWidget(); });
+    connect(ui->actionGenerator_View, &QAction::triggered, this, &MainWindow::on_actionGenerator_View_triggered);
     connect(ui->actionScript_View, &QAction::triggered, this, &MainWindow::on_actionScript_View_triggered);
     connect(ui->actionReplay_View, &QAction::triggered, this, &MainWindow::on_actionReplay_View_triggered);
     connect(ui->actionSettings, &QAction::triggered, this, &MainWindow::showSettingsDialog);
@@ -96,20 +96,20 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     ui->menuWindow->addAction(actionStandaloneGraph);
     connect(actionStandaloneGraph, &QAction::triggered, this, &MainWindow::createStandaloneGraphWindow);
 
-    connect(ui->actionStart_Measurement, SIGNAL(triggered()), this, SLOT(startMeasurement()));
-    connect(ui->btnStartMeasurement, SIGNAL(released()), this, SLOT(startMeasurement()));
-    connect(ui->actionStop_Measurement, SIGNAL(triggered()), this, SLOT(stopMeasurement()));
-    connect(ui->btnStopMeasurement, SIGNAL(released()), this, SLOT(stopMeasurement()));
-    connect(ui->btnSetupMeasurement, SIGNAL(released()), this, SLOT(showSetupDialog()));
+    connect(ui->actionStart_Measurement, &QAction::triggered, this, &MainWindow::startMeasurement);
+    connect(ui->btnStartMeasurement, &QPushButton::released, this, &MainWindow::startMeasurement);
+    connect(ui->actionStop_Measurement, &QAction::triggered, this, &MainWindow::stopMeasurement);
+    connect(ui->btnStopMeasurement, &QPushButton::released, this, &MainWindow::stopMeasurement);
+    connect(ui->btnSetupMeasurement, &QPushButton::released, this, &MainWindow::showSetupDialog);
 
     connect(ui->actionReload_Interfaces, &QAction::triggered, this, &MainWindow::reloadInterfaces);
 
-    connect(&backend(), SIGNAL(beginMeasurement()), this, SLOT(updateMeasurementActions()));
-    connect(&backend(), SIGNAL(endMeasurement()), this, SLOT(updateMeasurementActions()));
+    connect(&backend(), &Backend::beginMeasurement, this, &MainWindow::updateMeasurementActions);
+    connect(&backend(), &Backend::endMeasurement, this, &MainWindow::updateMeasurementActions);
     updateMeasurementActions();
 
-    connect(ui->actionSave_Trace_to_file, SIGNAL(triggered(bool)), this, SLOT(saveTraceToFile()));
-    connect(ui->actionAbout, SIGNAL(triggered()), this, SLOT(showAboutDialog()));
+    connect(ui->actionSave_Trace_to_file, &QAction::triggered, this, &MainWindow::saveTraceToFile);
+    connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::showAboutDialog);
     QMenu *traceMenu = ui->menu_Trace;
 
     QAction *actionExportFull = new QAction(tr("Export full trace"), this);
@@ -132,13 +132,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     ui->actionRestore_Window->setChecked(restoreEnabled);
     ui->actionCANblaster->setChecked(CANblasterEnabled);
 
-    if (restoreEnabled) {
+    if (restoreEnabled)
+    {
         if (!restoreGeometry(settings.value("mainWindow/geometry").toByteArray()))
         {
             resize(1365, 900);
 
             QScreen *screen = QGuiApplication::primaryScreen();
-            if (screen) {
+            if (screen)
+            {
                 move(screen->availableGeometry().center() - rect().center());
             }
 

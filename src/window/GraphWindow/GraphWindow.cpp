@@ -54,8 +54,8 @@ GraphWindow::GraphWindow(QWidget *parent, Backend &backend) :
 
     setupVisualizations();
 
-    connect(ui->viewSelector, SIGNAL(currentIndexChanged(int)), this, SLOT(onViewTypeChanged(int)));
-    connect(ui->durationSelector, SIGNAL(currentIndexChanged(int)), this, SLOT(onDurationChanged(int)));
+    connect(ui->viewSelector, &QComboBox::currentIndexChanged, this, &GraphWindow::onViewTypeChanged);
+    connect(ui->durationSelector, &QComboBox::currentIndexChanged, this, &GraphWindow::onDurationChanged);
     connect(ui->addSignalButton, &QPushButton::clicked, this, &GraphWindow::onAddSignalClicked);
     connect(ui->clearButton, &QPushButton::clicked, this, &GraphWindow::onClearClicked);
     connect(ui->btnFullReset, &QPushButton::clicked, this, &GraphWindow::onFullResetClicked);
@@ -64,7 +64,7 @@ GraphWindow::GraphWindow(QWidget *parent, Backend &backend) :
     connect(ui->resetZoomButton, &QPushButton::clicked, this, &GraphWindow::on_resetZoomButton_clicked);
 
     // Register with Trace for new messages
-    connect(_backend.getTrace(), SIGNAL(messageEnqueued(int)), this, SLOT(onMessageEnqueued(int)));
+    connect(_backend.getTrace(), &CanTrace::messageEnqueued, this, &GraphWindow::onMessageEnqueued);
 
     // Conditional Logging Panel
     connect(ui->enableCondLogging, &QCheckBox::toggled, this, &GraphWindow::onEnableCondLoggingToggled);
@@ -108,7 +108,7 @@ GraphWindow::GraphWindow(QWidget *parent, Backend &backend) :
     
     _columnContainer->hide();
     
-    connect(_columnSelector, SIGNAL(currentIndexChanged(int)), this, SLOT(onColumnSelectorChanged(int)));
+    connect(_columnSelector, &QComboBox::currentIndexChanged, this, &GraphWindow::onColumnSelectorChanged);
 
     // Initial view - call this LAST after all UI elements are initialized
     onViewTypeChanged(0);

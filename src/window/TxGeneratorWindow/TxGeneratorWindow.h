@@ -113,5 +113,6 @@ private:
     // Matches each CyclicMessage::interfaceName against the combo box and
     // sets interfaceId accordingly. Called after the combo box is repopulated.
     void resolveInterfaceNames();
+    void updateSendTimer();
 };
 

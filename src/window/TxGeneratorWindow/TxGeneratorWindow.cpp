@@ -23,26 +23,25 @@ TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :
     ui->setupUi(this);
 
     _sendTimer = new QTimer(this);
-    _sendTimer->setInterval(10); // Check every 10ms
-    connect(_sendTimer, SIGNAL(timeout()), this, SLOT(onSendTimerTimeout()));
-    _sendTimer->start();
+    _sendTimer->setInterval(4); // Check every 4ms
+    connect(_sendTimer, &QTimer::timeout, this, &TxGeneratorWindow::onSendTimerTimeout);
 
-    connect(&backend, SIGNAL(onSetupChanged()), this, SLOT(onSetupChanged()));
-    connect(&backend, SIGNAL(beginMeasurement()), this, SLOT(refreshInterfaces()));
-    connect(&backend, SIGNAL(beginMeasurement()), this, SLOT(updateMeasurementState()));
-    connect(&backend, SIGNAL(endMeasurement()), this, SLOT(refreshInterfaces()));
-    connect(&backend, SIGNAL(endMeasurement()), this, SLOT(updateMeasurementState()));
+    connect(&backend, &Backend::onSetupChanged, this, &TxGeneratorWindow::onSetupChanged);
+    connect(&backend, &Backend::beginMeasurement, this, &TxGeneratorWindow::refreshInterfaces);
+    connect(&backend, &Backend::beginMeasurement, this, &TxGeneratorWindow::updateMeasurementState);
+    connect(&backend, &Backend::endMeasurement, this, &TxGeneratorWindow::refreshInterfaces);
+    connect(&backend, &Backend::endMeasurement, this, &TxGeneratorWindow::updateMeasurementState);
 
-    connect(ui->btnBulkRun, SIGNAL(clicked()), this, SLOT(on_btnBulkRun_clicked()));
-    connect(ui->btnBulkStop, SIGNAL(clicked()), this, SLOT(on_btnBulkStop_clicked()));
+    connect(ui->btnBulkRun, &QPushButton::clicked, this, &TxGeneratorWindow::on_btnBulkRun_clicked);
+    connect(ui->btnBulkStop, &QPushButton::clicked, this, &TxGeneratorWindow::on_btnBulkStop_clicked);
 
     // Initial styling
     ui->btnBulkRun->setStyleSheet("QPushButton { font-weight: bold; background: #218838; color: white; border-radius: 4px; padding: 4px 8px; } QPushButton:hover { background: #28a745; } QPushButton:pressed { background: #196b2c; } QPushButton:disabled { background: #94d3a2; }");
     ui->btnBulkStop->setStyleSheet("QPushButton { font-weight: bold; background: #c82333; color: white; border-radius: 4px; padding: 4px 8px; } QPushButton:hover { background: #dc3545; } QPushButton:pressed { background: #a71d2a; } QPushButton:disabled { background: #f1aeb5; }");
 
-    connect(ui->treeActive, SIGNAL(itemChanged(QTreeWidgetItem*,int)), this, SLOT(on_treeActive_itemChanged(QTreeWidgetItem*,int)));
+    connect(ui->treeActive, &QTreeWidget::itemChanged, this, &TxGeneratorWindow::on_treeActive_itemChanged);
     connect(ui->treeActive, &QTreeWidget::itemDoubleClicked, this, &TxGeneratorWindow::on_treeActive_itemDoubleClicked_edit);
-    connect(ui->treeAvailable, SIGNAL(itemSelectionChanged()), this, SLOT(on_treeAvailable_itemSelectionChanged()));
+    connect(ui->treeAvailable, &QTreeWidget::itemSelectionChanged, this, &TxGeneratorWindow::on_treeAvailable_itemSelectionChanged);
 
     _bitMatrixWidget = new BitMatrixWidget(this);
     // REMOVED redundant addWidget to verticalLayoutTabLayout
@@ -444,6 +443,7 @@ void TxGeneratorWindow::on_btnBulkRun_clicked()
 
     ui->btnBulkRun->setChecked(true);
     ui->btnBulkStop->setChecked(false);
+    updateSendTimer();
 }
 
 void TxGeneratorWindow::on_btnBulkStop_clicked()
@@ -468,6 +468,7 @@ void TxGeneratorWindow::on_btnBulkStop_clicked()
 
     ui->btnBulkRun->setChecked(false);
     ui->btnBulkStop->setChecked(true);
+    updateSendTimer();
 }
 
 void TxGeneratorWindow::on_spinInterval_valueChanged(int i)
@@ -644,41 +645,45 @@ void TxGeneratorWindow::onStatusButtonClicked()
             _cyclicMessages[row].enabled = targetState;
             updateRowUI(row);
         }
+        updateSendTimer();
     }
 }
 
 void TxGeneratorWindow::onSendTimerTimeout()
 {
     if (!_backend.isMeasurementRunning()) {
+        _sendTimer->stop();
         return;
     }
     auto now = std::chrono::system_clock::now().time_since_epoch();
     uint64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+    bool showInTrace = ui->cbShowInTrace->isChecked();
 
     for (int i = 0; i < _cyclicMessages.size(); ++i) {
         CyclicMessage &cm = _cyclicMessages[i];
-        if (cm.enabled && (now_ms - cm.lastSent >= static_cast<uint64_t>(cm.interval))) {
-            CanInterface *intf = _backend.getInterfaceById(cm.interfaceId);
-            if (intf && intf->isOpen()) {
-                cm.msg.setInterfaceId(cm.interfaceId);
-                intf->sendMessage(cm.msg);
-                if (ui->cbShowInTrace->isChecked() && intf->ShowTxMsg()) {
-                    CanMessage loopback = cm.msg;
-                    loopback.setRX(false);
-                    auto now_loop = std::chrono::system_clock::now().time_since_epoch();
-                    loopback.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now_loop).count());
-                    emit loopbackFrame(loopback);
-                }
-                cm.lastSent = now_ms;
-            } else {
-                QString errorMsg = QString("TxGeneratorWindow: Cyclic - Interface %1 is not open.").arg(intf ? intf->getName() : QString::number(cm.interfaceId));
-                if (!_backend.isMeasurementRunning()) {
-                    errorMsg += " Did you start the measurement?";
-                }
-                log_error(errorMsg);
+        if (!cm.enabled) { continue; }
+        if (now_ms - cm.lastSent < static_cast<uint64_t>(cm.interval)) { continue; }
+
+        CanInterface *intf = _backend.getInterfaceById(cm.interfaceId);
+        if (intf && intf->isOpen()) {
+            cm.msg.setInterfaceId(cm.interfaceId);
+            intf->sendMessage(cm.msg);
+            if (showInTrace && intf->ShowTxMsg()) {
+                CanMessage loopback = cm.msg;
+                loopback.setRX(false);
+                loopback.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
+                emit loopbackFrame(loopback);
             }
+            cm.lastSent = now_ms;
+        } else {
+            // Disable to avoid error spam; user must re-enable manually
+            cm.enabled = false;
+            updateRowUI(i);
+            log_error(QString("TxGeneratorWindow: Interface %1 is not open.")
+                .arg(intf ? intf->getName() : QString::number(cm.interfaceId)));
         }
     }
+    updateSendTimer();
 }
 
 void TxGeneratorWindow::onSetupChanged()
@@ -694,6 +699,7 @@ void TxGeneratorWindow::updateMeasurementState()
     if (!running) {
         stopAll();
     }
+    updateSendTimer();
 }
 
 void TxGeneratorWindow::updateActiveList()
@@ -793,6 +799,19 @@ QSize TxGeneratorWindow::sizeHint() const
     return QSize(1200, 600);
 }
 
+void TxGeneratorWindow::updateSendTimer()
+{
+    bool anyEnabled = false;
+    for (const CyclicMessage &cm : _cyclicMessages) {
+        if (cm.enabled) { anyEnabled = true; break; }
+    }
+    if (anyEnabled && _backend.isMeasurementRunning()) {
+        if (!_sendTimer->isActive()) { _sendTimer->start(); }
+    } else {
+        _sendTimer->stop();
+    }
+}
+
 void TxGeneratorWindow::onRandomPayloadReleased()
 {
     QList<QTreeWidgetItem*> selected = ui->treeActive->selectedItems();
@@ -814,7 +833,7 @@ void TxGeneratorWindow::onRandomPayloadReleased()
 
             // If this is the currently focused message in the bit matrix, update it
             if (item == ui->treeActive->currentItem()) {
-    
+
             }
         }
     }

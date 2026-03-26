@@ -36,13 +36,13 @@ LogWindow::LogWindow(QWidget *parent, Backend &backend) :
 {
     ui->setupUi(this);
 
-    connect(&backend.getLogModel(), SIGNAL(rowsInserted(QModelIndex,int,int)), this, SLOT(rowsInserted(QModelIndex,int,int)));
+    connect(&backend.getLogModel(), &QAbstractItemModel::rowsInserted, this, &LogWindow::rowsInserted);
 
     ui->treeView->setModel(&backend.getLogModel());
 
     _scroll_timer.setInterval(1);
     _scroll_timer.setSingleShot(true);
-    connect(&_scroll_timer,SIGNAL(timeout()),this,SLOT(_scroll_timer_timeout()));
+    connect(&_scroll_timer, &QTimer::timeout, this, &LogWindow::_scroll_timer_timeout);
 }
 
 LogWindow::~LogWindow()

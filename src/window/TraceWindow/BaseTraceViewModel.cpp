@@ -155,9 +155,9 @@ QVariant BaseTraceViewModel::formatTimestamp(timestamp_mode_t mode, const CanMes
         double t_current = currentMsg.getFloatTimestamp();
         double t_last = lastMsg.getFloatTimestamp();
         if (t_last==0) {
-            return QString().asprintf("%.04lf", 0.00);
+            return QString().asprintf("%.03lf", 0.00);
         } else {
-            return QString().asprintf("%.04lf", t_current-t_last);
+            return QString().asprintf("%.03lf", t_current-t_last);
         }
 
     } else if (mode==timestamp_mode_absolute) {
@@ -167,7 +167,7 @@ QVariant BaseTraceViewModel::formatTimestamp(timestamp_mode_t mode, const CanMes
     } else if (mode==timestamp_mode_relative) {
 
         double t_current = currentMsg.getFloatTimestamp();
-        return QString().asprintf("%.04lf", t_current - backend()->getTimestampAtMeasurementStart());
+        return QString().asprintf("%.03lf", t_current - backend()->getTimestampAtMeasurementStart());
 
     }
 

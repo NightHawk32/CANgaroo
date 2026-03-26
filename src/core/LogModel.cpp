@@ -24,7 +24,7 @@
 
 LogModel::LogModel(Backend &backend)
 {
-    connect(&backend, SIGNAL(onLogMessage(QDateTime,log_level_t,QString)), this, SLOT(onLogMessage(QDateTime,log_level_t,QString)));
+    connect(&backend, &Backend::onLogMessage, this, &LogModel::onLogMessage);
 }
 
 LogModel::~LogModel()

@@ -37,7 +37,7 @@ SLCANDriver::SLCANDriver(Backend &backend)
   : CanDriver(backend),
     setupPage(new GenericCanSetupPage())
 {
-    QObject::connect(&backend, SIGNAL(onSetupDialogCreated(SetupDialog&)), setupPage, SLOT(onSetupDialogCreated(SetupDialog&)));
+    QObject::connect(&backend, &Backend::onSetupDialogCreated, setupPage, &GenericCanSetupPage::onSetupDialogCreated);
 }
 
 SLCANDriver::~SLCANDriver()

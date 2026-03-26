@@ -95,7 +95,7 @@ void CanListener::run()
 void CanListener::startThread()
 {
     moveToThread(_thread);
-    connect(_thread, SIGNAL(started()), this, SLOT(run()));
+    connect(_thread, &QThread::started, this, &CanListener::run);
     _thread->start();
 
     // Wait for interface to be open before returning so that beginMeasurement is emitted after interface open

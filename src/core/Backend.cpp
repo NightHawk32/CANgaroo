@@ -48,8 +48,8 @@ Backend::Backend()
     _trace = new CanTrace(*this, this, 50);
     _conditionalLoggingManager = new ConditionalLoggingManager(*this, this);
 
-    connect(_trace, SIGNAL(messageEnqueued(int)), this, SLOT(onMessageEnqueued(int)));
-    connect(&_setup, SIGNAL(onSetupChanged()), this, SIGNAL(onSetupChanged()));
+    connect(_trace, &CanTrace::messageEnqueued, this, &Backend::onMessageEnqueued);
+    connect(&_setup, &MeasurementSetup::onSetupChanged, this, &Backend::onSetupChanged);
 }
 
 Backend &Backend::instance()

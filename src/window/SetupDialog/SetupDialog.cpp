@@ -76,21 +76,21 @@ SetupDialog::SetupDialog(Backend &backend, QWidget *parent) :
     ui->candbsTreeView->setColumnHidden(SetupDialogTreeModel::column_filename, false);
     ui->candbsTreeView->setColumnHidden(SetupDialogTreeModel::column_path, false);
 
-    connect(ui->treeView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(treeViewContextMenu(QPoint)));
-    connect(ui->edNetworkName, SIGNAL(textChanged(QString)), this, SLOT(edNetworkNameChanged()));
+    connect(ui->treeView, &QTreeView::customContextMenuRequested, this, &SetupDialog::treeViewContextMenu);
+    connect(ui->edNetworkName, &QLineEdit::textChanged, this, &SetupDialog::edNetworkNameChanged);
 
-    connect(ui->treeView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)), this, SLOT(treeViewSelectionChanged(QItemSelection,QItemSelection)));
-    connect(ui->candbsTreeView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)), this, SLOT(updateButtons()));
-    connect(ui->interfacesTreeView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)), this, SLOT(updateButtons()));
+    connect(ui->treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &SetupDialog::treeViewSelectionChanged);
+    connect(ui->candbsTreeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this]() { updateButtons(); });
+    connect(ui->interfacesTreeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this]() { updateButtons(); });
 
-    connect(ui->btReloadDatabases, SIGNAL (released()), this, SLOT(executeReloadCanDbs()));
-    connect(ui->btRefreshNetworks, SIGNAL(released()), this, SLOT(on_btRefreshNetworks_clicked()));
+    connect(ui->btReloadDatabases, &QPushButton::released, this, &SetupDialog::executeReloadCanDbs);
+    connect(ui->btRefreshNetworks, &QPushButton::released, this, &SetupDialog::on_btRefreshNetworks_clicked);
 
-    connect(_actionAddCanDb, SIGNAL(triggered()), this, SLOT(executeAddCanDb()));
-    connect(_actionDeleteCanDb, SIGNAL(triggered()), this, SLOT(executeDeleteCanDb()));
+    connect(_actionAddCanDb, &QAction::triggered, this, &SetupDialog::executeAddCanDb);
+    connect(_actionDeleteCanDb, &QAction::triggered, this, &SetupDialog::executeDeleteCanDb);
 
-    connect(_actionAddInterface, SIGNAL(triggered()), this, SLOT(executeAddInterface()));
-    connect(_actionDeleteInterface, SIGNAL(triggered()), this, SLOT(executeDeleteInterface()));
+    connect(_actionAddInterface, &QAction::triggered, this, &SetupDialog::executeAddInterface);
+    connect(_actionDeleteInterface, &QAction::triggered, this, &SetupDialog::executeDeleteInterface);
 
 
     emit backend.onSetupDialogCreated(*this);

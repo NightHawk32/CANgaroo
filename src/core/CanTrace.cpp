@@ -43,7 +43,7 @@ CanTrace::CanTrace(Backend &backend, QObject *parent, int flushInterval)
     clear();
     _flushTimer.setSingleShot(true);
     _flushTimer.setInterval(flushInterval);
-    connect(&_flushTimer, SIGNAL(timeout()), this, SLOT(flushQueue()));
+    connect(&_flushTimer, &QTimer::timeout, this, &CanTrace::flushQueue);
 }
 
 unsigned long CanTrace::size()

@@ -67,10 +67,10 @@ CanStatusWindow::CanStatusWindow(QWidget *parent, Backend &backend) :
     // Bus Load width
     ui->treeWidget->setColumnWidth(column_bus_load, 90);
 
-    connect(&backend, SIGNAL(beginMeasurement()), this, SLOT(beginMeasurement()));
-    connect(&backend, SIGNAL(endMeasurement()), this, SLOT(endMeasurement()));
-    connect(&backend, SIGNAL(onClearTraceRequested()), this, SLOT(clearStatistics()));
-    connect(_timer, SIGNAL(timeout()), this, SLOT(update()));
+    connect(&backend, &Backend::beginMeasurement, this, &CanStatusWindow::beginMeasurement);
+    connect(&backend, &Backend::endMeasurement, this, &CanStatusWindow::endMeasurement);
+    connect(&backend, &Backend::onClearTraceRequested, this, &CanStatusWindow::clearStatistics);
+    connect(_timer, &QTimer::timeout, this, &CanStatusWindow::update);
 }
 
 CanStatusWindow::~CanStatusWindow()

@@ -33,11 +33,11 @@ AggregatedTraceViewModel::AggregatedTraceViewModel(Backend &backend)
     : BaseTraceViewModel(backend)
 {
     _rootItem = new AggregatedTraceViewItem(0);
-    connect(backend.getTrace(), SIGNAL(beforeAppend(int)), this, SLOT(beforeAppend(int)));
-    connect(backend.getTrace(), SIGNAL(beforeClear()), this, SLOT(beforeClear()));
-    connect(backend.getTrace(), SIGNAL(afterClear()), this, SLOT(afterClear()));
+    connect(backend.getTrace(), &CanTrace::beforeAppend, this, &AggregatedTraceViewModel::beforeAppend);
+    connect(backend.getTrace(), &CanTrace::beforeClear, this, &AggregatedTraceViewModel::beforeClear);
+    connect(backend.getTrace(), &CanTrace::afterClear, this, &AggregatedTraceViewModel::afterClear);
 
-    connect(&backend, SIGNAL(onSetupChanged()), this, SLOT(onSetupChanged()));
+    connect(&backend, &Backend::onSetupChanged, this, &AggregatedTraceViewModel::onSetupChanged);
 
     // Periodically repaint so stale-message fade updates without user interaction
     connect(&_fadeTimer, &QTimer::timeout, this, [this]()
