@@ -73,7 +73,7 @@ TraceWindow::TraceWindow(QWidget *parent, Backend &backend) :
         tree->setModel(_filterModels[i]);
         tree->setFont(font);
         tree->setAlternatingRowColors(true);
-        tree->setUniformRowHeights(false);
+        tree->setUniformRowHeights(true);
         tree->setRootIsDecorated(true);
         tree->header()->setDefaultAlignment(Qt::AlignCenter | Qt::AlignVCenter);
 
@@ -106,6 +106,10 @@ TraceWindow::TraceWindow(QWidget *parent, Backend &backend) :
     connect(ui->filterLineEdit, SIGNAL(textChanged(QString)), this, SLOT(on_cbFilterChanged()));
     connect(ui->TraceClearpushButton, SIGNAL(released()), this, SLOT(on_cbTraceClearpushButton()));
     connect(ui->cbViewMode, SIGNAL(currentIndexChanged(int)), this, SLOT(on_cbViewMode_currentIndexChanged(int)));
+
+    _scrollTimer.setInterval(100);
+    _scrollTimer.setSingleShot(true);
+    connect(&_scrollTimer, &QTimer::timeout, this, &TraceWindow::doScrollToBottom);
 
     setMode(mode_aggregated);
 }
@@ -235,19 +239,32 @@ void TraceWindow::onRowsInserted(const QModelIndex &parent, int first, int last)
     if (!ui->cbAutoscroll->isChecked()) { return; }
 
     TraceFilterModel *filterModel = qobject_cast<TraceFilterModel*>(sender());
-    QTreeView* trees[] = { ui->treeAgg, ui->treeUds, ui->treeJ1939 };
 
-    // Find which tree corresponds to this filter model and scroll it
     for (int i = 0; i < Cat_Count; ++i) {
         if (_filterModels[i] == filterModel || (i == 0 && _aggMonitorFilterModel == filterModel)) {
-            trees[i]->scrollToBottom();
+            _scrollPending[i] = true;
             break;
         }
+    }
+
+    if (!_scrollTimer.isActive()) {
+        _scrollTimer.start();
     }
 
     if(_backend->getTrace()->size() > 1000000)
     {
         _backend->clearTrace();
+    }
+}
+
+void TraceWindow::doScrollToBottom()
+{
+    QTreeView* trees[] = { ui->treeAgg, ui->treeUds, ui->treeJ1939 };
+    for (int i = 0; i < Cat_Count; ++i) {
+        if (_scrollPending[i]) {
+            trees[i]->scrollToBottom();
+            _scrollPending[i] = false;
+        }
     }
 }
 

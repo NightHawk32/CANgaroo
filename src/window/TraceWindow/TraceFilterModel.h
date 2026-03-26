@@ -2,6 +2,7 @@
 #define TRACEFILTER_H
 
 #include <QSortFilterProxyModel>
+#include <QRegularExpression>
 
 class TraceFilterModel : public QSortFilterProxyModel
 {
@@ -14,6 +15,8 @@ public slots:
 
 private:
     QString _filterText;
+    QRegularExpression _cachedRegex;
+    bool _regexValid = false;
 protected:
     virtual bool filterAcceptsRow(int source_row, const QModelIndex & source_parent) const override;
 };

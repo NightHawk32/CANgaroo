@@ -6,6 +6,7 @@
 #include <memory>
 #include <map>
 #include <QHash>
+#include <QTimer>
 
 class UnifiedTraceViewModel : public BaseTraceViewModel
 {
@@ -34,8 +35,8 @@ public:
     virtual QVariant data(const QModelIndex &index, int role) const override;
 
 private slots:
-    void beforeAppend(int num_messages);
-    void afterAppend();
+    void onTraceDirty();
+    void processNewMessages();
     void beforeRemove(int count);
     void afterRemove(int count);
     void beforeClear();
@@ -55,6 +56,8 @@ private:
     uint64_t m_firstTimestamp = 0;
     uint64_t m_previousRowTimestamp = 0;
     int m_maxRows = 10000;
+
+    QTimer m_processTimer;
 
     std::map<uint32_t, std::shared_ptr<UnifiedTraceItem>> m_j1939AggregatedMap;
     uint32_t getJ1939Key(const ProtocolMessage& pmsg) const;

@@ -28,9 +28,9 @@
 
 class LogItem {
 public:
-    QDateTime dt;
-    log_level_t level;
+    QString timeStr;
     QString text;
+    log_level_t level;
 };
 
 class LogModel : public QAbstractItemModel
@@ -65,7 +65,8 @@ public slots:
     void onLogMessage(const QDateTime dt, const log_level_t level, const QString msg);
 
 private:
-    QList<LogItem*> _items;
+    static const int MaxLogItems = 5000;
+    QList<LogItem> _items;
 
     static QString logLevelText(log_level_t level);
 };

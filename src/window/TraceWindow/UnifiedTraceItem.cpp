@@ -14,6 +14,7 @@ UnifiedTraceItem::UnifiedTraceItem(const ProtocolMessage& msg, UnifiedTraceItem*
     // Create children for metadata if any
     if (!msg.metadata.isEmpty()) {
         for (auto it = msg.metadata.begin(); it != msg.metadata.end(); ++it) {
+            m_metadataChildIndex[it.key()] = m_childItems.size();
             appendChild(std::make_shared<UnifiedTraceItem>(it.key(), it.value().toString(), this));
         }
     }
@@ -44,13 +45,11 @@ void UnifiedTraceItem::updateProtocolMessage(const ProtocolMessage& msg)
     // Update metadata children if they exist
     if (!msg.metadata.isEmpty()) {
         for (auto it = msg.metadata.begin(); it != msg.metadata.end(); ++it) {
-            // Find existing metadata child by name
-            for (auto& child : m_childItems) {
-                if (child->m_isMetadata && child->m_metadataName == it.key()) {
-                    child->m_metadataValue = it.value().toString();
-                    child->m_timestamp = m_timestamp;
-                    break;
-                }
+            auto idx = m_metadataChildIndex.constFind(it.key());
+            if (idx != m_metadataChildIndex.constEnd() && *idx < m_childItems.size()) {
+                auto &child = m_childItems[*idx];
+                child->m_metadataValue = it.value().toString();
+                child->m_timestamp = m_timestamp;
             }
         }
     }

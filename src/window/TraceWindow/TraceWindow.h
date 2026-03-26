@@ -23,6 +23,7 @@
 
 #include <core/ConfigurableWidget.h>
 #include <core/CanMessage.h>
+#include <QTimer>
 #include "TraceViewTypes.h"
 #include "TraceFilterModel.h"
 
@@ -72,11 +73,16 @@ private slots:
     void on_cbTraceClearpushButton(void);
     void on_cbViewMode_currentIndexChanged(int index);
 
+private slots:
+    void doScrollToBottom();
+
 private:
     Ui::TraceWindow *ui;
     Backend *_backend;
     mode_t _mode;
     timestamp_mode_t _timestampMode;
+    QTimer _scrollTimer;
+    bool _scrollPending[3] = {}; // One per Cat_Count
 
     enum Category {
         Cat_Aggregated = 0,

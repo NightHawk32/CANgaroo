@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QVector>
+#include <QHash>
 #include <memory>
 #include <core/CanMessage.h>
 #include <decoders/ProtocolTypes.h>
@@ -38,6 +39,7 @@ public:
 
 private:
     QVector<std::shared_ptr<UnifiedTraceItem>> m_childItems;
+    QHash<QString, int> m_metadataChildIndex; // name -> index in m_childItems
     UnifiedTraceItem* m_parentItem;
     
     bool m_isProtocol;

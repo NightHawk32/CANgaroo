@@ -29,7 +29,6 @@ LogModel::LogModel(Backend &backend)
 
 LogModel::~LogModel()
 {
-    qDeleteAll(_items);
     _items.clear();
 }
 
@@ -37,6 +36,7 @@ void LogModel::clear()
 {
     beginResetModel();
     _items.clear();
+    _items.reserve(MaxLogItems);
     endResetModel();
 }
 
@@ -125,46 +125,57 @@ QVariant LogModel::data(const QModelIndex &index, int role) const
             return QVariant();
         }
 
-        LogItem *item = _items.value(index.row(), 0);
-        if (item) {
-            switch (index.column()) {
-                case column_time:
-                    return item->dt.toString("hh:mm:ss");
-                case column_level:
-                    return logLevelText(item->level);
-                case column_text:
-                    return item->text;
-                default:
-                    return QVariant();
-            }
+        if (index.row() < 0 || index.row() >= _items.size()) {
+            return QVariant();
+        }
+        const LogItem &item = _items.at(index.row());
+        switch (index.column()) {
+            case column_time:
+                return item.timeStr;
+            case column_level:
+                return logLevelText(item.level);
+            case column_text:
+                return item.text;
+            default:
+                return QVariant();
         }
     }
 
     if(role == Qt::ToolTipRole) {
-        QString data = index.data(Qt::DisplayRole).toString();
-        uint  length = data.length();
-        if(length>30)
-        {
-            uint div = length / 30;
-            for(uint i = 0;i< div-1;i++)
-            {
-                data.insert(30*(i+1)+i,"\n");
-            }
+        if (index.row() < 0 || index.row() >= _items.size()) {
+            return QVariant();
         }
-        return data;
+        const LogItem &item = _items.at(index.row());
+        const QString &src = (index.column() == column_text) ? item.text :
+                             (index.column() == column_time) ? item.timeStr :
+                             logLevelText(item.level);
+        if (src.length() <= 30) { return src; }
+        QString wrapped = src;
+        for (int i = 30; i < wrapped.length(); i += 31) {
+            wrapped.insert(i, '\n');
+        }
+        return wrapped;
     }
     return QVariant();
 }
 
 void LogModel::onLogMessage(const QDateTime dt, const log_level_t level, const QString msg)
 {
-    LogItem *item = new LogItem();
-    item->dt = dt;
-    item->level = level;
-    item->text = msg;
+    // Trim oldest entries if at capacity
+    if (_items.size() >= MaxLogItems) {
+        int removeCount = MaxLogItems / 5; // remove 20% at once to avoid frequent trimming
+        beginRemoveRows(QModelIndex(), 0, removeCount - 1);
+        _items.erase(_items.begin(), _items.begin() + removeCount);
+        endRemoveRows();
+    }
+
+    LogItem item;
+    item.timeStr = dt.toString("hh:mm:ss");
+    item.level = level;
+    item.text = msg;
 
     beginInsertRows(QModelIndex(), _items.size(), _items.size());
-    _items.append(item);
+    _items.append(std::move(item));
     endInsertRows();
 }
 
