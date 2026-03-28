@@ -400,12 +400,8 @@ jobs:
 
       - name: Bundle runtime DLLs
         run: |
-<<<<<<< Upstream, based on 247fb0ead799e67d72bea9ee105b0b4fe1530ed6
-          cp src/driver/PeakCanDriver/pcan-basic-api/x64/PCANBasic.dll dist/
-          cp /c/kvaser-sdk/lib/canlib32.dll dist/
-=======
           cp /c/kvaser-sdk/Bin/canlib32.dll dist/
->>>>>>> 60f5e89 Update windows build
+          cp src/driver/PeakCanDriver/pcan-basic-api/x64/PCANBasic.dll dist/
 
       - name: Verify missing DLLs
         run: |
