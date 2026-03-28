@@ -213,7 +213,8 @@ jobs:
       # Kvaser CANlib Windows SDK version — update here when a newer SDK is released.
       KVASER_VERSION: "5.51.461"
       # Default install path used by the Kvaser SDK installer
-      CANLIB_DIR: "C:/Program Files/Kvaser/Drivers"
+      CANLIB_DIR_HEADER: "C:/Program Files/Kvaser/Canlib/INC"
+      CANLIB_DIR: "C:/Program Files/Kvaser/Canlib/Bin"
 
     defaults:
       run:
@@ -285,15 +286,45 @@ jobs:
             -OutFile $installer
           # Run the NSIS installer silently; default target is C:\Program Files\Kvaser\Drivers
           Start-Process -FilePath $installer -ArgumentList "/S" -Wait
+          Write-Host "=== Kvaser install tree (C:\Program Files\Kvaser) ==="
+          Get-ChildItem -Path "C:\Program Files\Kvaser" -Recurse -Directory -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty FullName
+
           # Copy SDK artefacts to a path without spaces for easier MSYS2 access
           New-Item -ItemType Directory -Force -Path "C:\kvaser-sdk\include"
           New-Item -ItemType Directory -Force -Path "C:\kvaser-sdk\lib"
-          Copy-Item "$env:CANLIB_DIR\*.h"        "C:\kvaser-sdk\include\" -ErrorAction SilentlyContinue
-          Copy-Item "$env:CANLIB_DIR\canlib32.dll" "C:\kvaser-sdk\lib\"  -ErrorAction SilentlyContinue
+
+          Write-Host "=== Contents of $env:CANLIB_DIR_HEADER ==="
+          if (Test-Path $env:CANLIB_DIR_HEADER) {
+            Get-ChildItem $env:CANLIB_DIR_HEADER | Format-Table Name, Length, LastWriteTime
+          } else {
+            Write-Warning "Header directory not found: $env:CANLIB_DIR_HEADER"
+          }
+
+          Write-Host "=== Contents of $env:CANLIB_DIR ==="
+          if (Test-Path $env:CANLIB_DIR) {
+            Get-ChildItem $env:CANLIB_DIR | Format-Table Name, Length, LastWriteTime
+          } else {
+            Write-Warning "Binary directory not found: $env:CANLIB_DIR"
+          }
+
+          try {
+            Copy-Item "$env:CANLIB_DIR_HEADER\*.h" "C:\kvaser-sdk\include\" -ErrorAction Stop
+          } catch {
+            Write-Warning "Failed to copy headers: $_"
+          }
+
+          try {
+            Copy-Item "$env:CANLIB_DIR\canlib32.dll" "C:\kvaser-sdk\lib\" -ErrorAction Stop
+          } catch {
+            Write-Warning "Failed to copy canlib32.dll: $_"
+          }
 
       - name: Generate MinGW import library for Kvaser CANlib
         if: steps.cache-kvaser-win.outputs.cache-hit != 'true'
         run: |
+          set -e
+          # gendef writes <name>.def to the CWD, so run everything from the lib dir
           cd /c/kvaser-sdk/lib
           gendef canlib32.dll
           dlltool --as-flags=--64 -m i386:x86-64 -k \
