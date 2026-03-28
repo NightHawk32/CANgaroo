@@ -218,6 +218,9 @@ jobs:
           Expand-Archive -Path "$env:TEMP\PCAN-Basic.zip" `
             -DestinationPath "src/driver/PeakCanDriver/pcan-basic-api" `
             -Force
+          Write-Host "=== PCAN-Basic SDK contents ==="
+          Get-ChildItem -Path "src/driver/PeakCanDriver/pcan-basic-api" -Recurse |
+            Select-Object -ExpandProperty FullName
 
       - name: Verify Qt6 installation
         run: |

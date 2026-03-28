@@ -24,6 +24,7 @@
 #include <core/Backend.h>
 #include <driver/GenericCanSetupPage.h>
 
+#include <windows.h>
 #include <PCANBasic.h>
 
 PeakCanDriver::PeakCanDriver(Backend &backend)

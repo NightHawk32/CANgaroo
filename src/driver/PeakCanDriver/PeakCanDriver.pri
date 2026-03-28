@@ -18,9 +18,9 @@ PCAN_API_DIR = $$PWD/pcan-basic-api
 }
 
 INCLUDEPATH += $$PCAN_API_DIR/Include
-LIBS        += $$PCAN_API_DIR/Lib/x64/PCANBasic.lib
+LIBS        += $$PCAN_API_DIR/Lib/x64/VC_LIB/PCANBasic.lib
 
 message("PeakCanDriver INCLUDEPATH: $$PCAN_API_DIR/Include")
-message("PeakCanDriver LIBS:        $$PCAN_API_DIR/Lib/x64/PCANBasic.lib")
+message("PeakCanDriver LIBS:        $$PCAN_API_DIR/Lib/x64/VC_LIB/PCANBasic.lib")
 
 FORMS +=
