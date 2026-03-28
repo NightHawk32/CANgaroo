@@ -252,6 +252,7 @@ jobs:
             mingw-w64-x86_64-ntldd \
             mingw-w64-x86_64-python \
             mingw-w64-x86_64-pybind11 \
+            mingw-w64-x86_64-tools-git \
             git
 
       - name: Download PCAN-Basic SDK
@@ -273,7 +274,7 @@ jobs:
           path: C:/kvaser-sdk
           key: kvaser-canlib-win-${{ env.KVASER_VERSION }}
 
-      - name: Install Kvaser CANlib SDK (Windows)
+      - name: Download and install Kvaser CANlib SDK (Windows)
         if: steps.cache-kvaser-win.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
@@ -287,15 +288,17 @@ jobs:
           # Copy SDK artefacts to a path without spaces for easier MSYS2 access
           New-Item -ItemType Directory -Force -Path "C:\kvaser-sdk\include"
           New-Item -ItemType Directory -Force -Path "C:\kvaser-sdk\lib"
-          Copy-Item "$env:CANLIB_DIR\*.h"   "C:\kvaser-sdk\include\" -ErrorAction SilentlyContinue
-          Copy-Item "$env:CANLIB_DIR\canlib32.dll" "C:\kvaser-sdk\lib\" -ErrorAction SilentlyContinue
-          # Generate MinGW import library from the DLL (gendef + dlltool ship with MinGW toolchain)
-          Set-Location "C:\kvaser-sdk\lib"
-          & "C:\msys64\mingw64\bin\gendef.exe" canlib32.dll
-          & "C:\msys64\mingw64\bin\dlltool.exe" `
-              --as-flags=--64 -m i386:x86-64 -k `
-              -d canlib32.def `
-              -l libcanlib32.a
+          Copy-Item "$env:CANLIB_DIR\*.h"        "C:\kvaser-sdk\include\" -ErrorAction SilentlyContinue
+          Copy-Item "$env:CANLIB_DIR\canlib32.dll" "C:\kvaser-sdk\lib\"  -ErrorAction SilentlyContinue
+
+      - name: Generate MinGW import library for Kvaser CANlib
+        if: steps.cache-kvaser-win.outputs.cache-hit != 'true'
+        run: |
+          cd /c/kvaser-sdk/lib
+          gendef canlib32.dll
+          dlltool --as-flags=--64 -m i386:x86-64 -k \
+            -d canlib32.def \
+            -l libcanlib32.a
 
       - name: Verify Qt6 installation
         run: |
