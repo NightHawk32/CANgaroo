@@ -187,6 +187,7 @@ jobs:
           update: true
 
       - name: Cache MinGW and MSYS2 packages
+        id: cache-msys2
         uses: actions/cache@v5
         with:
           path: |
@@ -198,6 +199,7 @@ jobs:
             msys2-mingw64-qt6-${{ runner.os }}-
 
       - name: Install MinGW + Qt6 (cached)
+        if: steps.cache-msys2.outputs.cache-hit != 'true'
         run: |
           pacman -S --needed --noconfirm \
             mingw-w64-x86_64-toolchain \
@@ -305,8 +307,7 @@ jobs:
 
       - name: Bundle runtime DLLs
         run: |
-          cp /c/kvaser-sdk/Bin/canlib32.dll dist/
-          cp src/driver/PeakCanDriver/pcan-basic-api/Bin/x64/PCANBasic.dll dist/
+          cp src/driver/PeakCanDriver/pcan-basic-api/x64/PCANBasic.dll dist/
 
       - name: Verify missing DLLs
         run: |
