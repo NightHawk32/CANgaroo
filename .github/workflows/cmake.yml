@@ -13,9 +13,7 @@ jobs:
 
     env:
       # Kvaser linuxcan version — update here when a newer SDK is released.
-      # Directory/file naming follows Kvaser's YY-MM-Patch scheme.
-      KVASER_VERSION: "5.46"
-      KVASER_DIR_TAG: "24-10-1"
+      KVASER_VERSION: "5.51.461"
 
     steps:
     - name: Checkout repository
@@ -58,7 +56,9 @@ jobs:
     - name: Install Kvaser CANlib (Linux)
       if: steps.cache-kvaser-linux.outputs.cache-hit != 'true'
       run: |
-        wget -q "https://www.kvaser.com/files/${{ env.KVASER_DIR_TAG }}/linuxcan.tar.gz" \
+        VER_US="${{ env.KVASER_VERSION }}"
+        VER_US="${VER_US//./_}"
+        wget -q "https://pim.kvaser.com/var/assets/Product_Resources/7330130980754/${{ env.KVASER_VERSION }}/linuxcan_${VER_US}.tar.gz" \
           -O /tmp/linuxcan.tar.gz
         mkdir -p /tmp/linuxcan
         tar -xf /tmp/linuxcan.tar.gz -C /tmp/linuxcan --strip-components=1
@@ -211,8 +211,7 @@ jobs:
 
     env:
       # Kvaser CANlib Windows SDK version — update here when a newer SDK is released.
-      KVASER_VERSION: "5.46"
-      KVASER_DIR_TAG: "24-10-1"
+      KVASER_VERSION: "5.51.461"
       # Default install path used by the Kvaser SDK installer
       CANLIB_DIR: "C:/Program Files/Kvaser/Drivers"
 
@@ -279,8 +278,9 @@ jobs:
         shell: pwsh
         run: |
           $installer = "$env:TEMP\kvaser_canlib_sdk.exe"
+          $verUs = $env:KVASER_VERSION -replace '\.', '_'
           Invoke-WebRequest `
-            -Uri "https://www.kvaser.com/files/$env:KVASER_DIR_TAG/kvaser_canlib_win_sdk.exe" `
+            -Uri "https://pim.kvaser.com/var/assets/Product_Resources/7330130980150/$env:KVASER_VERSION/canlib_${verUs}.exe" `
             -OutFile $installer
           # Run the NSIS installer silently; default target is C:\Program Files\Kvaser\Drivers
           Start-Process -FilePath $installer -ArgumentList "/S" -Wait
