@@ -4,27 +4,20 @@
 
 **🔩 Supported Interfaces & Hardware:**
 
-*   **PEAK-System (PCAN)**:
-    *   PCAN-USB, PCAN-USB Pro, PCAN-PCIe, etc. (Native driver: `peak_usb`).
-*   **Native USB-CAN Adapters**:
-    *   [CANable](https://canable.io/) (with Candlelight firmware)
-    *   Kvaser USB/CAN Leaf
-    *   Candlelight compatible devices (e.g., MKS CANable, cantact)
-*   **USB SLCAN Adapters**:
-    *   CANable (with set-default SLCAN firmware)
-    *   Arduino-based CAN shields (running SLCAN sketches)
-*   **Industrial / Embedded CAN**:
-    *   PCIe/mPCIe CAN cards
-    *   Embedded CAN controllers on SoCs (e.g., Raspberry Pi with MCP2515)
-*   **Remote / Network CAN**:
-    *   [CANblaster](https://github.com/OpenAutoDiagLabs/CANblaster) (UDP)
-    *   tcpcan / candlelight-over-ethernet
-*   **GrIP Driver**
+| Interface | Linux | Windows | Notes |
+| :--- | :---: | :---: | :--- |
+| **SocketCAN** | ✅ | — | Any kernel CAN interface (`can0`, `vcan0`, …) |
+| **PEAK PCAN** | ✅ | ✅ | PCAN-USB, PCAN-USB Pro, PCAN-PCIe, … via PCAN-Basic SDK |
+| **Kvaser** | ✅ | ✅ | USB/CAN Leaf and other Kvaser devices via CANlib SDK |
+| **Candlelight / CANable** | ✅ | ✅ | CANable (Candlelight firmware), MKS CANable, cantact, … |
+| **SLCAN** | ✅ | ✅ | CANable (SLCAN firmware), Arduino CAN shields |
+| **CANblaster** | ✅ | ✅ | UDP-based remote CAN via [CANblaster](https://github.com/OpenAutoDiagLabs/CANblaster) |
+| **GrIP** | ✅ | ✅ | GrIP protocol |
 
 ## ⚙️ Features
 
 *   **Real-time CAN/CAN-FD Decoding**: Support for standard and high-speed flexible data-rate frames.
-*   **Wide Hardware Compatibility**: Works with **SocketCAN** (Linux), **CANable** (SLCAN), **Candlelight**, and **CANblaster** (UDP).
+*   **Wide Hardware Compatibility**: Works with **SocketCAN** (Linux), **PEAK PCAN**, **Kvaser**, **CANable**, **Candlelight**, **SLCAN**, and **CANblaster** (UDP).
 *   **DBC Database Support**: Load multiple `.dbc` files to instantly decode frames into human-readable signals.
 *   **Powerful Data Visualization**: Integrated Graphing tools supporting Time-series, Scatter charts, Text-based monitoring, and interactive Gauge views with zoom and live tooltips.
 *   **Advanced Filtering & Logging**: Isolate critical data with live filters and export captures for offline analysis.
@@ -61,12 +54,26 @@ The binary will be in `bin/cangaroo`.
 * Install [Qt 6](https://www.qt.io/download-qt-installer) (Community / Open Source) with Qt Creator.
 * Install [Python 3](https://www.python.org/downloads/) and [pybind11](https://github.com/pybind/pybind11) (`pip install pybind11`).
 * Open `cangaroo.pro` in Qt Creator and build.
-* **PCAN support** (optional):
-  * Download from http://www.peak-system.com/fileadmin/media/files/pcan-basic.zip
-  * Extract to `src/driver/PeakCanDriver/pcan-basic-api`
-  * Place `PCANBasic.dll` next to the built `.exe` file.
-  * To disable PCAN support, remove the line `win32:include($$PWD/driver/PeakCanDriver/PeakCanDriver.pri)` from `src/src.pro`.
-* **Deployment**: include the required Qt6 libraries (Qt6Core, Qt6Gui, Qt6Widgets, Qt6Xml, Qt6Charts, Qt6SerialPort, Qt6OpenGL, Qt6OpenGLWidgets) or use `windeployqt`.
+
+#### Optional hardware drivers
+
+Both drivers are opt-in. Enable them by passing the corresponding `CONFIG` flag to qmake, or by adding them to the project settings in Qt Creator.
+
+**PEAK PCAN** (`CONFIG+=peakcan`):
+  1. Download [PCAN-Basic SDK](https://www.peak-system.com/fileadmin/media/files/PCAN-Basic.zip) and extract to `src/driver/PeakCanDriver/pcan-basic-api/`.
+  2. Build with `qmake CONFIG+=peakcan` (or add `peakcan` to the Qt Creator qmake arguments).
+  3. Place `PCANBasic.dll` (from `pcan-basic-api/Bin/x64/`) next to the built `.exe`.
+
+**Kvaser** (`CONFIG+=kvaser`):
+  1. Install the [Kvaser CANlib SDK](https://www.kvaser.com/downloads-kvaser/) (V5.51.461 or newer).
+  2. Build with `qmake CONFIG+=kvaser CANLIB_DIR="C:/path/to/Kvaser/Canlib"`.
+  3. Place `canlib32.dll` next to the built `.exe`.
+
+#### Deployment
+Include the required Qt6 libraries or run `windeployqt` on the `.exe`:
+```
+windeployqt --release cangaroo.exe
+```
 
 ### ARXML to DBC Conversion
 Cangaroo natively supports DBC. If you have ARXML files, you can convert them using `canconvert`:

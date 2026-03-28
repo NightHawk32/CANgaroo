@@ -128,8 +128,7 @@ jobs:
     - name: Build DEB package
       run: |
           PKG_NAME=cangaroo
-          PKG_VERSION=$(git describe --tags --always 2>/dev/null || echo "0.0.1")
-          PKG_VERSION=$(echo "$PKG_VERSION" | sed 's/^v//')
+          PKG_VERSION=$(grep '^VERSION' src/src.pro | sed 's/VERSION\s*=\s*//')
           PKG_ARCH=amd64
 
           DEB_DIR="${PKG_NAME}_${PKG_VERSION}_${PKG_ARCH}"
@@ -210,6 +209,16 @@ jobs:
             mingw-w64-x86_64-pybind11 \
             git
 
+      - name: Download PCAN-Basic SDK
+        shell: pwsh
+        run: |
+          Invoke-WebRequest `
+            -Uri "https://www.peak-system.com/fileadmin/media/files/PCAN-Basic.zip" `
+            -OutFile "$env:TEMP\PCAN-Basic.zip"
+          Expand-Archive -Path "$env:TEMP\PCAN-Basic.zip" `
+            -DestinationPath "src/driver/PeakCanDriver/pcan-basic-api" `
+            -Force
+
       - name: Verify Qt6 installation
         run: |
           qmake6 --version
@@ -217,7 +226,7 @@ jobs:
 
       - name: Configure build (Qt6 qmake)
         run: |
-          qmake6 CONFIG+=release
+          qmake6 CONFIG+=release CONFIG+=peakcan
 
       - name: Build
         run: |
@@ -290,6 +299,11 @@ jobs:
               echo "Copying $linux_path"
               cp "$linux_path" dist/ || echo "Skipped $linux_path"
               done
+
+      - name: Bundle runtime DLLs
+        run: |
+          cp /c/kvaser-sdk/Bin/canlib32.dll dist/
+          cp src/driver/PeakCanDriver/pcan-basic-api/Bin/x64/PCANBasic.dll dist/
 
       - name: Verify missing DLLs
         run: |

@@ -74,4 +74,12 @@ include($$PWD/driver/GrIPDriver/GrIPDriver.pri)
 
 win32:include($$PWD/driver/CandleApiDriver/CandleApiDriver.pri)
 
+# Pass CONFIG+=peakcan to qmake to enable the PEAK PCAN driver.
+# Requires the PCAN-Basic SDK extracted to src/driver/PeakCanDriver/pcan-basic-api/.
+# Download: https://www.peak-system.com/fileadmin/media/files/PCAN-Basic.zip
+win32:peakcan {
+    DEFINES += PEAKCAN_DRIVER
+    include($$PWD/driver/PeakCanDriver/PeakCanDriver.pri)
+}
+
 DISTFILES +=

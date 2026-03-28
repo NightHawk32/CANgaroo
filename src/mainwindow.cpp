@@ -61,6 +61,10 @@
 #include <driver/CandleApiDriver/CandleApiDriver.h>
 #endif
 
+#ifdef PEAKCAN_DRIVER
+#include <driver/PeakCanDriver/PeakCanDriver.h>
+#endif
+
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -153,6 +157,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     Backend::instance().addCanDriver(*(new SocketCanDriver(Backend::instance())));
 #else
     Backend::instance().addCanDriver(*(new CandleApiDriver(Backend::instance())));
+#endif
+
+#ifdef PEAKCAN_DRIVER
+    Backend::instance().addCanDriver(*(new PeakCanDriver(Backend::instance())));
 #endif
     Backend::instance().addCanDriver(*(new SLCANDriver(Backend::instance())));
     Backend::instance().addCanDriver(*(new GrIPDriver(Backend::instance())));
