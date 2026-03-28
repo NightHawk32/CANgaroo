@@ -50,7 +50,7 @@ jobs:
       id: cache-kvaser-linux
       uses: actions/cache@v5
       with:
-        path: /usr/local/kvaser
+        path: ~/kvaser-cache
         key: kvaser-linuxcan-${{ env.KVASER_VERSION }}-ubuntu24
 
     - name: Install Kvaser CANlib (Linux)
@@ -65,18 +65,18 @@ jobs:
         # Build only the userspace canlib — no kernel modules required
         make -C /tmp/linuxcan/canlib
         sudo make -C /tmp/linuxcan/canlib install
-        # Cache installed files for future runs
-        sudo mkdir -p /usr/local/kvaser/include /usr/local/kvaser/lib
-        sudo cp /usr/local/include/canlib.h \
-                /usr/local/include/canstat.h \
-                /usr/local/kvaser/include/ 2>/dev/null || true
-        sudo cp -P /usr/local/lib/libcanlib* /usr/local/kvaser/lib/ 2>/dev/null || true
+        # Save installed files to a user-writable path for caching
+        mkdir -p ~/kvaser-cache/include ~/kvaser-cache/lib
+        cp /usr/local/include/canlib.h \
+           /usr/local/include/canstat.h \
+           ~/kvaser-cache/include/ 2>/dev/null || true
+        cp -P /usr/local/lib/libcanlib* ~/kvaser-cache/lib/ 2>/dev/null || true
 
     - name: Restore Kvaser headers/libs from cache
       if: steps.cache-kvaser-linux.outputs.cache-hit == 'true'
       run: |
-        sudo cp /usr/local/kvaser/include/* /usr/local/include/ 2>/dev/null || true
-        sudo cp -P /usr/local/kvaser/lib/*   /usr/local/lib/    2>/dev/null || true
+        sudo cp ~/kvaser-cache/include/* /usr/local/include/ 2>/dev/null || true
+        sudo cp -P ~/kvaser-cache/lib/*  /usr/local/lib/    2>/dev/null || true
         sudo ldconfig
 
     - name: Run qmake6 and make
@@ -266,9 +266,7 @@ jobs:
           Expand-Archive -Path "$env:TEMP\PCAN-Basic.zip" `
             -DestinationPath "src/driver/PeakCanDriver/pcan-basic-api" `
             -Force
-          Write-Host "=== PCAN-Basic SDK contents ==="
-          Get-ChildItem -Path "src/driver/PeakCanDriver/pcan-basic-api" -Recurse |
-            Select-Object -ExpandProperty FullName
+
       - name: Cache Kvaser CANlib Windows SDK
         id: cache-kvaser-win
         uses: actions/cache@v5

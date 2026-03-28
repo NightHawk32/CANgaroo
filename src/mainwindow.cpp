@@ -63,6 +63,8 @@
 
 #ifdef PEAKCAN_DRIVER
 #include <driver/PeakCanDriver/PeakCanDriver.h>
+#endif
+
 #ifdef KVASER_DRIVER
 #include <driver/KvaserDriver/KvaserDriver.h>
 #endif
