@@ -63,6 +63,8 @@
 
 #ifdef PEAKCAN_DRIVER
 #include <driver/PeakCanDriver/PeakCanDriver.h>
+#ifdef KVASER_DRIVER
+#include <driver/KvaserDriver/KvaserDriver.h>
 #endif
 
 
@@ -169,6 +171,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     {
         Backend::instance().addCanDriver(*(new CANBlasterDriver(Backend::instance())));
     }
+
+#ifdef KVASER_DRIVER
+    Backend::instance().addCanDriver(*(new KvaserDriver(Backend::instance())));
+#endif
 
     setWorkspaceModified(false);
     newWorkspace();
