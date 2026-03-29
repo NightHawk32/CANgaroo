@@ -11,7 +11,7 @@ TEMPLATE = app
 CONFIG += warn_on
 CONFIG += link_pkgconfig
 
-VERSION = 0.5.1
+VERSION = 0.5.2
 DEFINES += VERSION_STRING=\\\"$${VERSION}\\\"
 
 TRANSLATIONS = \
@@ -89,5 +89,9 @@ kvaser {
     DEFINES += KVASER_DRIVER
     include($$PWD/driver/KvaserDriver/KvaserDriver.pri)
 }
+
+# Vector CAN driver — always enabled via Qt serialbus.
+# Requires the Vector XL Driver Library installed on the target machine at runtime.
+include($$PWD/driver/VectorDriver/VectorDriver.pri)
 
 DISTFILES +=

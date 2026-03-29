@@ -69,6 +69,8 @@
 #include <driver/KvaserDriver/KvaserDriver.h>
 #endif
 
+#include <driver/VectorDriver/VectorDriver.h>
+
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -176,6 +178,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
 
 #ifdef KVASER_DRIVER
     Backend::instance().addCanDriver(*(new KvaserDriver(Backend::instance())));
+#endif
+
+#ifdef VECTOR_DRIVER
+    Backend::instance().addCanDriver(*(new VectorDriver(Backend::instance())));
 #endif
 
     setWorkspaceModified(false);

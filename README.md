@@ -6,9 +6,12 @@
 
 | Interface | Linux | Windows | Notes |
 | :--- | :---: | :---: | :--- |
+| Interface | Linux | Windows | Notes |
+| :--- | :---: | :---: | :--- |
 | **SocketCAN** | ✅ | — | Any kernel CAN interface (`can0`, `vcan0`, …) |
-| **PEAK PCAN** | ✅ | ✅ | PCAN-USB, PCAN-USB Pro, PCAN-PCIe, … via PCAN-Basic SDK |
-| **Kvaser** | ✅ | ✅ | USB/CAN Leaf and other Kvaser devices via CANlib SDK |
+| **PEAK PCAN** | ✅ | ✅ | PCAN-USB, PCAN-USB Pro, PCAN-PCIe, … via PCAN-Basic SDK (`CONFIG+=peakcan`) |
+| **Kvaser** | ✅ | ✅ | USB/CAN Leaf and other Kvaser devices via CANlib SDK (`CONFIG+=kvaser`) |
+| **Vector** | — | ✅ | VN-series and other Vector devices via Qt serialbus (XL Driver Library required at runtime) |
 | **Candlelight / CANable** | ✅ | ✅ | CANable (Candlelight firmware), MKS CANable, cantact, … |
 | **SLCAN** | ✅ | ✅ | CANable (SLCAN firmware), Arduino CAN shields |
 | **CANblaster** | ✅ | ✅ | UDP-based remote CAN via [CANblaster](https://github.com/OpenAutoDiagLabs/CANblaster) |
@@ -17,7 +20,7 @@
 ## ⚙️ Features
 
 *   **Real-time CAN/CAN-FD Decoding**: Support for standard and high-speed flexible data-rate frames.
-*   **Wide Hardware Compatibility**: Works with **SocketCAN** (Linux), **PEAK PCAN**, **Kvaser**, **CANable**, **Candlelight**, **SLCAN**, and **CANblaster** (UDP).
+*   **Wide Hardware Compatibility**: Works with **SocketCAN** (Linux), **PEAK PCAN**, **Kvaser**, **Vector**, **CANable**, **Candlelight**, **SLCAN**, and **CANblaster** (UDP).
 *   **DBC Database Support**: Load multiple `.dbc` files to instantly decode frames into human-readable signals.
 *   **Powerful Data Visualization**: Integrated Graphing tools supporting Time-series, Scatter charts, Text-based monitoring, and interactive Gauge views with zoom and live tooltips.
 *   **Advanced Filtering & Logging**: Isolate critical data with live filters and export captures for offline analysis.
@@ -39,9 +42,9 @@
 #### Install dependencies:
 | Distribution | Command |
 | :--- | :--- |
-| **Ubuntu / Debian** | `sudo apt install build-essential qt6-base-dev qt6-charts-dev qt6-serialport-dev qt6-tools-dev qt6-l10n-tools libqt6opengl6-dev libnl-3-dev libnl-route-3-dev python3-dev pybind11-dev pkg-config` |
-| **Fedora** | `sudo dnf install gcc-c++ make qt6-qtbase-devel qt6-qtcharts-devel qt6-qtserialport-devel qt6-qttools-devel libnl3-devel python3-devel pybind11-devel pkgconfig` |
-| **Arch Linux** | `sudo pacman -S base-devel qt6-base qt6-charts qt6-serialport qt6-tools libnl python pybind11 pkgconf` |
+| **Ubuntu / Debian** | `sudo apt install build-essential qt6-base-dev qt6-charts-dev qt6-serialport-dev qt6-serialbus-dev qt6-tools-dev qt6-l10n-tools libqt6opengl6-dev libnl-3-dev libnl-route-3-dev python3-dev pybind11-dev pkg-config` |
+| **Fedora** | `sudo dnf install gcc-c++ make qt6-qtbase-devel qt6-qtcharts-devel qt6-qtserialport-devel qt6-qtserialbus-devel qt6-qttools-devel libnl3-devel python3-devel pybind11-devel pkgconfig` |
+| **Arch Linux** | `sudo pacman -S base-devel qt6-base qt6-charts qt6-serialport qt6-serialbus qt6-tools libnl python pybind11 pkgconf` |
 
 #### Build:
 ```bash
@@ -51,13 +54,11 @@ make -j$(nproc)
 The binary will be in `bin/cangaroo`.
 
 ### 🪟 Windows
-* Install [Qt 6](https://www.qt.io/download-qt-installer) (Community / Open Source) with Qt Creator.
+* Install [Qt 6](https://www.qt.io/download-qt-installer) (Community / Open Source) including the **Qt Serial Bus** component.
 * Install [Python 3](https://www.python.org/downloads/) and [pybind11](https://github.com/pybind/pybind11) (`pip install pybind11`).
 * Open `cangaroo.pro` in Qt Creator and build.
 
 #### Optional hardware drivers
-
-Both drivers are opt-in. Enable them by passing the corresponding `CONFIG` flag to qmake, or by adding them to the project settings in Qt Creator.
 
 **PEAK PCAN** (`CONFIG+=peakcan`):
   1. Download [PCAN-Basic SDK](https://www.peak-system.com/fileadmin/media/files/PCAN-Basic.zip) and extract to `src/driver/PeakCanDriver/pcan-basic-api/`.
@@ -68,6 +69,10 @@ Both drivers are opt-in. Enable them by passing the corresponding `CONFIG` flag 
   1. Install the [Kvaser CANlib SDK](https://www.kvaser.com/downloads-kvaser/) (V5.51.461 or newer).
   2. Build with `qmake CONFIG+=kvaser CANLIB_DIR="C:/path/to/Kvaser/Canlib"`.
   3. Place `canlib32.dll` next to the built `.exe`.
+
+**Vector** (always enabled):
+  * Install the [Vector XL Driver Library](https://www.vector.com/int/en/products/products-a-z/libraries-drivers/xl-driver-library/) on the target machine.
+  * No build-time SDK needed — Qt's `serialbus` module handles the integration.
 
 #### Deployment
 Include the required Qt6 libraries or run `windeployqt` on the `.exe`:
