@@ -206,35 +206,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Setup MSYS2 (without install)
+      - name: Setup MSYS2 with MinGW + Qt6
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
           update: true
-
-      - name: Cache MinGW and MSYS2 packages
-        id: cache-msys2
-        uses: actions/cache@v5
-        with:
-          path: |
-            C:/msys64/mingw64
-            C:/msys64/var/cache/pacman/pkg
-          key: >
-            msys2-mingw64-qt6-${{ runner.os }}-${{ hashFiles('.github/workflows/cmake.yml') }}
-          restore-keys: |
-            msys2-mingw64-qt6-${{ runner.os }}-
-
-      - name: Install MinGW + Qt6 (cached)
-        if: steps.cache-msys2.outputs.cache-hit != 'true'
-        run: |
-          pacman -S --needed --noconfirm \
-            mingw-w64-x86_64-toolchain \
-            mingw-w64-x86_64-qt6 \
-            mingw-w64-x86_64-qt6-tools \
-            mingw-w64-x86_64-make \
-            mingw-w64-x86_64-ntldd \
-            mingw-w64-x86_64-python \
-            mingw-w64-x86_64-pybind11 \
+          cache: true
+          install: >-
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-qt6
+            mingw-w64-x86_64-qt6-tools
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-ntldd
+            mingw-w64-x86_64-python
+            mingw-w64-x86_64-pybind11
             git
 
       - name: Download PCAN-Basic SDK
