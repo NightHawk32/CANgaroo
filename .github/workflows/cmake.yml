@@ -46,15 +46,7 @@ jobs:
         echo "=== Adwaita Libraries ==="
         ls -la /usr/lib/x86_64-linux-gnu/libadwaitaqt6*.so* || echo "No Adwaita libraries found"
 
-    - name: Cache Kvaser linuxcan SDK
-      id: cache-kvaser-linux
-      uses: actions/cache@v5
-      with:
-        path: ~/kvaser-cache
-        key: kvaser-linuxcan-${{ env.KVASER_VERSION }}-ubuntu24
-
     - name: Install Kvaser CANlib (Linux)
-      if: steps.cache-kvaser-linux.outputs.cache-hit != 'true'
       run: |
         VER_US="${{ env.KVASER_VERSION }}"
         VER_US="${VER_US//./_}"
@@ -65,15 +57,6 @@ jobs:
         # Build only the userspace canlib — no kernel modules required
         make -C /tmp/linuxcan/canlib
         sudo make -C /tmp/linuxcan/canlib install
-        sudo ldconfig
-        # Cache the pre-built canlib directory so we can re-run make install on cache hit
-        mkdir -p ~/kvaser-cache
-        cp -r /tmp/linuxcan/canlib ~/kvaser-cache/
-
-    - name: Restore Kvaser CANlib from cache
-      if: steps.cache-kvaser-linux.outputs.cache-hit == 'true'
-      run: |
-        sudo make -C ~/kvaser-cache/canlib install
         sudo ldconfig
 
     - name: Run qmake6 and make
@@ -264,15 +247,7 @@ jobs:
             -DestinationPath "src/driver/PeakCanDriver/pcan-basic-api" `
             -Force
 
-      - name: Cache Kvaser CANlib Windows SDK
-        id: cache-kvaser-win
-        uses: actions/cache@v5
-        with:
-          path: C:/kvaser-sdk
-          key: kvaser-canlib-win-${{ env.KVASER_VERSION }}
-
       - name: Download and install Kvaser CANlib SDK (Windows)
-        if: steps.cache-kvaser-win.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $installer = "$env:TEMP\kvaser_canlib_sdk.exe"
