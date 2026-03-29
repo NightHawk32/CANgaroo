@@ -71,6 +71,7 @@
 #endif
 
 #include <driver/VectorDriver/VectorDriver.h>
+#include <driver/TinyCanDriver/TinyCanDriver.h>
 
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
@@ -139,9 +140,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     // Load settings
     bool restoreEnabled = settings.value("ui/restoreWindowGeometry", false).toBool();
     bool CANblasterEnabled = settings.value("mainWindow/CANblaster", false).toBool();
+    bool tinyCanEnabled = settings.value("mainWindow/TinyCAN", false).toBool();
 
     ui->actionRestore_Window->setChecked(restoreEnabled);
     ui->actionCANblaster->setChecked(CANblasterEnabled);
+    ui->actionTinyCAN->setChecked(tinyCanEnabled);
 
     if (restoreEnabled)
     {
@@ -169,11 +172,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     Backend::instance().addCanDriver(*(new SLCANDriver(Backend::instance())));
     Backend::instance().addCanDriver(*(new GrIPDriver(Backend::instance())));
 
-    if (CANblasterEnabled)
-    {
-        Backend::instance().addCanDriver(*(new CANBlasterDriver(Backend::instance())));
-    }
-
 #ifdef PEAKCAN_DRIVER
     Backend::instance().addCanDriver(*(new PeakCanDriver(Backend::instance())));
 #endif
@@ -185,6 +183,16 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
 #ifdef VECTOR_DRIVER
     Backend::instance().addCanDriver(*(new VectorDriver(Backend::instance())));
 #endif
+
+    if (CANblasterEnabled)
+    {
+        Backend::instance().addCanDriver(*(new CANBlasterDriver(Backend::instance())));
+    }
+
+    if (tinyCanEnabled)
+    {
+        Backend::instance().addCanDriver(*(new TinyCanDriver(Backend::instance())));
+    }
 
     setWorkspaceModified(false);
     newWorkspace();
@@ -394,6 +402,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
     settings.setValue("mainWindow/maximized", isMaximized());
     settings.setValue("ui/restoreWindowGeometry", ui->actionRestore_Window->isChecked());
     settings.setValue("mainWindow/CANblaster", ui->actionCANblaster->isChecked());
+    settings.setValue("mainWindow/TinyCAN", ui->actionTinyCAN->isChecked());
 
     // Save each tab's inner dock-widget layout independently.
     for (int i = 0; i < ui->mainTabs->count(); i++)

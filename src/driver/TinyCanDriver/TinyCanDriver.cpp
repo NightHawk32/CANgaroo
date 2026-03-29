@@ -19,14 +19,14 @@
 
 */
 
-#include "VectorDriver.h"
-#include "VectorInterface.h"
+#include "TinyCanDriver.h"
+#include "TinyCanInterface.h"
 #include <core/Backend.h>
 #include <driver/GenericCanSetupPage.h>
 
 #include <QCanBus>
 
-VectorDriver::VectorDriver(Backend &backend)
+TinyCanDriver::TinyCanDriver(Backend &backend)
   : CanDriver(backend),
     setupPage(new GenericCanSetupPage())
 {
@@ -34,51 +34,50 @@ VectorDriver::VectorDriver(Backend &backend)
                      setupPage, &GenericCanSetupPage::onSetupDialogCreated);
 }
 
-VectorDriver::~VectorDriver()
+TinyCanDriver::~TinyCanDriver()
 {
 }
 
-QString VectorDriver::getName()
+QString TinyCanDriver::getName()
 {
-    return "Vector";
+    return "TinyCAN";
 }
 
-bool VectorDriver::update()
+bool TinyCanDriver::update()
 {
     deleteAllInterfaces();
 
-    if (!QCanBus::instance()->plugins().contains(QStringLiteral("vectorcan"))) {
+    if (!QCanBus::instance()->plugins().contains(QStringLiteral("tinycan"))) {
         return true;
     }
 
     QString errorString;
-    const QList<QCanBusDeviceInfo> devices =
-        QCanBus::instance()->availableDevices(QStringLiteral("vectorcan"), &errorString);
+    const QList<QCanBusDeviceInfo> devices = QCanBus::instance()->availableDevices(QStringLiteral("tinycan"), &errorString);
 
     if (!errorString.isEmpty()) {
-        log_error(QString("VectorDriver: failed to enumerate devices: %1").arg(errorString));
+        log_error(QString("TinyCanDriver: failed to enumerate devices: %1").arg(errorString));
         return false;
     }
 
     for (const QCanBusDeviceInfo &info : devices) {
-        QString desc = QString("%1 (ch %2)").arg(info.description()).arg(info.channel());
+        QString desc = info.description().isEmpty() ? QString("TinyCAN %1").arg(info.name()) : QString("%1 (%2)").arg(info.description(), info.name());
         createOrUpdateInterface(info.name(), desc);
     }
 
     return true;
 }
 
-VectorInterface *VectorDriver::createOrUpdateInterface(QString deviceName, QString description)
+TinyCanInterface *TinyCanDriver::createOrUpdateInterface(QString deviceName, QString description)
 {
     for (auto *intf : getInterfaces()) {
-        VectorInterface *vif = dynamic_cast<VectorInterface*>(intf);
-        if (vif && vif->getDeviceName() == deviceName) {
-            vif->setName(description);
-            return vif;
+        TinyCanInterface *tif = dynamic_cast<TinyCanInterface*>(intf);
+        if (tif && tif->getDeviceName() == deviceName) {
+            tif->setName(description);
+            return tif;
         }
     }
 
-    VectorInterface *vif = new VectorInterface(this, deviceName, description);
-    addInterface(vif);
-    return vif;
+    TinyCanInterface *tif = new TinyCanInterface(this, deviceName, description);
+    addInterface(tif);
+    return tif;
 }

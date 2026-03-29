@@ -94,4 +94,8 @@ kvaser {
 # Requires the Vector XL Driver Library installed on the target machine at runtime.
 include($$PWD/driver/VectorDriver/VectorDriver.pri)
 
+# TinyCAN driver — always enabled via Qt serialbus.
+# Requires the TinyCAN driver/library installed on the target machine at runtime.
+include($$PWD/driver/TinyCanDriver/TinyCanDriver.pri)
+
 DISTFILES +=

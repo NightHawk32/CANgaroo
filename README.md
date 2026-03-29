@@ -10,6 +10,7 @@
 | **PEAK PCAN** | ✅ | ✅ | PCAN-USB, PCAN-USB Pro, PCAN-PCIe, … via PCAN-Basic SDK (`CONFIG+=peakcan`) |
 | **Kvaser** | ✅ | ✅ | USB/CAN Leaf and other Kvaser devices via CANlib SDK (`CONFIG+=kvaser`) |
 | **Vector** | — | ✅ | VN-series and other Vector devices via Qt serialbus (XL Driver Library required at runtime) |
+| **TinyCAN** | ✅ | ✅ | TinyCAN USB adapters via Qt serialbus (enable in Measurement > Driver menu) |
 | **Candlelight / CANable** | ✅ | ✅ | CANable (Candlelight firmware), MKS CANable, cantact, … |
 | **SLCAN** | ✅ | ✅ | CANable (SLCAN firmware), Arduino CAN shields |
 | **CANblaster** | ✅ | ✅ | UDP-based remote CAN via [CANblaster](https://github.com/OpenAutoDiagLabs/CANblaster) |
@@ -18,12 +19,13 @@
 ## ⚙️ Features
 
 *   **Real-time CAN/CAN-FD Decoding**: Support for standard and high-speed flexible data-rate frames.
-*   **Wide Hardware Compatibility**: Works with **SocketCAN** (Linux), **PEAK PCAN**, **Kvaser**, **Vector**, **CANable**, **Candlelight**, **SLCAN**, and **CANblaster** (UDP).
+*   **Wide Hardware Compatibility**: Works with **SocketCAN** (Linux), **PEAK PCAN**, **Kvaser**, **Vector**, **TinyCAN**, **CANable**, **Candlelight**, **SLCAN**, and **CANblaster** (UDP).
 *   **DBC Database Support**: Load multiple `.dbc` files to instantly decode frames into human-readable signals.
 *   **Powerful Data Visualization**: Integrated Graphing tools supporting Time-series, Scatter charts, Text-based monitoring, and interactive Gauge views with zoom and live tooltips.
 *   **Advanced Filtering & Logging**: Isolate critical data with live filters and export captures for offline analysis.
 *   **Python Scripting**: Built-in script editor with an embedded Python interpreter (via pybind11). Send and receive CAN messages, decode signals using loaded DBC files, and automate tasks. Scripts can be started manually or automatically with the measurement.
-*   **Trace Replay**: Replay captured CAN logs (Vector ASC and candump formats) with adjustable speed, per-message RX/TX direction filtering, channel mapping to live interfaces, and optional autoplay with the measurement. Supports classic CAN, CAN-FD, RTR, and error frames.
+*   **Trace Replay**: Replay captured CAN logs (Vector ASC, candump, PCAP, and PCAPng formats) with adjustable speed, per-message RX/TX direction filtering, channel mapping to live interfaces, and optional autoplay with the measurement. Supports classic CAN, CAN-FD, RTR, and error frames.
+*   **Multiple Export Formats**: Save traces as Vector ASC, Vector MDF4, Linux candump, PCAP, or PCAPng (Wireshark-compatible).
 *   **Modern Workspace**: A clean, dockable userinterface optimized for multi-monitor setups.
 
 <br>![Cangaroo Trace View](src/docs/view.png)<br>
@@ -89,6 +91,11 @@ windeployqt --release cangaroo.exe
 **Vector** (always enabled) — Windows only:
   * Install the [Vector XL Driver Library](https://www.vector.com/int/en/products/products-a-z/libraries-drivers/xl-driver-library/) on the target machine.
   * No build-time SDK needed — Qt's `serialbus` module handles the integration.
+
+**TinyCAN** (toggle in Measurement > Driver menu) — Linux and Windows:
+  * Install the [TinyCAN](https://www.mhs-elektronik.de/) driver/library on the target machine.
+  * No build-time SDK needed — Qt's `serialbus` module handles the integration.
+  * Enable the driver via **Measurement > Driver > TinyCAN** and restart the application.
 
 ## ARXML to DBC Conversion
 Cangaroo natively supports DBC. If you have ARXML files, you can convert them using `canconvert`:
