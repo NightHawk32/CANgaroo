@@ -6,8 +6,6 @@
 
 | Interface | Linux | Windows | Notes |
 | :--- | :---: | :---: | :--- |
-| Interface | Linux | Windows | Notes |
-| :--- | :---: | :---: | :--- |
 | **SocketCAN** | ✅ | — | Any kernel CAN interface (`can0`, `vcan0`, …) |
 | **PEAK PCAN** | ✅ | ✅ | PCAN-USB, PCAN-USB Pro, PCAN-PCIe, … via PCAN-Basic SDK (`CONFIG+=peakcan`) |
 | **Kvaser** | ✅ | ✅ | USB/CAN Leaf and other Kvaser devices via CANlib SDK (`CONFIG+=kvaser`) |
@@ -58,29 +56,41 @@ The binary will be in `bin/cangaroo`.
 * Install [Python 3](https://www.python.org/downloads/) and [pybind11](https://github.com/pybind/pybind11) (`pip install pybind11`).
 * Open `cangaroo.pro` in Qt Creator and build.
 
-#### Optional hardware drivers
-
-**PEAK PCAN** (`CONFIG+=peakcan`):
-  1. Download [PCAN-Basic SDK](https://www.peak-system.com/fileadmin/media/files/PCAN-Basic.zip) and extract to `src/driver/PeakCanDriver/pcan-basic-api/`.
-  2. Build with `qmake CONFIG+=peakcan` (or add `peakcan` to the Qt Creator qmake arguments).
-  3. Place `PCANBasic.dll` (from `pcan-basic-api/Bin/x64/`) next to the built `.exe`.
-
-**Kvaser** (`CONFIG+=kvaser`):
-  1. Install the [Kvaser CANlib SDK](https://www.kvaser.com/downloads-kvaser/) (V5.51.461 or newer).
-  2. Build with `qmake CONFIG+=kvaser CANLIB_DIR="C:/path/to/Kvaser/Canlib"`.
-  3. Place `canlib32.dll` next to the built `.exe`.
-
-**Vector** (always enabled):
-  * Install the [Vector XL Driver Library](https://www.vector.com/int/en/products/products-a-z/libraries-drivers/xl-driver-library/) on the target machine.
-  * No build-time SDK needed — Qt's `serialbus` module handles the integration.
-
 #### Deployment
 Include the required Qt6 libraries or run `windeployqt` on the `.exe`:
 ```
 windeployqt --release cangaroo.exe
 ```
 
-### ARXML to DBC Conversion
+### Optional hardware drivers
+
+**PEAK PCAN** (`CONFIG+=peakcan`) — Windows only:
+  1. Download [PCAN-Basic SDK](https://www.peak-system.com/fileadmin/media/files/PCAN-Basic.zip) and extract to `src/driver/PeakCanDriver/pcan-basic-api/`.
+  2. Build with `qmake CONFIG+=peakcan` (or add `peakcan` to the Qt Creator qmake arguments).
+  3. Place `PCANBasic.dll` (from `pcan-basic-api/x64/`) next to the built `.exe`.
+
+**Kvaser** (`CONFIG+=kvaser`) — Linux and Windows:
+
+  *Linux:*
+  1. Download and build [linuxcan](https://www.kvaser.com/downloads-kvaser/) (V5.51.461 or newer):
+     ```bash
+     tar -xf linuxcan.tar.gz
+     make -C linuxcan/canlib
+     sudo make -C linuxcan/canlib install
+     sudo ldconfig
+     ```
+  2. Build with `qmake6 CONFIG+=kvaser`.
+
+  *Windows:*
+  1. Install the [Kvaser CANlib SDK](https://www.kvaser.com/downloads-kvaser/) (V5.51.461 or newer).
+  2. Build with `qmake CONFIG+=kvaser CANLIB_DIR="C:/path/to/Kvaser/Canlib"`.
+  3. Place `canlib32.dll` (from `Canlib/Bin/`) next to the built `.exe`.
+
+**Vector** (always enabled) — Windows only:
+  * Install the [Vector XL Driver Library](https://www.vector.com/int/en/products/products-a-z/libraries-drivers/xl-driver-library/) on the target machine.
+  * No build-time SDK needed — Qt's `serialbus` module handles the integration.
+
+## ARXML to DBC Conversion
 Cangaroo natively supports DBC. If you have ARXML files, you can convert them using `canconvert`:
 ```bash
 # Install canconvert
