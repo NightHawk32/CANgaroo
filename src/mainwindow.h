@@ -21,6 +21,12 @@
 
 #pragma once
 
+// VERSION_STRING is injected by qmake (DEFINES += VERSION_STRING=...).
+// The fallback keeps IDEs happy when qmake definitions are not available.
+#ifndef VERSION_STRING
+#define VERSION_STRING "dev"
+#endif
+
 #include <QMainWindow>
 #include <QList>
 #include <core/Backend.h>
@@ -143,5 +149,5 @@ private:
     void applyFontSize(int pointSize);
     QTranslator m_translator;
     QActionGroup *m_languageActionGroup = nullptr;
-   
+
 };

@@ -11,7 +11,7 @@ TEMPLATE = app
 CONFIG += warn_on
 CONFIG += link_pkgconfig
 
-VERSION = 0.5.1
+VERSION = 0.5.2
 DEFINES += VERSION_STRING=\\\"$${VERSION}\\\"
 
 TRANSLATIONS = \
@@ -81,5 +81,17 @@ win32:peakcan {
     DEFINES += PEAKCAN_DRIVER
     include($$PWD/driver/PeakCanDriver/PeakCanDriver.pri)
 }
+
+# Pass CONFIG+=kvaser to qmake to enable the Kvaser CANlib driver.
+# Requires the Kvaser CANlib SDK (canlib.h + libcanlib / canlib32.dll).
+# On Windows also set CANLIB_DIR=<path to SDK> (see KvaserDriver.pri).
+kvaser {
+    DEFINES += KVASER_DRIVER
+    include($$PWD/driver/KvaserDriver/KvaserDriver.pri)
+}
+
+# Vector CAN driver — always enabled via Qt serialbus.
+# Requires the Vector XL Driver Library installed on the target machine at runtime.
+include($$PWD/driver/VectorDriver/VectorDriver.pri)
 
 DISTFILES +=
