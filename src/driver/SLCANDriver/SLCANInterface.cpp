@@ -41,7 +41,7 @@
 
 
 SLCANInterface::SLCANInterface(SLCANDriver *driver, int index, QString name, bool fd_support, uint32_t manufacturer)
-  : CanInterface((CanDriver *)driver),
+  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
     _manufacturer(manufacturer),
     _idx(index),
     _isOpen(false),

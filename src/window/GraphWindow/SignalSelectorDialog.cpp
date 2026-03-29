@@ -128,7 +128,7 @@ QList<CanDbSignal*> SignalSelectorDialog::getSelectedSignals() const
         if ((*it)->checkState(0) == Qt::Checked) {
             void* sigPtr = (*it)->data(0, Qt::UserRole).value<void*>();
             if (sigPtr) {
-                selected.append((CanDbSignal*)sigPtr);
+                selected.append(static_cast<CanDbSignal*>(sigPtr));
             }
         }
         ++it;
@@ -141,7 +141,7 @@ void SignalSelectorDialog::setSelectedSignals(const QList<CanDbSignal*> &sigList
     QTreeWidgetItemIterator it(_tree);
     while (*it) {
         void* sigPtr = (*it)->data(0, Qt::UserRole).value<void*>();
-        if (sigPtr && sigList.contains((CanDbSignal*)sigPtr)) {
+        if (sigPtr && sigList.contains(static_cast<CanDbSignal*>(sigPtr))) {
             (*it)->setCheckState(0, Qt::Checked);
             
             // Expand parents

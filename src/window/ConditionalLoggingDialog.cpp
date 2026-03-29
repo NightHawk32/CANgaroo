@@ -50,7 +50,7 @@ ConditionalLoggingDialog::ConditionalLoggingDialog(Backend &backend, QWidget *pa
         void *data = item->data(0, Qt::UserRole).value<void*>();
 
         if (type == "signal") {
-            if (filterSignalSet.contains((CanDbSignal*)data)) item->setCheckState(0, Qt::Checked);
+            if (filterSignalSet.contains(static_cast<CanDbSignal*>(data))) item->setCheckState(0, Qt::Checked);
         }
         ++it;
     }
@@ -294,14 +294,14 @@ void ConditionalLoggingDialog::onAccept()
             void *data = item->data(0, Qt::UserRole).value<void*>();
             
             if (type == "network") {
-                MeasurementNetwork *net = (MeasurementNetwork*)data;
+                MeasurementNetwork *net = static_cast<MeasurementNetwork*>(data);
                 for (auto *mi : net->interfaces()) {
                     filterBusIds.insert(mi->canInterface());
                 }
             } else if (type == "message") {
-                filterMessages.insert((CanDbMessage*)data);
+                filterMessages.insert(static_cast<CanDbMessage*>(data));
             } else if (type == "signal") {
-                CanDbSignal *sig = (CanDbSignal*)data;
+                CanDbSignal *sig = static_cast<CanDbSignal*>(data);
                 filterSignals.insert(sig);
                 logSignals.append(sig);
             }

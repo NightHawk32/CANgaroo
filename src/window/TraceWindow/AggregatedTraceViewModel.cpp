@@ -191,7 +191,7 @@ QModelIndex AggregatedTraceViewModel::parent(const QModelIndex &index) const
         return QModelIndex();
     }
 
-    AggregatedTraceViewItem *childItem = (AggregatedTraceViewItem*) index.internalPointer();
+    AggregatedTraceViewItem *childItem = static_cast<AggregatedTraceViewItem*>(index.internalPointer());
     AggregatedTraceViewItem *parentItem = childItem->parent();
 
     if (parentItem == _rootItem) {
@@ -209,7 +209,7 @@ int AggregatedTraceViewModel::rowCount(const QModelIndex &parent) const
 
     AggregatedTraceViewItem *parentItem;
     if (parent.isValid()) {
-        parentItem = (AggregatedTraceViewItem*)parent.internalPointer();
+        parentItem = static_cast<AggregatedTraceViewItem*>(parent.internalPointer());
     } else {
         parentItem = _rootItem;
     }
@@ -226,7 +226,7 @@ CanMessage AggregatedTraceViewModel::getMessage(const QModelIndex &index) const
 
 QVariant AggregatedTraceViewModel::data_DisplayRole(const QModelIndex &index, int role) const
 {
-    AggregatedTraceViewItem *item = (AggregatedTraceViewItem *)index.internalPointer();
+    AggregatedTraceViewItem *item = static_cast<AggregatedTraceViewItem *>(index.internalPointer());
     if (!item) { return QVariant(); }
 
     if (index.column() == column_index) {
@@ -245,7 +245,7 @@ QVariant AggregatedTraceViewModel::data_TextColorRole(const QModelIndex &index, 
     (void) role;
     bool isDark = ThemeManager::instance().isDarkMode();
 
-    AggregatedTraceViewItem *item = (AggregatedTraceViewItem *)index.internalPointer();
+    AggregatedTraceViewItem *item = static_cast<AggregatedTraceViewItem *>(index.internalPointer());
     if (!item) { return QVariant(); }
 
     const CanMessage &msg = (item->parent() == _rootItem)

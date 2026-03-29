@@ -81,6 +81,8 @@ private:
     void loadTraceFile(const QString &filename);
     bool parseCanDump(QFile &file);
     bool parseVectorAsc(QFile &file);
+    bool parsePcap(QFile &file);
+    bool parsePcapNg(QFile &file);
     void buildFilterTree();
     void updatePositionLabel();
     bool isMessageEnabled(int index) const;

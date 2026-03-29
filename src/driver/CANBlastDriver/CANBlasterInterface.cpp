@@ -38,7 +38,7 @@
 
 
 CANBlasterInterface::CANBlasterInterface(CANBlasterDriver *driver, int index, QString name, bool fd_support)
-  : CanInterface((CanDriver *)driver),
+  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
     _idx(index),
     _isOpen(false),
     _name(name),

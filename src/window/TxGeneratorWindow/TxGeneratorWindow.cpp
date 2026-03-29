@@ -296,7 +296,7 @@ void TxGeneratorWindow::on_treeAvailable_itemSelectionChanged()
 
     QTreeWidgetItem *item = ui->treeAvailable->currentItem();
     if (item && _bitMatrixWidget) {
-        CanDbMessage *dbMsg = (CanDbMessage*)item->data(0, Qt::UserRole).value<void*>();
+        CanDbMessage *dbMsg = static_cast<CanDbMessage*>(item->data(0, Qt::UserRole).value<void*>());
         _bitMatrixWidget->setMessage(dbMsg);
     } else if (_bitMatrixWidget) {
         _bitMatrixWidget->setMessage(nullptr);
@@ -330,7 +330,7 @@ void TxGeneratorWindow::on_btnAddToList_released()
     if (selected.isEmpty()) return;
 
     for (auto *item : selected) {
-        CanDbMessage *dbMsg = (CanDbMessage*)item->data(0, Qt::UserRole).value<void*>();
+        CanDbMessage *dbMsg = static_cast<CanDbMessage*>(item->data(0, Qt::UserRole).value<void*>());
         if (!dbMsg) continue;
 
         CyclicMessage cm;

@@ -31,7 +31,7 @@
 #include <QCanBusFrame>
 
 VectorInterface::VectorInterface(VectorDriver *driver, QString deviceName, QString description)
-  : CanInterface((CanDriver *)driver),
+  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
     _deviceName(deviceName),
     _name(description),
     _device(nullptr),

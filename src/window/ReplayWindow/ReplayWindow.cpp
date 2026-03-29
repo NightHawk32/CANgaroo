@@ -21,6 +21,7 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDataStream>
 
 #include <core/CanTrace.h>
 #include <core/Backend.h>
@@ -148,15 +149,18 @@ void ReplayWindow::onLoadClicked()
 {
     QString filename = QFileDialog::getOpenFileName(this, tr("Load Trace File"),
         _traceFilePath,
-        tr("All Supported (*.asc *.candump);;Vector ASC (*.asc);;Linux candump (*.candump);;All Files (*)"));
+        tr("All Supported (*.asc *.candump *.pcap *.pcapng);;Vector ASC (*.asc);;Linux candump (*.candump);;PCAP (*.pcap);;PCAPng (*.pcapng);;All Files (*)"));
     if (filename.isEmpty()) { return; }
     loadTraceFile(filename);
 }
 
 void ReplayWindow::loadTraceFile(const QString &filename)
 {
+    bool isBinary = filename.endsWith(".pcap", Qt::CaseInsensitive)
+                 || filename.endsWith(".pcapng", Qt::CaseInsensitive);
+
     QFile file(filename);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+    if (!file.open(isBinary ? QIODevice::ReadOnly : (QIODevice::ReadOnly | QIODevice::Text)))
     {
         _infoBox->setPlainText(tr("Error: Cannot open file."));
         return;
@@ -172,6 +176,14 @@ void ReplayWindow::loadTraceFile(const QString &filename)
     if (filename.endsWith(".candump", Qt::CaseInsensitive))
     {
         ok = parseCanDump(file);
+    }
+    else if (filename.endsWith(".pcapng", Qt::CaseInsensitive))
+    {
+        ok = parsePcapNg(file);
+    }
+    else if (filename.endsWith(".pcap", Qt::CaseInsensitive))
+    {
+        ok = parsePcap(file);
     }
     else
     {
@@ -398,6 +410,263 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
 
         _messages.append(msg);
         _messageInterfaces.append(tr("CH %1").arg(channel));
+    }
+
+    return !_messages.isEmpty();
+}
+
+// Helper: parse a SocketCAN frame from a PCAP/PCAPng packet payload
+static bool parseSocketCanFrame(QDataStream &ds, quint32 capturedLen,
+                                CanMessage &msg, bool &valid)
+{
+    static const quint32 CAN_EFF_FLAG = 0x80000000;
+    static const quint32 CAN_RTR_FLAG = 0x40000000;
+    static const quint32 CAN_ERR_FLAG = 0x20000000;
+    static const quint32 CAN_ID_MASK  = 0x1FFFFFFF;
+
+    valid = false;
+    if (capturedLen < 16) return false;
+
+    quint32 can_id;
+    quint8 dlc_or_len, pad1, pad2, pad3;
+    ds >> can_id >> dlc_or_len >> pad1 >> pad2 >> pad3;
+
+    bool isFD = (capturedLen == 72);
+    int dataLen = isFD ? 64 : 8;
+
+    // Read data bytes
+    uint8_t data[64] = {};
+    int toRead = qMin(static_cast<int>(capturedLen) - 8, dataLen);
+    for (int i = 0; i < toRead; i++) {
+        quint8 b;
+        ds >> b;
+        data[i] = b;
+    }
+    // Skip remaining bytes if any
+    int remaining = static_cast<int>(capturedLen) - 8 - toRead;
+    for (int i = 0; i < remaining; i++) {
+        quint8 b;
+        ds >> b;
+    }
+
+    msg.setId(can_id & CAN_ID_MASK);
+    msg.setExtended((can_id & CAN_EFF_FLAG) != 0);
+    msg.setRTR((can_id & CAN_RTR_FLAG) != 0);
+    msg.setErrorFrame((can_id & CAN_ERR_FLAG) != 0);
+    msg.setRX(true);
+
+    if (isFD) {
+        msg.setFD(true);
+        msg.setBRS((pad1 & 0x01) != 0); // pad1 is flags in canfd_frame
+        msg.setLength(dlc_or_len);
+    } else {
+        msg.setFD(false);
+        quint8 d = dlc_or_len > 8 ? 8 : dlc_or_len;
+        msg.setLength(d);
+    }
+
+    for (int i = 0; i < msg.getLength(); i++) {
+        msg.setByte(i, data[i]);
+    }
+
+    valid = true;
+    return true;
+}
+
+bool ReplayWindow::parsePcap(QFile &file)
+{
+    // PCAP global header: magic(4) + ver_maj(2) + ver_min(2) + thiszone(4) + sigfigs(4) + snaplen(4) + linktype(4)
+    static const quint32 PCAP_MAGIC_LE    = 0xA1B2C3D4;
+    static const quint32 PCAP_MAGIC_BE    = 0xD4C3B2A1;
+    static const quint32 PCAP_MAGIC_NS_LE = 0xA1B23C4D; // nanosecond variant
+    static const quint32 PCAP_MAGIC_NS_BE = 0x4D3CB2A1;
+    static const quint32 LINKTYPE_CAN_SOCKETCAN = 227;
+
+    QDataStream ds(&file);
+
+    // Read magic to determine byte order
+    quint32 magic;
+    ds >> magic;
+
+    bool nanoSecond = false;
+    if (magic == PCAP_MAGIC_LE || magic == PCAP_MAGIC_NS_LE) {
+        ds.setByteOrder(QDataStream::LittleEndian);
+        nanoSecond = (magic == PCAP_MAGIC_NS_LE);
+    } else if (magic == PCAP_MAGIC_BE || magic == PCAP_MAGIC_NS_BE) {
+        ds.setByteOrder(QDataStream::BigEndian);
+        nanoSecond = (magic == PCAP_MAGIC_NS_BE);
+    } else {
+        return false;
+    }
+
+    quint16 verMaj, verMin;
+    qint32 thiszone;
+    quint32 sigfigs, snaplen, linktype;
+    ds >> verMaj >> verMin >> thiszone >> sigfigs >> snaplen >> linktype;
+
+    if (linktype != LINKTYPE_CAN_SOCKETCAN) {
+        return false;
+    }
+
+    while (!ds.atEnd()) {
+        quint32 ts_sec, ts_frac, capturedLen, originalLen;
+        ds >> ts_sec >> ts_frac >> capturedLen >> originalLen;
+        if (ds.status() != QDataStream::Ok) break;
+
+        int64_t ts_us;
+        if (nanoSecond) {
+            ts_us = static_cast<int64_t>(ts_sec) * 1000000 + static_cast<int64_t>(ts_frac) / 1000;
+        } else {
+            ts_us = static_cast<int64_t>(ts_sec) * 1000000 + static_cast<int64_t>(ts_frac);
+        }
+
+        CanMessage msg;
+        bool valid;
+        parseSocketCanFrame(ds, capturedLen, msg, valid);
+
+        if (valid) {
+            msg.setTimestamp_us(ts_us);
+            _messages.append(msg);
+            _messageInterfaces.append(QStringLiteral("pcap0"));
+        }
+    }
+
+    return !_messages.isEmpty();
+}
+
+bool ReplayWindow::parsePcapNg(QFile &file)
+{
+    // PCAPng block types
+    static const quint32 BT_SHB = 0x0A0D0D0A;
+    static const quint32 BT_IDB = 0x00000001;
+    static const quint32 BT_EPB = 0x00000006;
+    static const quint32 BT_SPB = 0x00000003;
+
+    static const quint32 BYTE_ORDER_MAGIC = 0x1A2B3C4D;
+    static const quint32 LINKTYPE_CAN_SOCKETCAN = 227;
+
+    QDataStream ds(&file);
+
+    // Interface metadata collected from IDB blocks
+    struct IfaceInfo {
+        QString name;
+        quint32 linkType = 0;
+        quint8 tsResol = 6; // default: 10^-6 (microseconds)
+    };
+    QVector<IfaceInfo> interfaces;
+
+    while (!ds.atEnd()) {
+        qint64 blockStart = file.pos();
+        quint32 blockType, blockTotalLen;
+        ds >> blockType >> blockTotalLen;
+        if (ds.status() != QDataStream::Ok) break;
+        if (blockTotalLen < 12) break;
+
+        if (blockType == BT_SHB) {
+            // Section Header Block — determine byte order
+            quint32 bom;
+            ds >> bom;
+            if (bom == BYTE_ORDER_MAGIC) {
+                ds.setByteOrder(QDataStream::LittleEndian);
+            } else if (bom == 0x4D3C2B1A) {
+                ds.setByteOrder(QDataStream::BigEndian);
+            } else {
+                return false;
+            }
+            // Re-read blockTotalLen with correct byte order
+            file.seek(blockStart + 4);
+            ds >> blockTotalLen;
+            // Skip rest: version(4) + section_length(8) + options
+            interfaces.clear();
+        }
+        else if (blockType == BT_IDB) {
+            // Interface Description Block: linktype(2) + reserved(2) + snaplen(4) + options
+            quint16 linkType, reserved;
+            quint32 snaplen;
+            ds >> linkType >> reserved >> snaplen;
+
+            IfaceInfo info;
+            info.linkType = linkType;
+
+            // Parse options for if_name (code 2) and if_tsresol (code 9)
+            qint64 optStart = file.pos();
+            qint64 optEnd = blockStart + blockTotalLen - 4; // exclude trailing total_length
+            while (file.pos() + 4 <= optEnd) {
+                quint16 optCode, optLen;
+                ds >> optCode >> optLen;
+                if (optCode == 0) break; // opt_endofopt
+                qint64 valStart = file.pos();
+
+                if (optCode == 2 && optLen > 0) {
+                    // if_name
+                    QByteArray nameBytes(optLen, 0);
+                    ds.readRawData(nameBytes.data(), optLen);
+                    // Remove trailing null if present
+                    if (nameBytes.endsWith('\0')) nameBytes.chop(1);
+                    info.name = QString::fromUtf8(nameBytes);
+                } else if (optCode == 9 && optLen == 1) {
+                    // if_tsresol
+                    quint8 tsresol;
+                    ds >> tsresol;
+                    info.tsResol = tsresol;
+                }
+
+                // Advance past padded option value
+                quint32 paddedLen = (optLen + 3) & ~quint32(3);
+                file.seek(valStart + paddedLen);
+            }
+
+            if (info.name.isEmpty()) {
+                info.name = QStringLiteral("if%1").arg(interfaces.size());
+            }
+            interfaces.append(info);
+        }
+        else if (blockType == BT_EPB) {
+            // Enhanced Packet Block: interface_id(4) + ts_high(4) + ts_low(4) + captured_len(4) + original_len(4) + data
+            quint32 ifaceIdx, tsHigh, tsLow, capturedLen, originalLen;
+            ds >> ifaceIdx >> tsHigh >> tsLow >> capturedLen >> originalLen;
+
+            if (ifaceIdx >= static_cast<quint32>(interfaces.size())) {
+                // Unknown interface, skip
+                file.seek(blockStart + blockTotalLen);
+                continue;
+            }
+
+            const IfaceInfo &iface = interfaces[ifaceIdx];
+            if (iface.linkType != LINKTYPE_CAN_SOCKETCAN) {
+                file.seek(blockStart + blockTotalLen);
+                continue;
+            }
+
+            // Convert timestamp to microseconds
+            uint64_t tsRaw = (static_cast<uint64_t>(tsHigh) << 32) | tsLow;
+            int64_t ts_us;
+            if (iface.tsResol == 6) {
+                ts_us = static_cast<int64_t>(tsRaw); // already microseconds
+            } else if (iface.tsResol == 9) {
+                ts_us = static_cast<int64_t>(tsRaw / 1000); // nanoseconds
+            } else if (iface.tsResol == 3) {
+                ts_us = static_cast<int64_t>(tsRaw * 1000); // milliseconds
+            } else {
+                // Generic power-of-10: tsResol is the exponent
+                double scale = 1e6;
+                for (quint8 e = 0; e < iface.tsResol; e++) scale /= 10.0;
+                ts_us = static_cast<int64_t>(tsRaw * scale);
+            }
+
+            CanMessage msg;
+            bool valid;
+            parseSocketCanFrame(ds, capturedLen, msg, valid);
+
+            if (valid) {
+                msg.setTimestamp_us(ts_us);
+                _messages.append(msg);
+                _messageInterfaces.append(iface.name);
+            }
+        }
+
+        // Skip to end of block (blockTotalLen includes type + length fields at start and trailing length)
+        file.seek(blockStart + blockTotalLen);
     }
 
     return !_messages.isEmpty();

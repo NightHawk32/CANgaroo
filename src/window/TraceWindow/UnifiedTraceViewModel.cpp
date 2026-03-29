@@ -484,7 +484,11 @@ QString UnifiedTraceViewModel::formatUnifiedTimestamp(uint64_t ts, uint64_t prev
             int m = (totalSecs % 3600) / 60;
             int s = totalSecs % 60;
             int msec = static_cast<int>(ms % 1000);
-            return QString::asprintf("%02d:%02d:%02d.%03d", h, m, s, msec);
+            return QStringLiteral("%1:%2:%3.%4")
+                .arg(h, 2, 10, QLatin1Char('0'))
+                .arg(m, 2, 10, QLatin1Char('0'))
+                .arg(s, 2, 10, QLatin1Char('0'))
+                .arg(msec, 3, 10, QLatin1Char('0'));
         }
         case timestamp_mode_relative:
             val = static_cast<double>(ts - static_cast<uint64_t>(backend()->getTimestampAtMeasurementStart() * 1000000.0)) / 1000000.0;

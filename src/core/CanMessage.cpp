@@ -350,9 +350,9 @@ void CanMessage::setTimestamp(uint64_t seconds, uint32_t micro_seconds)
 QString CanMessage::getIdString() const
 {
     if (isExtended()) {
-        return QString().asprintf("0x%08X", getId());
+        return QStringLiteral("0x%1").arg(getId(), 8, 16, QLatin1Char('0')).toUpper();
     } else {
-        return QString().asprintf("0x%03X", getId());
+        return QStringLiteral("0x%1").arg(getId(), 3, 16, QLatin1Char('0')).toUpper();
     }
 }
 

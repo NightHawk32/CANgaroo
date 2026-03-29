@@ -52,7 +52,7 @@ static inline void kvaserTimestampToSecUsec(unsigned long ts, long &sec, long &u
 #endif
 
 KvaserInterface::KvaserInterface(KvaserDriver *driver, int channel, QString name)
-  : CanInterface((CanDriver *)driver),
+  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
     _channel(channel),
     _handle(canINVALID_HANDLE),
     _isOpen(false),

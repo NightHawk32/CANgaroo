@@ -30,7 +30,7 @@
 #include <PCANBasic.h>
 
 PeakCanInterface::PeakCanInterface(PeakCanDriver *driver, TPCANHandle channel, QString name)
-  : CanInterface((CanDriver *)driver),
+  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
     _channel(channel),
     _rxEvent(nullptr),
     _isOpen(false),

@@ -155,38 +155,30 @@ void CanTrace::saveCanDump(QFile &file)
     for (unsigned int i=0; i<size(); i++) {
         CanMessage *msg = &_data[i];
         QString line;
-        line.append(QString().asprintf("(%.6f) ", msg->getFloatTimestamp()));
+        line.append(QStringLiteral("(%1) ").arg(msg->getFloatTimestamp(), 0, 'f', 6));
         line.append(_backend.getInterfaceName(msg->getInterfaceId()));
+
+        int idWidth = msg->isExtended() ? 8 : 3;
+        QString idHex = QString::number(msg->getId(), 16).toUpper().rightJustified(idWidth, QLatin1Char('0'));
+
         if (msg->isErrorFrame()) {
             // Error frame: error flag in ID, 8 bytes of zero data
-            line.append(QString().asprintf(" %08X#", 0x20000000 | msg->getId()));
-            line.append("0000000000000000");
+            QString errId = QString::number(0x20000000 | msg->getId(), 16).toUpper().rightJustified(8, QLatin1Char('0'));
+            line.append(QStringLiteral(" %1#0000000000000000").arg(errId));
         } else if (msg->isFD()) {
             // CANFD: use ## separator with flags byte (bit 0 = BRS, bit 1 = ESI)
             uint8_t flags = msg->isBRS() ? 1 : 0;
-            if (msg->isExtended()) {
-                line.append(QString().asprintf(" %08X##%X", msg->getId(), flags));
-            } else {
-                line.append(QString().asprintf(" %03X##%X", msg->getId(), flags));
-            }
+            line.append(QStringLiteral(" %1##%2").arg(idHex).arg(flags));
             for (int i=0; i<msg->getLength(); i++) {
-                line.append(QString().asprintf("%02X", msg->getByte(i)));
+                line.append(QString::number(msg->getByte(i), 16).toUpper().rightJustified(2, QLatin1Char('0')));
             }
         } else if (msg->isRTR()) {
             // RTR: #R followed by DLC
-            if (msg->isExtended()) {
-                line.append(QString().asprintf(" %08X#R%d", msg->getId(), msg->getLength()));
-            } else {
-                line.append(QString().asprintf(" %03X#R%d", msg->getId(), msg->getLength()));
-            }
+            line.append(QStringLiteral(" %1#R%2").arg(idHex).arg(msg->getLength()));
         } else {
-            if (msg->isExtended()) {
-                line.append(QString().asprintf(" %08X#", msg->getId()));
-            } else {
-                line.append(QString().asprintf(" %03X#", msg->getId()));
-            }
+            line.append(QStringLiteral(" %1#").arg(idHex));
             for (int i=0; i<msg->getLength(); i++) {
-                line.append(QString().asprintf("%02X", msg->getByte(i)));
+                line.append(QString::number(msg->getByte(i), 16).toUpper().rightJustified(2, QLatin1Char('0')));
             }
         }
         stream << line << Qt::endl;
@@ -233,21 +225,22 @@ void CanTrace::saveVectorAsc(QFile &file)
         int channel = channelMap.value(msg.getInterfaceId(), 1);
 
         if (msg.isErrorFrame()) {
-            QString line = QString().asprintf(
-                "%11.6lf %d  ErrorFrame",
-                t_current-t_start,
-                channel
-            );
+            QString line = QStringLiteral("%1 %2  ErrorFrame")
+                .arg(t_current - t_start, 11, 'f', 6)
+                .arg(channel);
             stream << line << Qt::endl;
             continue;
         }
 
-        QString id_hex_str = QString().asprintf("%x", msg.getId());
-        QString id_dec_str = QString().asprintf("%d", msg.getId());
+        QString id_hex_str = QString::number(msg.getId(), 16);
+        QString id_dec_str = QString::number(msg.getId());
         if (msg.isExtended()) {
-            id_hex_str.append("x");
-            id_dec_str.append("x");
+            id_hex_str.append(QLatin1Char('x'));
+            id_dec_str.append(QLatin1Char('x'));
         }
+
+        QString dir = msg.isRX() ? QStringLiteral("Rx") : QStringLiteral("Tx");
+        QString dataHex = msg.getDataHexString();
 
         QString line;
         if (msg.isFD()) {
@@ -257,31 +250,25 @@ void CanTrace::saveVectorAsc(QFile &file)
             int flags = 0;
             if (msg.isBRS()) { flags |= 0x1; }
 
-            line = QString().asprintf(
-                "%11.6lf CANFD %3d %s %15s %d 0 0 %d %d %s",
-                t_current-t_start,
-                channel,
-                msg.isRX() ? "Rx" : "Tx",
-                id_hex_str.toStdString().c_str(),
-                flags,
-                msg.getLength(),
-                msg.getLength(),
-                msg.getDataHexString().toStdString().c_str()
-            );
+            line = QStringLiteral("%1 CANFD %2 %3 %4 %5 0 0 %6 %7 %8")
+                .arg(t_current - t_start, 11, 'f', 6)
+                .arg(channel, 3)
+                .arg(dir)
+                .arg(id_hex_str, 15)
+                .arg(flags)
+                .arg(msg.getLength())
+                .arg(msg.getLength())
+                .arg(dataHex);
         } else {
-            line = QString().asprintf(
-                "%11.6lf %d  %-15s %s   %c %d %s  Length = %d BitCount = %d ID = %s",
-                t_current-t_start,
-                channel,
-                id_hex_str.toStdString().c_str(),
-                msg.isRX() ? "Rx" : "Tx",
-                msg.isRTR() ? 'r' : 'd',
-                msg.getLength(),
-                msg.getDataHexString().toStdString().c_str(),
-                0, // TODO Length (transfer time in ns)
-                0, // TODO BitCount (overall frame length, including stuff bits)
-                id_dec_str.toStdString().c_str()
-            );
+            line = QStringLiteral("%1 %2  %3 %4   %5 %6 %7  Length = 0 BitCount = 0 ID = %8")
+                .arg(t_current - t_start, 11, 'f', 6)
+                .arg(channel)
+                .arg(id_hex_str, -15)
+                .arg(dir)
+                .arg(QLatin1Char(msg.isRTR() ? 'r' : 'd'))
+                .arg(msg.getLength())
+                .arg(dataHex)
+                .arg(id_dec_str);
         }
 
         stream << line << Qt::endl;
@@ -500,6 +487,277 @@ void CanTrace::saveVectorMdf(QFile &file)
         for (int j = 0; j < 8; j++) {              // 8 bytes
             ds << msg.getByte(j);
         }
+    }
+}
+
+void CanTrace::savePcap(QFile &file)
+{
+    // PCAP file format with LINKTYPE_CAN_SOCKETCAN (227).
+    // Standard CAN frames are stored as a 16-byte SocketCAN can_frame.
+    // CAN FD frames are stored as a 72-byte SocketCAN canfd_frame.
+    //
+    // CAN ID flags (upper bits of the 32-bit can_id word):
+    //   0x80000000  CAN_EFF_FLAG  — extended (29-bit) frame
+    //   0x40000000  CAN_RTR_FLAG  — remote transmission request
+    //   0x20000000  CAN_ERR_FLAG  — error frame
+    //
+    // canfd_frame flags byte:
+    //   0x01  CANFD_BRS  — bit rate switch
+    //   0x02  CANFD_ESI  — error state indicator
+
+    static const quint32 PCAP_MAGIC       = 0xA1B2C3D4;
+    static const quint16 PCAP_VERSION_MAJ = 2;
+    static const quint16 PCAP_VERSION_MIN = 4;
+    static const quint32 SNAPLEN          = 72; // max canfd_frame size
+    static const quint32 LINKTYPE_CAN_SOCKETCAN = 227;
+
+    static const quint32 CAN_EFF_FLAG = 0x80000000;
+    static const quint32 CAN_RTR_FLAG = 0x40000000;
+    static const quint32 CAN_ERR_FLAG = 0x20000000;
+
+    static const quint8  CANFD_BRS = 0x01;
+    static const quint8  CANFD_ESI = 0x02;
+
+    QMutexLocker locker(&_mutex);
+
+    QDataStream ds(&file);
+    ds.setByteOrder(QDataStream::LittleEndian);
+
+    // Global header (24 bytes)
+    ds << PCAP_MAGIC;
+    ds << PCAP_VERSION_MAJ;
+    ds << PCAP_VERSION_MIN;
+    ds << qint32(0);   // thiszone: UTC
+    ds << quint32(0);  // sigfigs
+    ds << SNAPLEN;
+    ds << LINKTYPE_CAN_SOCKETCAN;
+
+    for (unsigned int i = 0; i < size(); i++) {
+        CanMessage &msg = _data[i];
+
+        int64_t ts_us  = msg.getTimestamp_us();
+        quint32 ts_sec  = static_cast<quint32>(ts_us / 1000000);
+        quint32 ts_usec = static_cast<quint32>(ts_us % 1000000);
+
+        quint32 can_id = msg.getId();
+        if (msg.isExtended())   can_id |= CAN_EFF_FLAG;
+        if (msg.isRTR())        can_id |= CAN_RTR_FLAG;
+        if (msg.isErrorFrame()) can_id |= CAN_ERR_FLAG;
+
+        if (msg.isFD()) {
+            // canfd_frame: 4 + 1 + 1 + 2 + 64 = 72 bytes
+            quint32 frame_len = 72;
+            quint8 len   = msg.getLength();
+            quint8 flags = 0;
+            if (msg.isBRS()) flags |= CANFD_BRS;
+
+            ds << ts_sec << ts_usec << frame_len << frame_len;
+            ds << can_id;
+            ds << len;
+            ds << flags;
+            ds << quint8(0) << quint8(0); // __res0, __res1
+            for (int j = 0; j < 64; j++) {
+                ds << (j < len ? msg.getByte(j) : quint8(0));
+            }
+        } else {
+            // can_frame: 4 + 1 + 3 + 8 = 16 bytes
+            quint32 frame_len = 16;
+            quint8 dlc = msg.getLength();
+            if (dlc > 8) dlc = 8;
+
+            ds << ts_sec << ts_usec << frame_len << frame_len;
+            ds << can_id;
+            ds << dlc;
+            ds << quint8(0) << quint8(0) << quint8(0); // pad, res0, res1
+            for (int j = 0; j < 8; j++) {
+                ds << (j < dlc ? msg.getByte(j) : quint8(0));
+            }
+        }
+    }
+}
+
+// --- pcapng helpers (local to this TU) ---
+
+// Write padding bytes so that the total bytes written from the start of
+// the current block are aligned to a 4-byte boundary.
+static void pcapngPad4(QDataStream &ds, quint32 unpadded)
+{
+    quint32 rem = unpadded % 4;
+    if (rem) {
+        for (quint32 p = 0; p < 4 - rem; p++)
+            ds << quint8(0);
+    }
+}
+
+static quint32 pcapngPadded(quint32 len)
+{
+    return (len + 3) & ~quint32(3);
+}
+
+// Write a pcapng option (type + length + value + pad).
+static void pcapngWriteOption(QDataStream &ds, quint16 code, const QByteArray &value)
+{
+    ds << code;
+    ds << quint16(value.size());
+    ds.writeRawData(value.constData(), value.size());
+    pcapngPad4(ds, value.size());
+}
+
+// Write opt_endofopt (code 0, length 0).
+static void pcapngWriteEndOfOpt(QDataStream &ds)
+{
+    ds << quint16(0) << quint16(0);
+}
+
+void CanTrace::savePcapNg(QFile &file)
+{
+    // pcapng (IETF draft-tuexen-opsawg-pcapng) with LINKTYPE_CAN_SOCKETCAN.
+    //
+    // Block layout written by this function:
+    //   1x  Section Header Block  (SHB)
+    //   Nx  Interface Description Block  (IDB) — one per CAN interface
+    //   Mx  Enhanced Packet Block  (EPB) — one per CAN message
+    //
+    // All multi-byte fields are little-endian (matching the SHB byte-order
+    // magic 0x1A2B3C4D).
+
+    static const quint32 BT_SHB = 0x0A0D0D0A;
+    static const quint32 BT_IDB = 0x00000001;
+    static const quint32 BT_EPB = 0x00000006;
+
+    static const quint32 BYTE_ORDER_MAGIC = 0x1A2B3C4D;
+    static const quint16 PCAPNG_VERSION_MAJ = 1;
+    static const quint16 PCAPNG_VERSION_MIN = 0;
+
+    static const quint32 LINKTYPE_CAN_SOCKETCAN = 227;
+    static const quint32 SNAPLEN = 72;
+
+    static const quint32 CAN_EFF_FLAG = 0x80000000;
+    static const quint32 CAN_RTR_FLAG = 0x40000000;
+    static const quint32 CAN_ERR_FLAG = 0x20000000;
+    static const quint8  CANFD_BRS    = 0x01;
+
+    QMutexLocker locker(&_mutex);
+
+    QDataStream ds(&file);
+    ds.setByteOrder(QDataStream::LittleEndian);
+
+    // --- Collect interfaces seen in the trace ---
+    QMap<CanInterfaceId, int> ifaceIndexMap; // interfaceId → IDB index (0-based)
+    QList<CanInterfaceId> ifaceOrder;
+    for (unsigned int i = 0; i < size(); i++) {
+        CanInterfaceId id = _data[i].getInterfaceId();
+        if (!ifaceIndexMap.contains(id)) {
+            ifaceIndexMap[id] = ifaceOrder.size();
+            ifaceOrder.append(id);
+        }
+    }
+
+    // --- Section Header Block (SHB) ---
+    // Fixed body: byte-order magic (4) + major (2) + minor (2) + section length (8) = 16
+    // Options: shb_userappl + opt_endofopt
+    QByteArray appName = QByteArray("CANgaroo");
+    // opt shb_userappl (code 4): 2+2+padded(value)
+    quint32 shbOptLen = 4 + pcapngPadded(appName.size()) + 4; // userappl + endofopt
+    quint32 shbTotalLen = 12 + 16 + shbOptLen + 4; // block-type(4)+len(4)+body+options+len(4)
+    // But block type is part of the 12: type(4)+total_length(4)...+total_length(4)
+    // SHB: type(4) + total_length(4) + bom(4) + maj(2) + min(2) + section_len(8) + options + total_length(4)
+    shbTotalLen = 4 + 4 + 4 + 2 + 2 + 8 + shbOptLen + 4;
+
+    ds << BT_SHB;
+    ds << shbTotalLen;
+    ds << BYTE_ORDER_MAGIC;
+    ds << PCAPNG_VERSION_MAJ;
+    ds << PCAPNG_VERSION_MIN;
+    ds << quint64(0xFFFFFFFFFFFFFFFF); // section length: unspecified
+    pcapngWriteOption(ds, 4, appName);  // shb_userappl
+    pcapngWriteEndOfOpt(ds);
+    ds << shbTotalLen;
+
+    // --- Interface Description Blocks (IDB) ---
+    for (int idx = 0; idx < ifaceOrder.size(); idx++) {
+        QString name = _backend.getInterfaceName(ifaceOrder[idx]);
+        QByteArray nameUtf8 = name.toUtf8();
+
+        // Options: if_name (code 2) + opt_endofopt
+        quint32 idbOptLen = 4 + pcapngPadded(nameUtf8.size()) + 4;
+        // IDB: type(4) + total_length(4) + linktype(2) + reserved(2) + snaplen(4) + options + total_length(4)
+        quint32 idbTotalLen = 4 + 4 + 2 + 2 + 4 + idbOptLen + 4;
+
+        ds << BT_IDB;
+        ds << idbTotalLen;
+        ds << quint16(LINKTYPE_CAN_SOCKETCAN);
+        ds << quint16(0); // reserved
+        ds << SNAPLEN;
+        pcapngWriteOption(ds, 2, nameUtf8); // if_name
+        pcapngWriteEndOfOpt(ds);
+        ds << idbTotalLen;
+    }
+
+    // --- Enhanced Packet Blocks (EPB) ---
+    for (unsigned int i = 0; i < size(); i++) {
+        CanMessage &msg = _data[i];
+
+        int64_t ts_us = msg.getTimestamp_us();
+        // pcapng timestamp: 64-bit value in units of the interface's ts_resol (default: microseconds)
+        quint32 ts_high = static_cast<quint32>(ts_us >> 32);
+        quint32 ts_low  = static_cast<quint32>(ts_us & 0xFFFFFFFF);
+
+        quint32 can_id = msg.getId();
+        if (msg.isExtended())   can_id |= CAN_EFF_FLAG;
+        if (msg.isRTR())        can_id |= CAN_RTR_FLAG;
+        if (msg.isErrorFrame()) can_id |= CAN_ERR_FLAG;
+
+        quint32 ifaceIdx = ifaceIndexMap.value(msg.getInterfaceId(), 0);
+
+        quint32 capturedLen, originalLen;
+        if (msg.isFD()) {
+            capturedLen = 72;
+        } else {
+            capturedLen = 16;
+        }
+        originalLen = capturedLen;
+
+        // EPB: type(4) + total_length(4) + interface_id(4) + ts_high(4) + ts_low(4)
+        //    + captured_len(4) + original_len(4) + packet_data(padded) + total_length(4)
+        quint32 epbTotalLen = 4 + 4 + 4 + 4 + 4 + 4 + 4 + pcapngPadded(capturedLen) + 4;
+
+        ds << BT_EPB;
+        ds << epbTotalLen;
+        ds << ifaceIdx;
+        ds << ts_high;
+        ds << ts_low;
+        ds << capturedLen;
+        ds << originalLen;
+
+        // Packet data: SocketCAN frame
+        ds << can_id;
+
+        if (msg.isFD()) {
+            quint8 len   = msg.getLength();
+            quint8 flags = 0;
+            if (msg.isBRS()) flags |= CANFD_BRS;
+            ds << len;
+            ds << flags;
+            ds << quint8(0) << quint8(0);
+            for (int j = 0; j < 64; j++) {
+                ds << (j < len ? msg.getByte(j) : quint8(0));
+            }
+        } else {
+            quint8 dlc = msg.getLength();
+            if (dlc > 8) dlc = 8;
+            ds << dlc;
+            ds << quint8(0) << quint8(0) << quint8(0);
+            for (int j = 0; j < 8; j++) {
+                ds << (j < dlc ? msg.getByte(j) : quint8(0));
+            }
+        }
+
+        // Pad packet data to 4-byte boundary (16 and 72 are both multiples of 4, so no padding needed,
+        // but call it for correctness if frame sizes change in the future)
+        pcapngPad4(ds, capturedLen);
+
+        ds << epbTotalLen;
     }
 }
 

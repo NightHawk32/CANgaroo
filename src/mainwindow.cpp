@@ -24,10 +24,11 @@
 
 #include <QtWidgets>
 #include <QMdiArea>
-#include <QSignalMapper>
+
 #include <QCloseEvent>
 #include <QTimer>
 #include <QLabel>
+#include <QRegularExpression>
 #include <QDockWidget>
 #include <QStatusBar>
 #include <QDomDocument>
@@ -165,9 +166,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     Backend::instance().addCanDriver(*(new CandleApiDriver(Backend::instance())));
 #endif
 
-#ifdef PEAKCAN_DRIVER
-    Backend::instance().addCanDriver(*(new PeakCanDriver(Backend::instance())));
-#endif
     Backend::instance().addCanDriver(*(new SLCANDriver(Backend::instance())));
     Backend::instance().addCanDriver(*(new GrIPDriver(Backend::instance())));
 
@@ -175,6 +173,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     {
         Backend::instance().addCanDriver(*(new CANBlasterDriver(Backend::instance())));
     }
+
+#ifdef PEAKCAN_DRIVER
+    Backend::instance().addCanDriver(*(new PeakCanDriver(Backend::instance())));
+#endif
 
 #ifdef KVASER_DRIVER
     Backend::instance().addCanDriver(*(new KvaserDriver(Backend::instance())));
@@ -1093,7 +1095,7 @@ void MainWindow::stopMeasurement()
 
 void MainWindow::saveTraceToFile()
 {
-    QString filters("Vector ASC (*.asc);;Vector MDF4 (*.mf4);;Linux candump (*.candump)");
+    QString filters("Vector ASC (*.asc);;Vector MDF4 (*.mf4);;Linux candump (*.candump);;PCAP (*.pcap);;PCAPng (*.pcapng)");
     QString defaultFilter("Vector ASC (*.asc)");
 
     QFileDialog fileDialog(0, tr("Save Trace to file"), QDir::currentPath(), filters);
@@ -1104,6 +1106,19 @@ void MainWindow::saveTraceToFile()
     if (fileDialog.exec())
     {
         QString filename = fileDialog.selectedFiles().at(0);
+
+        // If the user typed a name without extension, derive it from the selected filter
+        if (!filename.contains('.')) {
+            QString selectedFilter = fileDialog.selectedNameFilter();
+            QRegularExpression extRe("\\*(\\.\\w+)");
+            QRegularExpressionMatch match = extRe.match(selectedFilter);
+            if (match.hasMatch()) {
+                filename += match.captured(1);
+            } else {
+                filename += ".asc";
+            }
+        }
+
         QFile file(filename);
         if (file.open(QIODevice::ReadWrite | QIODevice::Truncate))
         {
@@ -1114,6 +1129,14 @@ void MainWindow::saveTraceToFile()
             else if (filename.endsWith(".mf4", Qt::CaseInsensitive))
             {
                 backend().getTrace()->saveVectorMdf(file);
+            }
+            else if (filename.endsWith(".pcapng", Qt::CaseInsensitive))
+            {
+                backend().getTrace()->savePcapNg(file);
+            }
+            else if (filename.endsWith(".pcap", Qt::CaseInsensitive))
+            {
+                backend().getTrace()->savePcap(file);
             }
             else
             {

@@ -49,7 +49,7 @@
 
 
 SocketCanInterface::SocketCanInterface(SocketCanDriver *driver, int index, QString name)
-  : CanInterface((CanDriver *)driver),
+  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
     _idx(index),
     _isOpen(false),
     _fd(0),
@@ -171,7 +171,9 @@ void SocketCanInterface::applyConfig(const MeasurementInterface &mi)
         log_info(QString("calling ip link to reconfigure interface %1 (CAN FD)").arg(getName()));
         
         // First bring interface down
-        QProcess::execute("ip", {"link", "set", getName(), "down"});
+        QProcess proc_down;
+        proc_down.start("ip", {"link", "set", getName(), "down"});
+        proc_down.waitForFinished();
         
         cmd = "ip";
         args << "link" << "set" << getName() << "up" << "type" << "can";

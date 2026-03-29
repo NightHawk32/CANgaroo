@@ -39,7 +39,6 @@ class QMenu;
 class QMdiArea;
 class QMdiSubWindow;
 class QWidget;
-class QSignalMapper;
 class QDomElement;
 class QActionGroup;
 QT_END_NAMESPACE
@@ -63,7 +62,7 @@ public:
     bool isDarkMode();
 
 protected:
-    void closeEvent(QCloseEvent *event) Q_DECL_OVERRIDE;
+    void closeEvent(QCloseEvent *event) override;
     virtual void changeEvent(QEvent *event) override;
 
 public slots:

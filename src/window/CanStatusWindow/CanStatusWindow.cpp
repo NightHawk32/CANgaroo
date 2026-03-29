@@ -141,7 +141,7 @@ void CanStatusWindow::update()
     for (QTreeWidgetItemIterator it(ui->treeWidget); *it; ++it)
     {
         QTreeWidgetItem *item = *it;
-        CanInterface *intf = (CanInterface *)item->data(0, Qt::UserRole).value<void *>();
+        CanInterface *intf = static_cast<CanInterface *>(item->data(0, Qt::UserRole).value<void *>());
         if (intf)
         {
             intf->updateStatistics();

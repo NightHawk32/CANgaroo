@@ -2,7 +2,7 @@
 #include "CandleApiInterface.h"
 
 CandleApiInterface::CandleApiInterface(CandleApiDriver *driver, candle_handle handle)
-  : CanInterface(driver),
+  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
     _hostOffsetStart(0),
     _deviceTicksStart(0),
     _handle(handle),
