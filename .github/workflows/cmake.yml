@@ -24,7 +24,7 @@ jobs:
         sudo apt update
         sudo apt install -y build-essential git cmake \
           qt6-base-dev qt6-base-private-dev qt6-tools-dev \
-          libqt6serialport6-dev qt6-serialbus-dev libqt6charts6-dev \
+          qt6-serialport-dev qt6-serialbus-dev qt6-charts-dev \
           adwaita-qt6 libadwaitaqt6-1 pybind11-dev \
           libnl-3-dev libnl-route-3-dev libgl1-mesa-dev fuse libfuse2 wget
 
@@ -65,18 +65,15 @@ jobs:
         # Build only the userspace canlib — no kernel modules required
         make -C /tmp/linuxcan/canlib
         sudo make -C /tmp/linuxcan/canlib install
-        # Save installed files to a user-writable path for caching
-        mkdir -p ~/kvaser-cache/include ~/kvaser-cache/lib
-        cp /usr/local/include/canlib.h \
-           /usr/local/include/canstat.h \
-           ~/kvaser-cache/include/ 2>/dev/null || true
-        cp -P /usr/local/lib/libcanlib* ~/kvaser-cache/lib/ 2>/dev/null || true
+        sudo ldconfig
+        # Cache the pre-built canlib directory so we can re-run make install on cache hit
+        mkdir -p ~/kvaser-cache
+        cp -r /tmp/linuxcan/canlib ~/kvaser-cache/
 
-    - name: Restore Kvaser headers/libs from cache
+    - name: Restore Kvaser CANlib from cache
       if: steps.cache-kvaser-linux.outputs.cache-hit == 'true'
       run: |
-        sudo cp ~/kvaser-cache/include/* /usr/local/include/ 2>/dev/null || true
-        sudo cp -P ~/kvaser-cache/lib/*  /usr/local/lib/    2>/dev/null || true
+        sudo make -C ~/kvaser-cache/canlib install
         sudo ldconfig
 
     - name: Run qmake6 and make
