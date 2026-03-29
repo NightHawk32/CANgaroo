@@ -1,3 +1,5 @@
+!win32: error("PeakCanDriver is only supported on Windows")
+
 CONFIG += c++20
 
 SOURCES += \
