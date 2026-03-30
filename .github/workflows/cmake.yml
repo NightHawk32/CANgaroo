@@ -195,7 +195,7 @@ jobs:
       # Default install path used by the Kvaser SDK installer
       CANLIB_DIR_HEADER: "C:/Program Files (x86)/Kvaser/Canlib/INC"
       CANLIB_DIR_BIN: "C:/Program Files (x86)/Kvaser/Canlib/Bin"
-      CANLIB_DIR_LIB: "C:/Program Files (x86)/Kvaser/Canlib/Lib/x64"
+      CANLIB_DIR_LIB: "C:/Program Files (x86)/Kvaser/Canlib/Lib/Borland"
       CANLIB_DIR: "C:/Program Files (x86)/Kvaser/Canlib/"
 
     defaults:
