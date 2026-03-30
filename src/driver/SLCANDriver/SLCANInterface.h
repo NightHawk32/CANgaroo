@@ -126,6 +126,7 @@ private:
     int _idx;
     bool _isOpen;
     bool _isOffline;
+    bool _no_confirm;
     QSerialPort* _serport;
     QList<can_msg_t> _can_msg_queue;
     QList<CanMessage> _can_msg_tx_queue;

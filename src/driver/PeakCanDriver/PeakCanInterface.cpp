@@ -22,6 +22,8 @@
 #include "PeakCanInterface.h"
 #include "PeakCanDriver.h"
 
+#include <chrono>
+#include <QMutexLocker>
 #include <core/Backend.h>
 #include <core/MeasurementInterface.h>
 #include <core/CanMessage.h>
@@ -191,6 +193,13 @@ void PeakCanInterface::sendMessage(const CanMessage &msg)
     } else {
         _stats.tx_count++;
         addFrameBits(msg);
+
+        CanMessage txMsg = msg;
+        txMsg.setRX(false);
+        auto now = std::chrono::system_clock::now().time_since_epoch();
+        txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
+        QMutexLocker lock(&_txMutex);
+        _txMsgList.append(txMsg);
     }
 }
 
@@ -200,9 +209,18 @@ bool PeakCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int time
         return false;
     }
 
+    // Enqueue tx messages
+    {
+        QMutexLocker lock(&_txMutex);
+        msglist.append(_txMsgList);
+        _txMsgList.clear();
+    }
+
+    bool hasTx = !msglist.isEmpty();
+
     DWORD waitResult = WaitForSingleObject(static_cast<HANDLE>(_rxEvent), timeout_ms);
     if (waitResult != WAIT_OBJECT_0) {
-        return false;
+        return hasTx;
     }
 
     TPCANMsg       frame;

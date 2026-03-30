@@ -22,6 +22,7 @@
 #pragma once
 
 #include "../CanInterface.h"
+#include <QMutex>
 
 // canHandle is typedef int on both Linux and Windows CANlib SDKs.
 // We use int here to avoid pulling canlib.h into every translation unit
@@ -79,4 +80,7 @@ private:
         int      tx_errors;
         uint64_t tx_dropped;
     } _stats, _offset_stats;
+
+    QMutex _txMutex;
+    QList<CanMessage> _txMsgList;
 };

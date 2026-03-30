@@ -21,6 +21,8 @@
 
 #include "SocketCanInterface.h"
 
+#include <chrono>
+#include <QMutexLocker>
 #include <core/Backend.h>
 #include <core/MeasurementSetup.h>
 #include <core/MeasurementNetwork.h>
@@ -169,12 +171,12 @@ void SocketCanInterface::applyConfig(const MeasurementInterface &mi)
     // Use ip link if CAN FD is requested, as it's the standard way now
     if (mi.isCanFD()) {
         log_info(QString("calling ip link to reconfigure interface %1 (CAN FD)").arg(getName()));
-        
+
         // First bring interface down
         QProcess proc_down;
         proc_down.start("ip", {"link", "set", getName(), "down"});
         proc_down.waitForFinished();
-        
+
         cmd = "ip";
         args << "link" << "set" << getName() << "up" << "type" << "can";
         args << "bitrate" << QString::number(mi.bitrate());
@@ -182,7 +184,7 @@ void SocketCanInterface::applyConfig(const MeasurementInterface &mi)
         args << "dbitrate" << QString::number(mi.fdBitrate());
         args << "dsample-point" << QString::number(static_cast<float>(mi.fdSamplePoint())/1000.0, 'f', 3);
         args << "fd" << "on";
-        
+
         if (mi.doAutoRestart()) {
             args << "restart-ms" << QString::number(mi.autoRestartMs());
         }
@@ -469,6 +471,7 @@ void SocketCanInterface::open() {
     }
 
     _isOpen = true;
+    txMsgList.clear();
 }
 
 bool SocketCanInterface::isOpen()
@@ -514,6 +517,13 @@ void SocketCanInterface::sendMessage(const CanMessage &msg) {
 
         if (::write(_fd, &frame, sizeof(struct canfd_frame)) < 0) {
             log_error(QString("SocketCanInterface: Error writing FD frame to %1: %2").arg(_name, strerror(errno)));
+        } else {
+            CanMessage txMsg = msg;
+            txMsg.setRX(false);
+            auto now = std::chrono::system_clock::now().time_since_epoch();
+            txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
+            QMutexLocker lock(&_txMutex);
+            txMsgList.append(txMsg);
         }
     } else {
         struct can_frame frame;
@@ -544,6 +554,13 @@ void SocketCanInterface::sendMessage(const CanMessage &msg) {
 
         if (::write(_fd, &frame, sizeof(struct can_frame)) < 0) {
             log_error(QString("SocketCanInterface: Error writing frame to %1: %2").arg(_name, strerror(errno)));
+        } else {
+            CanMessage txMsg = msg;
+            txMsg.setRX(false);
+            auto now = std::chrono::system_clock::now().time_since_epoch();
+            txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
+            QMutexLocker lock(&_txMutex);
+            txMsgList.append(txMsg);
         }
     }
     // Track sent bits
@@ -563,6 +580,13 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
 
     FD_ZERO(&fdset);
     FD_SET(_fd, &fdset);
+
+    // Enqueue tx messages
+    {
+        QMutexLocker lock(&_txMutex);
+        msglist.append(txMsgList);
+        txMsgList.clear();
+    }
 
     CanMessage msg;
 
@@ -612,7 +636,7 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
         msglist.append(msg);
         addFrameBits(msg); // Track received bits
         return true;
-    } 
-    
+    }
+
     return false;
 }

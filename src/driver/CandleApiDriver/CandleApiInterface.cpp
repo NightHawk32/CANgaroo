@@ -1,5 +1,7 @@
 #include "CandleApiDriver.h"
 #include "CandleApiInterface.h"
+#include <chrono>
+#include <QMutexLocker>
 
 CandleApiInterface::CandleApiInterface(CandleApiDriver *driver, candle_handle handle)
   : CanInterface(reinterpret_cast<CanDriver*>(driver)),
@@ -292,6 +294,13 @@ void CandleApiInterface::sendMessage(const CanMessage &msg)
 
     if (candle_frame_send(_handle, 0, &frame)) {
         _numTx++;
+
+        CanMessage txMsg = msg;
+        txMsg.setRX(false);
+        auto now = std::chrono::system_clock::now().time_since_epoch();
+        txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
+        QMutexLocker lock(&_txMutex);
+        _txMsgList.append(txMsg);
     } else {
         _numTxErr++;
     }
@@ -299,6 +308,14 @@ void CandleApiInterface::sendMessage(const CanMessage &msg)
 
 bool CandleApiInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
 {
+    // Enqueue tx messages
+    {
+        QMutexLocker lock(&_txMutex);
+        msglist.append(_txMsgList);
+        _txMsgList.clear();
+    }
+    bool hasTx = !msglist.isEmpty();
+
     candle_frame_t frame;
     CanMessage msg;
 
@@ -335,7 +352,7 @@ bool CandleApiInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
 
     }
 
-    return false;
+    return hasTx;
 }
 
 bool CandleApiInterface::updateStatistics()

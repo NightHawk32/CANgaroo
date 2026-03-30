@@ -7,6 +7,7 @@
 #include "CandleApiTiming.h"
 #include <windows.h>
 #include <QList>
+#include <QMutex>
 
 class CandleApiDriver;
 
@@ -66,6 +67,9 @@ private:
     QList<CandleApiTiming> _timings;
 
     bool setBitTiming(uint32_t bitrate, uint32_t samplePoint);
+
+    QMutex _txMutex;
+    QList<CanMessage> _txMsgList;
 };
 
 #endif // CANDLEAPIINTERFACE_H

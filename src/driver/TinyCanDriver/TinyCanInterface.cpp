@@ -22,6 +22,8 @@
 #include "TinyCanInterface.h"
 #include "TinyCanDriver.h"
 
+#include <chrono>
+#include <QMutexLocker>
 #include <core/Backend.h>
 #include <core/MeasurementInterface.h>
 #include <core/CanMessage.h>
@@ -170,6 +172,13 @@ void TinyCanInterface::sendMessage(const CanMessage &msg)
     } else {
         _stats.tx_count++;
         addFrameBits(msg);
+
+        CanMessage txMsg = msg;
+        txMsg.setRX(false);
+        auto now = std::chrono::system_clock::now().time_since_epoch();
+        txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
+        QMutexLocker lock(&_txMutex);
+        _txMsgList.append(txMsg);
     }
 }
 
@@ -179,20 +188,28 @@ bool TinyCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int time
         return false;
     }
 
+    // Enqueue tx messages
+    {
+        QMutexLocker lock(&_txMutex);
+        msglist.append(_txMsgList);
+        _txMsgList.clear();
+    }
+    bool hasTx = !msglist.isEmpty();
+
     if (!_device->framesAvailable()) {
         if (!_device->waitForFramesReceived(static_cast<int>(timeout_ms))) {
-            return false;
+            return hasTx;
         }
     }
 
     const QCanBusFrame frame = _device->readFrame();
     if (!frame.isValid()) {
-        return false;
+        return hasTx;
     }
 
     if (frame.frameType() == QCanBusFrame::ErrorFrame) {
         _stats.rx_errors++;
-        return false;
+        return hasTx;
     }
 
     CanMessage msg;

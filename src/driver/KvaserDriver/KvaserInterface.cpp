@@ -22,6 +22,8 @@
 #include "KvaserInterface.h"
 #include "KvaserDriver.h"
 
+#include <chrono>
+#include <QMutexLocker>
 #include <core/Backend.h>
 #include <core/MeasurementInterface.h>
 #include <core/CanMessage.h>
@@ -212,6 +214,13 @@ void KvaserInterface::sendMessage(const CanMessage &msg)
     } else {
         _stats.tx_count++;
         addFrameBits(msg);
+
+        CanMessage txMsg = msg;
+        txMsg.setRX(false);
+        auto now = std::chrono::system_clock::now().time_since_epoch();
+        txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
+        QMutexLocker lock(&_txMutex);
+        _txMsgList.append(txMsg);
     }
 }
 
@@ -221,6 +230,14 @@ bool KvaserInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeo
         return false;
     }
 
+    // Enqueue tx messages
+    {
+        QMutexLocker lock(&_txMutex);
+        msglist.append(_txMsgList);
+        _txMsgList.clear();
+    }
+    bool hasTx = !msglist.isEmpty();
+
     long id;
     uint8_t data[8];
     unsigned int dlc, flags;
@@ -228,12 +245,12 @@ bool KvaserInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeo
 
     canStatus status = canReadWait(_handle, &id, data, &dlc, &flags, &timestamp, timeout_ms);
     if (status != canOK) {
-        return false;
+        return hasTx;
     }
 
     if (flags & canMSG_ERROR_FRAME) {
         _stats.rx_errors++;
-        return false;
+        return hasTx;
     }
 
     CanMessage msg;

@@ -413,13 +413,11 @@ void TxGeneratorWindow::on_btnSendOnce_released()
             if (intf && intf->isOpen()) {
                 cm.msg.setInterfaceId(cm.interfaceId);
                 intf->sendMessage(cm.msg);
-                if (ui->cbShowInTrace->isChecked() && intf->ShowTxMsg()) {
-                    CanMessage loopback = cm.msg;
-                    loopback.setRX(false);
-                    auto now = std::chrono::system_clock::now().time_since_epoch();
-                    loopback.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
-                    emit loopbackFrame(loopback);
-                }
+                /*CanMessage loopback = cm.msg;
+                loopback.setRX(false);
+                auto now = std::chrono::system_clock::now().time_since_epoch();
+                loopback.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
+                emit loopbackFrame(loopback);*/
             } else {
                 QString errorMsg = QString("TxGeneratorWindow: Interface %1 is not open.").arg(intf ? intf->getName() : QString::number(cm.interfaceId));
                 log_error(errorMsg);
@@ -657,7 +655,6 @@ void TxGeneratorWindow::onSendTimerTimeout()
     }
     auto now = std::chrono::system_clock::now().time_since_epoch();
     uint64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
-    bool showInTrace = ui->cbShowInTrace->isChecked();
 
     for (int i = 0; i < _cyclicMessages.size(); ++i) {
         CyclicMessage &cm = _cyclicMessages[i];
@@ -668,12 +665,10 @@ void TxGeneratorWindow::onSendTimerTimeout()
         if (intf && intf->isOpen()) {
             cm.msg.setInterfaceId(cm.interfaceId);
             intf->sendMessage(cm.msg);
-            if (showInTrace && intf->ShowTxMsg()) {
-                CanMessage loopback = cm.msg;
-                loopback.setRX(false);
-                loopback.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
-                emit loopbackFrame(loopback);
-            }
+            /*CanMessage loopback = cm.msg;
+            loopback.setRX(false);
+            loopback.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
+            emit loopbackFrame(loopback);*/
             cm.lastSent = now_ms;
         } else {
             // Disable to avoid error spam; user must re-enable manually

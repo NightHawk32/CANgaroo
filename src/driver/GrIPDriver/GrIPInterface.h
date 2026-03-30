@@ -106,7 +106,6 @@ public:
     int getNumTxDropped() override;
 
     QString getVersion() override;
-    bool ShowTxMsg() override { return false; }
 
     int getIfIndex();
 

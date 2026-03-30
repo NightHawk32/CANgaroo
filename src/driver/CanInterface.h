@@ -93,7 +93,6 @@ public:
     virtual QString getVersion();
 
     QString getStateText();
-    virtual bool ShowTxMsg() {return true;}
 
     CanInterfaceId getId() const;
     void setId(CanInterfaceId id);

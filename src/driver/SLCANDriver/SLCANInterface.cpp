@@ -23,6 +23,7 @@
 #include "qapplication.h"
 #include "qdebug.h"
 
+#include <chrono>
 #include <core/Backend.h>
 #include <core/MeasurementInterface.h>
 #include <core/CanMessage.h>
@@ -331,17 +332,36 @@ void SLCANInterface::open()
     _serport->flush();
     _serport->clear();
 
+    _no_confirm = false;
+
     // Close CAN port
     _serport->write("C\r", 2);
     _serport->flush();
-    _serport->waitForBytesWritten(100);
-    _serport->waitForReadyRead(50);
+    _serport->waitForBytesWritten(50);
+    if(_serport->waitForReadyRead(50))
+    {
+        qApp->processEvents();
+
+        if(_serport->bytesAvailable())
+        {
+            _no_confirm = false;
+            _serport->readAll();
+        }
+        else
+        {
+            _no_confirm = true;
+        }
+    }
+    else
+    {
+        _no_confirm = true;
+    }
 
     // Get Version
     _serport->clear(QSerialPort::Input);
     _serport->write("V\r", 2);
     _serport->flush();
-    _serport->waitForBytesWritten(100);
+    _serport->waitForBytesWritten(50);
     if(_serport->waitForReadyRead(50))
     {
         qApp->processEvents();
@@ -733,6 +753,7 @@ void SLCANInterface::sendMessage(const CanMessage &msg)
 
     can_msg.length = msg_idx;
 
+
     _can_msg_queue.append(can_msg);
     _can_msg_tx_queue.append(msg);
 
@@ -838,6 +859,24 @@ bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeou
 
     //////////////////////////
 
+    if (_no_confirm)
+    {
+        while (_can_msg_tx_queue.empty() == false)
+        {
+            _status.tx_count++;
+            _status.can_state = state_tx_success;
+
+            msgtx.cloneFrom(_can_msg_tx_queue.front());
+            msgtx.setRX(false);
+            msgtx.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(
+                                      std::chrono::system_clock::now().time_since_epoch())
+                                      .count());
+            msglist.append(msgtx);
+
+            _can_msg_tx_queue.pop_front();
+        }
+    }
+
     bool ret = true;
     _rxbuf_mutex.lock();
     while(_rxbuf_tail != _rxbuf_head)
@@ -881,8 +920,8 @@ bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeou
                             if(_status.can_state == state_tx_success)
                             {
                                 msgtx.cloneFrom(_can_msg_tx_queue.front());
-                                if(msgtx.isShow())
-                                    msglist.append(msgtx);
+                                msgtx.setRX(false);
+                                msglist.append(msgtx);
                             }
                             if(_can_msg_tx_queue.empty() == false)
                                 _can_msg_tx_queue.pop_front();

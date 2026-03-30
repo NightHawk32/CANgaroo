@@ -22,6 +22,7 @@
 #pragma once
 
 #include "../CanInterface.h"
+#include <QMutex>
 
 // TPCANHandle is typedef'd as uint16_t in PCANBasic.h.
 // Forward-declare it here so PCANBasic.h is only needed in the .cpp.
@@ -78,4 +79,7 @@ private:
         int      tx_errors;
         uint64_t tx_dropped;
     } _stats, _offset_stats;
+
+    QMutex _txMutex;
+    QList<CanMessage> _txMsgList;
 };

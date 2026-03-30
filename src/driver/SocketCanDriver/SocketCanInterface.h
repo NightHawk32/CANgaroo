@@ -24,6 +24,7 @@
 #include "../CanInterface.h"
 #include <linux/can/netlink.h>
 #include <string>
+#include <QMutex>
 
 class SocketCanDriver;
 
@@ -113,6 +114,9 @@ private:
     const char *cname();
     std::string _cnameBuffer;
     bool updateStatus();
+
+    QMutex _txMutex;
+    QList<CanMessage> txMsgList;
 
     QString buildIpRouteCmd(const MeasurementInterface &mi);
     QStringList buildCanIfConfigArgs(const MeasurementInterface &mi);

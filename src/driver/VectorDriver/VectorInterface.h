@@ -23,6 +23,7 @@
 
 #include "../CanInterface.h"
 #include <QString>
+#include <QMutex>
 
 class QCanBusDevice;
 class VectorDriver;
@@ -76,4 +77,7 @@ private:
         int      tx_errors;
         uint64_t tx_dropped;
     } _stats, _offset_stats;
+
+    QMutex _txMutex;
+    QList<CanMessage> _txMsgList;
 };
