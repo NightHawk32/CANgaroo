@@ -195,7 +195,7 @@ jobs:
       # Default install path used by the Kvaser SDK installer
       CANLIB_DIR_HEADER: "C:/Program Files (x86)/Kvaser/Canlib/INC"
       CANLIB_DIR_BIN: "C:/Program Files (x86)/Kvaser/Canlib/Bin"
-      CANLIB_DIR_LIB: "C:/Program Files (x86)/Kvaser/Canlib/Lib/Borland"
+      CANLIB_DIR_LIB: "C:/Program Files (x86)/Kvaser/Canlib/Lib/x64"
       CANLIB_DIR: "C:/Program Files (x86)/Kvaser/Canlib/"
 
     defaults:
@@ -243,7 +243,6 @@ jobs:
           # Run the NSIS installer silently; default target is C:\Program Files\Kvaser\Drivers
           Start-Process -FilePath $installer -ArgumentList "/S" -Wait
 
-          # Copy SDK into source tree so KvaserDriver.pri resolves paths automatically.
           # Copy SDK into source tree so KvaserDriver.pri finds it automatically
           $SDK_DEST = "src\driver\KvaserDriver\canlib-sdk"
           New-Item -ItemType Directory -Force -Path "$SDK_DEST\INC"
@@ -251,14 +250,14 @@ jobs:
           New-Item -ItemType Directory -Force -Path "$SDK_DEST\Lib"
 
           try {
-            Write-Host "=== Copy $env:CANLIB_DIR_HEADER ==="
+            Write-Host "=== Copy headers ==="
             Copy-Item "$env:CANLIB_DIR_HEADER\*.h" "$SDK_DEST\INC\" -ErrorAction Stop
           } catch {
             Write-Warning "Failed to copy headers: $_"
           }
 
           try {
-            Write-Host "=== Copy $env:CANLIB_DIR_BIN ==="
+            Write-Host "=== Copy canlib32.dll ==="
             Copy-Item "$env:CANLIB_DIR_BIN\canlib32.dll" "$SDK_DEST\Bin\" -ErrorAction Stop
           } catch {
             Write-Warning "Failed to copy canlib32.dll: $_"
