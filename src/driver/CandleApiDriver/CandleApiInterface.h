@@ -3,11 +3,14 @@
 
 #include <driver/CanInterface.h>
 #include <core/MeasurementInterface.h>
-#include "api/candle.h"
-#include "CandleApiTiming.h"
-#include <windows.h>
+
 #include <QList>
 #include <QMutex>
+
+#include <windows.h>
+
+#include "CandleApiTiming.h"
+#include "api/candle.h"
 
 class CandleApiDriver;
 

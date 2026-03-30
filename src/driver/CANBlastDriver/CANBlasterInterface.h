@@ -22,9 +22,11 @@
 #pragma once
 
 #include "../CanInterface.h"
-#include <core/MeasurementInterface.h>
-#include <QtNetwork/QUdpSocket>
+
 #include <QTimer>
+#include <QtNetwork/QUdpSocket>
+
+#include <core/MeasurementInterface.h>
 
 class CANBlasterDriver;
 struct can_config_t {

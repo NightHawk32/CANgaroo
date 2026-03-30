@@ -1,6 +1,8 @@
-#include "CandleApiDriver.h"
 #include "CandleApiInterface.h"
+#include "CandleApiDriver.h"
+
 #include <chrono>
+
 #include <QMutexLocker>
 
 CandleApiInterface::CandleApiInterface(CandleApiDriver *driver, candle_handle handle)

@@ -21,20 +21,17 @@
 
 #include "CANBlasterInterface.h"
 
-#include <core/Backend.h>
-#include <core/MeasurementInterface.h>
-#include <core/CanMessage.h>
+#include <cstdio>
 
-#include <stdio.h>
-#include <unistd.h>
-#include <time.h>
-#include <fcntl.h>
+#include <QNetworkDatagram>
 #include <QString>
 #include <QStringList>
-#include <QProcess>
 #include <QThread>
 #include <QTimer>
-#include <QNetworkDatagram>
+
+#include <core/Backend.h>
+#include <core/CanMessage.h>
+#include <core/MeasurementInterface.h>
 
 
 CANBlasterInterface::CANBlasterInterface(CANBlasterDriver *driver, int index, QString name, bool fd_support)

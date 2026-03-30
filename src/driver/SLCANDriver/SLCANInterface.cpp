@@ -20,24 +20,20 @@
 */
 
 #include "SLCANInterface.h"
-#include "qapplication.h"
-#include "qdebug.h"
 
 #include <chrono>
-#include <core/Backend.h>
-#include <core/MeasurementInterface.h>
-#include <core/CanMessage.h>
-
+#include <cstdio>
 #include <iostream>
-#include <stdio.h>
-#include <unistd.h>
-#include <time.h>
-#include <fcntl.h>
+
+#include <QApplication>
 #include <QString>
 #include <QStringList>
-#include <QProcess>
 #include <QtSerialPort/QSerialPort>
 #include <QtSerialPort/QSerialPortInfo>
+
+#include <core/Backend.h>
+#include <core/CanMessage.h>
+#include <core/MeasurementInterface.h>
 #include <QThread>
 
 

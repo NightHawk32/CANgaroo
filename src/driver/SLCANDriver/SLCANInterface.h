@@ -22,11 +22,12 @@
 #pragma once
 
 #include "../CanInterface.h"
-#include "qdatetime.h"
-#include <core/MeasurementInterface.h>
-#include <QtSerialPort/QSerialPort>
-#include <QtSerialPort/QSerialPortInfo>
+
+#include <QDateTime>
 #include <QMutex>
+#include <QtSerialPort/QSerialPort>
+
+#include <core/MeasurementInterface.h>
 
 // Maximum rx buffer len
 #define SLCAN_MTU (1 + 8 + 1 + 128 + 1) // canfd 64 frame plus \r plus some padding

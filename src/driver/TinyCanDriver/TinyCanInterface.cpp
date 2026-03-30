@@ -23,14 +23,15 @@
 #include "TinyCanDriver.h"
 
 #include <chrono>
-#include <QMutexLocker>
-#include <core/Backend.h>
-#include <core/MeasurementInterface.h>
-#include <core/CanMessage.h>
 
 #include <QCanBus>
 #include <QCanBusDevice>
 #include <QCanBusFrame>
+#include <QMutexLocker>
+
+#include <core/Backend.h>
+#include <core/CanMessage.h>
+#include <core/MeasurementInterface.h>
 
 TinyCanInterface::TinyCanInterface(TinyCanDriver *driver, QString deviceName, QString description)
   : CanInterface(reinterpret_cast<CanDriver*>(driver)),

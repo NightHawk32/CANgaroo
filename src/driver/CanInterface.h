@@ -21,12 +21,14 @@
 
 #pragma once
 
-#include <QString>
-#include <stdint.h>
 #include <atomic>
+#include <cstdint>
+
+#include <QObject>
+#include <QString>
+
 #include "CanDriver.h"
 #include "CanTiming.h"
-#include <QObject>
 
 class CanMessage;
 class MeasurementInterface;

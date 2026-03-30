@@ -22,9 +22,11 @@
 #pragma once
 
 #include "../CanInterface.h"
-#include <core/MeasurementInterface.h>
-#include <QtSerialPort/QSerialPort>
+
 #include <QMutex>
+#include <QtSerialPort/QSerialPort>
+
+#include <core/MeasurementInterface.h>
 
 #include "GrIP/GrIPHandler.h"
 

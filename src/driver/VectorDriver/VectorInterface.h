@@ -22,7 +22,7 @@
 #pragma once
 
 #include "../CanInterface.h"
-#include <QString>
+
 #include <QMutex>
 
 class QCanBusDevice;

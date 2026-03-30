@@ -22,6 +22,7 @@
 #pragma once
 
 #include "../CanInterface.h"
+
 #include <QMutex>
 
 // canHandle is typedef int on both Linux and Windows CANlib SDKs.

@@ -22,32 +22,30 @@
 #include "SocketCanInterface.h"
 
 #include <chrono>
-#include <QMutexLocker>
-#include <core/Backend.h>
-#include <core/MeasurementSetup.h>
-#include <core/MeasurementNetwork.h>
-#include <core/MeasurementInterface.h>
-#include <core/CanMessage.h>
+#include <cstring>
 
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
+#include <QMutexLocker>
+#include <QProcess>
 #include <QString>
 #include <QStringList>
-#include <QProcess>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
 
-#include <linux/if.h>
+#include <core/Backend.h>
+#include <core/CanMessage.h>
+#include <core/MeasurementInterface.h>
+#include <core/MeasurementNetwork.h>
+
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <linux/can.h>
-#include <linux/can/raw.h>
 #include <linux/can/netlink.h>
+#include <linux/can/raw.h>
+#include <linux/if.h>
 #include <linux/sockios.h>
-#include <netlink/version.h>
 #include <netlink/route/link.h>
 #include <netlink/route/link/can.h>
+#include <netlink/version.h>
 
 
 SocketCanInterface::SocketCanInterface(SocketCanDriver *driver, int index, QString name)

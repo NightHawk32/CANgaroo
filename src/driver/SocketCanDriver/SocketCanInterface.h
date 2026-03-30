@@ -22,9 +22,12 @@
 #pragma once
 
 #include "../CanInterface.h"
-#include <linux/can/netlink.h>
+
 #include <string>
+
 #include <QMutex>
+
+#include <linux/can/netlink.h>
 
 class SocketCanDriver;
 
