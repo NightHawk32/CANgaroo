@@ -33,5 +33,4 @@ HEADERS += \
     $$PWD/Log.h \
     $$PWD/ThemeManager.h \
     $$PWD/ConditionalLoggingManager.h \
-    $$PWD/PythonEngine.h \
-    $$PWD/ldf_parser.h
+    $$PWD/PythonEngine.h
