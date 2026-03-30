@@ -243,29 +243,30 @@ jobs:
           # Run the NSIS installer silently; default target is C:\Program Files\Kvaser\Drivers
           Start-Process -FilePath $installer -ArgumentList "/S" -Wait
 
-          # Copy SDK artefacts to C:\kvaser-sdk using the same INC/Bin/Lib layout
-          # as the real Kvaser SDK so that KvaserDriver.pri resolves paths correctly.
-          New-Item -ItemType Directory -Force -Path "C:\kvaser-sdk\INC"
-          New-Item -ItemType Directory -Force -Path "C:\kvaser-sdk\Bin"
-          New-Item -ItemType Directory -Force -Path "C:\kvaser-sdk\Lib"
+          # Copy SDK into source tree so KvaserDriver.pri resolves paths automatically.
+          # Copy SDK into source tree so KvaserDriver.pri finds it automatically
+          $SDK_DEST = "src\driver\KvaserDriver\canlib-sdk"
+          New-Item -ItemType Directory -Force -Path "$SDK_DEST\INC"
+          New-Item -ItemType Directory -Force -Path "$SDK_DEST\Bin"
+          New-Item -ItemType Directory -Force -Path "$SDK_DEST\Lib"
 
           try {
             Write-Host "=== Copy $env:CANLIB_DIR_HEADER ==="
-            Copy-Item "$env:CANLIB_DIR_HEADER\*.h" "C:\kvaser-sdk\INC\" -ErrorAction Stop
+            Copy-Item "$env:CANLIB_DIR_HEADER\*.h" "$SDK_DEST\INC\" -ErrorAction Stop
           } catch {
             Write-Warning "Failed to copy headers: $_"
           }
 
           try {
             Write-Host "=== Copy $env:CANLIB_DIR_BIN ==="
-            Copy-Item "$env:CANLIB_DIR_BIN\canlib32.dll" "C:\kvaser-sdk\Bin\" -ErrorAction Stop
+            Copy-Item "$env:CANLIB_DIR_BIN\canlib32.dll" "$SDK_DEST\Bin\" -ErrorAction Stop
           } catch {
             Write-Warning "Failed to copy canlib32.dll: $_"
           }
 
           try {
             Write-Host "=== Copy $env:CANLIB_DIR_LIB ==="
-            Copy-Item "$env:CANLIB_DIR_LIB\canlib32.lib" "C:\kvaser-sdk\Lib\" -ErrorAction Stop
+            Copy-Item "$env:CANLIB_DIR_LIB\canlib32.lib" "$SDK_DEST\Lib\" -ErrorAction Stop
           } catch {
             Write-Warning "Failed to copy canlib32.lib: $_"
           }
@@ -277,9 +278,7 @@ jobs:
 
       - name: Configure build (Qt6 qmake)
         run: |
-          CANLIB_WIN=$(cygpath -u "C:/kvaser-sdk")
-          qmake6 CONFIG+=release CONFIG+=peakcan \
-            CANLIB_DIR="${CANLIB_WIN}"
+          qmake6 CONFIG+=release CONFIG+=kvaser CONFIG+=peakcan
 
       - name: Build
         run: |
@@ -355,7 +354,7 @@ jobs:
 
       - name: Bundle runtime DLLs
         run: |
-          cp /c/kvaser-sdk/Bin/canlib32.dll dist/
+          cp src/driver/KvaserDriver/canlib-sdk/Bin/canlib32.dll dist/
           cp src/driver/PeakCanDriver/pcan-basic-api/x64/PCANBasic.dll dist/
 
       - name: Verify missing DLLs
