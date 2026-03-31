@@ -145,9 +145,9 @@ CanInterfaceId CanMessage::getInterfaceId() const
     return _interface;
 }
 
-void CanMessage::setInterfaceId(CanInterfaceId interface)
+void CanMessage::setInterfaceId(CanInterfaceId id)
 {
-    _interface = interface;
+    _interface = id;
 }
 
 uint8_t CanMessage::getLength() const {

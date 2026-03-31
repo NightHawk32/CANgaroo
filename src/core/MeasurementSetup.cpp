@@ -125,9 +125,9 @@ CanDbMessage *MeasurementSetup::findDbMessage(const CanMessage &msg) const
     return nullptr;
 }
 
-QString MeasurementSetup::getInterfaceName(const CanInterface &interface) const
+QString MeasurementSetup::getInterfaceName(const CanInterface &id) const
 {
-    return interface.getName();
+    return id.getName();
 }
 
 int MeasurementSetup::countNetworks() const

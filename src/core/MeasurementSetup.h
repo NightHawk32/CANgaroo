@@ -44,7 +44,7 @@ public:
 
     CanDbMessage *findDbMessage(const CanMessage &msg) const;
     void rebuildMessageCache();
-    QString getInterfaceName(const CanInterface &interface) const;
+    QString getInterfaceName(const CanInterface &id) const;
 
     int countNetworks() const;
     MeasurementNetwork *getNetwork(int index) const;
