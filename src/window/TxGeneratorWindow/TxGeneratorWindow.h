@@ -74,7 +74,7 @@ private slots:
     void on_treeAvailable_itemDoubleClicked(QTreeWidgetItem *item, int column);
     void on_treeAvailable_itemSelectionChanged();
     void on_treeActive_itemSelectionChanged();
-    void on_treeActive_itemDoubleClicked_edit(QTreeWidgetItem *item, int column);
+    void treeActiveItemDoubleClicked(QTreeWidgetItem *item, int column);
     void onSendTimerTimeout();
     void onSetupChanged();
     void on_btnSelectAll_released();

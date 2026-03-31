@@ -85,6 +85,7 @@ ScriptWindow::ScriptWindow(QWidget *parent, Backend &backend)
     connect(_btnClear, &QPushButton::clicked, this, &ScriptWindow::onClearClicked);
     connect(_btnLoad,  &QPushButton::clicked, this, &ScriptWindow::onLoadClicked);
     connect(_btnSave,  &QPushButton::clicked, this, &ScriptWindow::onSaveClicked);
+    connect(_chkAutoRun, &QCheckBox::toggled, this, [this]() { emit settingsChanged(this); });
 
     connect(_engine, &PythonEngine::scriptOutput,   this, &ScriptWindow::onScriptOutput, Qt::QueuedConnection);
     connect(_engine, &PythonEngine::scriptError,    this, &ScriptWindow::onScriptError, Qt::QueuedConnection);
@@ -168,6 +169,7 @@ void ScriptWindow::onLoadClicked()
                                                      _scriptFilePath, tr("Python Files (*.py);;All Files (*)"));
     if (filename.isEmpty()) { return; }
     loadScriptFile(filename);
+    emit settingsChanged(this);
 }
 
 void ScriptWindow::onSaveClicked()
@@ -183,6 +185,7 @@ void ScriptWindow::onSaveClicked()
         out << _editor->toPlainText();
         _scriptFilePath = filename;
         _fileLabel->setText(filename);
+        emit settingsChanged(this);
     }
 }
 
@@ -254,6 +257,8 @@ bool ScriptWindow::loadXML(Backend &backend, QDomElement &el)
     {
         loadScriptFile(filepath);
     }
+    _chkAutoRun->blockSignals(true);
     _chkAutoRun->setChecked(el.attribute("autorun", "0") == "1");
+    _chkAutoRun->blockSignals(false);
     return true;
 }

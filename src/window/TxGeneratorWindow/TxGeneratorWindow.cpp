@@ -40,7 +40,7 @@ TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :
     ui->btnBulkStop->setStyleSheet("QPushButton { font-weight: bold; background: #c82333; color: white; border-radius: 4px; padding: 4px 8px; } QPushButton:hover { background: #dc3545; } QPushButton:pressed { background: #a71d2a; } QPushButton:disabled { background: #f1aeb5; }");
 
     connect(ui->treeActive, &QTreeWidget::itemChanged, this, &TxGeneratorWindow::on_treeActive_itemChanged);
-    connect(ui->treeActive, &QTreeWidget::itemDoubleClicked, this, &TxGeneratorWindow::on_treeActive_itemDoubleClicked_edit);
+    connect(ui->treeActive, &QTreeWidget::itemDoubleClicked, this, &TxGeneratorWindow::treeActiveItemDoubleClicked);
     connect(ui->treeAvailable, &QTreeWidget::itemSelectionChanged, this, &TxGeneratorWindow::on_treeAvailable_itemSelectionChanged);
 
     _bitMatrixWidget = new BitMatrixWidget(this);
@@ -546,7 +546,7 @@ void TxGeneratorWindow::on_treeActive_itemSelectionChanged()
     isLoading = false;
 }
 
-void TxGeneratorWindow::on_treeActive_itemDoubleClicked_edit(QTreeWidgetItem *item, int column)
+void TxGeneratorWindow::treeActiveItemDoubleClicked(QTreeWidgetItem *item, int column)
 {
     Q_UNUSED(column);
     int row = ui->treeActive->indexOfTopLevelItem(item);

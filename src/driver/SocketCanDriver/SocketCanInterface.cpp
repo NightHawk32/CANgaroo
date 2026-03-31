@@ -588,8 +588,12 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
 
     CanMessage msg;
 
-    int rv = select(_fd+1, &fdset, nullptr, nullptr, &timeout);
-    if (rv > 0) {
+    for (int retry = 0; retry < 12; retry++) {
+        int rv = select(_fd+1, &fdset, nullptr, nullptr, &timeout);
+        if (rv <= 0) {
+            break;
+        }
+
         int nbytes = ::read(_fd, &frame, sizeof(struct canfd_frame));
         if (nbytes < 0) {
             return false;
@@ -633,8 +637,13 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
 
         msglist.append(msg);
         addFrameBits(msg); // Track received bits
-        return true;
+
+        // Prepare for next iteration with zero timeout (non-blocking check)
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 0;
+        FD_ZERO(&fdset);
+        FD_SET(_fd, &fdset);
     }
 
-    return false;
+    return !msglist.empty();
 }

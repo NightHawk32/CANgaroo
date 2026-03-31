@@ -380,7 +380,8 @@ void MainWindow::updateRecentFilesMenu()
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if (askSaveBecauseWorkspaceModified() != QMessageBox::Cancel)
+    auto cmd = askSaveBecauseWorkspaceModified();
+    if (cmd == QMessageBox::Save)
     {
         backend().stopMeasurement();
 
@@ -392,9 +393,14 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
         event->accept();
     }
-    else
+    else if(cmd == QMessageBox::Discard)
+    {
+        event->accept();
+    }
+    else if(cmd == QMessageBox::Cancel)
     {
         event->ignore();
+        return;
     }
 
     settings.setValue("mainWindow/geometry", saveGeometry());
@@ -803,7 +809,7 @@ int MainWindow::askSaveBecauseWorkspaceModified()
             }
             else
             {
-                return QMessageBox::Cancel;
+                // Error saving
             }
         }
         return result;
@@ -974,7 +980,9 @@ QDockWidget *MainWindow::addScriptWidget(QMainWindow *parent)
     }
     QDockWidget *dock = new QDockWidget(tr("Python Script"), parent);
     dock->setObjectName(QStringLiteral("dock_script"));
-    dock->setWidget(new ScriptWindow(dock, backend()));
+    auto *scriptWindow = new ScriptWindow(dock, backend());
+    connect(scriptWindow, &ConfigurableWidget::settingsChanged, this, [this]() { setWorkspaceModified(true); });
+    dock->setWidget(scriptWindow);
     parent->addDockWidget(Qt::BottomDockWidgetArea, dock);
     setupDockFloatReparent(dock, parent);
 
