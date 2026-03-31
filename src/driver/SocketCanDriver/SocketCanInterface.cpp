@@ -588,23 +588,27 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
 
     CanMessage msg;
 
-    for (int retry = 0; retry < 12; retry++) {
+    for (int retry = 0; retry < 12; retry++)
+    {
         int rv = select(_fd+1, &fdset, nullptr, nullptr, &timeout);
         if (rv <= 0) {
             break;
         }
 
         int nbytes = ::read(_fd, &frame, sizeof(struct canfd_frame));
-        if (nbytes < 0) {
+        if (nbytes < 0)
+        {
             return false;
         }
 
-        if (_ts_mode == ts_mode_SIOCSHWTSTAMP) {
+        if (_ts_mode == ts_mode_SIOCSHWTSTAMP)
+        {
             // TODO implement me
             _ts_mode = ts_mode_SIOCGSTAMPNS;
         }
 
-        if (_ts_mode == ts_mode_SIOCGSTAMPNS) {
+        if (_ts_mode == ts_mode_SIOCGSTAMPNS)
+        {
             if (ioctl(_fd, SIOCGSTAMPNS, &ts_rcv) == 0) {
                 msg.setTimestamp(ts_rcv.tv_sec, ts_rcv.tv_nsec/1000);
             } else {
@@ -612,7 +616,8 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
             }
         }
 
-        if (_ts_mode == ts_mode_SIOCGSTAMP) {
+        if (_ts_mode == ts_mode_SIOCGSTAMP)
+        {
             ioctl(_fd, SIOCGSTAMP, &tv_rcv);
             msg.setTimestamp(tv_rcv.tv_sec, tv_rcv.tv_usec);
         }
@@ -625,13 +630,15 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
 
         bool isFD = (nbytes == CANFD_MTU);
         msg.setFD(isFD);
-        if (isFD) {
+        if (isFD)
+        {
             msg.setBRS((frame.flags & CANFD_BRS) != 0);
         }
 
         uint8_t len = frame.len;
         msg.setLength(len);
-        for (int i=0; i<len; i++) {
+        for (int i=0; i<len; i++)
+        {
             msg.setByte(i, frame.data[i]);
         }
 

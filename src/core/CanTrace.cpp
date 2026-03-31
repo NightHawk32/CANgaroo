@@ -24,6 +24,7 @@
 #include <QFile>
 #include <QTextStream>
 #include <QDataStream>
+#include <QtEndian>
 
 #include <core/Backend.h>
 #include <core/CanMessage.h>
@@ -532,7 +533,8 @@ void CanTrace::savePcap(QFile &file)
     ds << SNAPLEN;
     ds << LINKTYPE_CAN_SOCKETCAN;
 
-    for (unsigned int i = 0; i < size(); i++) {
+    for (unsigned int i = 0; i < size(); i++)
+    {
         CanMessage &msg = _data[i];
 
         int64_t ts_us  = msg.getTimestamp_us();
@@ -544,7 +546,8 @@ void CanTrace::savePcap(QFile &file)
         if (msg.isRTR())        can_id |= CAN_RTR_FLAG;
         if (msg.isErrorFrame()) can_id |= CAN_ERR_FLAG;
 
-        if (msg.isFD()) {
+        if (msg.isFD())
+        {
             // canfd_frame: 4 + 1 + 1 + 2 + 64 = 72 bytes
             quint32 frame_len = 72;
             quint8 len   = msg.getLength();
@@ -552,24 +555,27 @@ void CanTrace::savePcap(QFile &file)
             if (msg.isBRS()) flags |= CANFD_BRS;
 
             ds << ts_sec << ts_usec << frame_len << frame_len;
-            ds << can_id;
+            ds << qToBigEndian(can_id);
             ds << len;
             ds << flags;
             ds << quint8(0) << quint8(0); // __res0, __res1
             for (int j = 0; j < 64; j++) {
                 ds << (j < len ? msg.getByte(j) : quint8(0));
             }
-        } else {
+        }
+        else
+        {
             // can_frame: 4 + 1 + 3 + 8 = 16 bytes
             quint32 frame_len = 16;
             quint8 dlc = msg.getLength();
             if (dlc > 8) dlc = 8;
 
             ds << ts_sec << ts_usec << frame_len << frame_len;
-            ds << can_id;
+            ds << qToBigEndian(can_id);
             ds << dlc;
-            ds << quint8(0) << quint8(0) << quint8(0); // pad, res0, res1
-            for (int j = 0; j < 8; j++) {
+            ds << quint8(0) << quint8(0) << dlc; // pad, res0, res1
+            for (int j = 0; j < 8; j++)
+            {
                 ds << (j < dlc ? msg.getByte(j) : quint8(0));
             }
         }
@@ -731,7 +737,7 @@ void CanTrace::savePcapNg(QFile &file)
         ds << originalLen;
 
         // Packet data: SocketCAN frame
-        ds << can_id;
+        ds << qToBigEndian(can_id);
 
         if (msg.isFD()) {
             quint8 len   = msg.getLength();
