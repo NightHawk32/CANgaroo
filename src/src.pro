@@ -5,6 +5,7 @@ QT += widgets
 QT += xml
 QT += charts
 QT += serialport
+QT += svg
 
 TARGET = cangaroo
 TEMPLATE = app
@@ -99,4 +100,5 @@ include($$PWD/driver/VectorDriver/VectorDriver.pri)
 # Requires the TinyCAN driver/library installed on the target machine at runtime.
 include($$PWD/driver/TinyCanDriver/TinyCanDriver.pri)
 
-DISTFILES +=
+DISTFILES += \
+    assets/filter-symbolic.svg

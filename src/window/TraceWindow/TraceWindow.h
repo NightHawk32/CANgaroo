@@ -21,11 +21,15 @@
 
 #pragma once
 
-#include <core/ConfigurableWidget.h>
-#include <core/CanMessage.h>
+#include <QSet>
 #include <QTimer>
-#include "TraceViewTypes.h"
+
+#include <core/CanMessage.h>
+#include <core/ConfigurableWidget.h>
+#include <driver/CanDriver.h>
+
 #include "TraceFilterModel.h"
+#include "TraceViewTypes.h"
 
 namespace Ui {
 class TraceWindow;
@@ -72,6 +76,7 @@ private slots:
 
     void on_cbTraceClearpushButton(void);
     void on_cbViewMode_currentIndexChanged(int index);
+    void openFilterDialog();
 
 private slots:
     void doScrollToBottom();
@@ -96,4 +101,11 @@ private:
     AggregatedTraceViewModel *_aggregatedTraceViewModel;
     QSortFilterProxyModel *_aggregatedProxyModel;
     TraceFilterModel * _aggMonitorFilterModel; // Existing aggregated monitor mode
+
+    bool _filterShowTx = true;
+    bool _filterShowRx = true;
+    QSet<uint32_t> _filterHiddenMessageIds;
+    QSet<CanInterfaceId> _filterHiddenInterfaces;
+
+    void applyDialogFilters();
 };

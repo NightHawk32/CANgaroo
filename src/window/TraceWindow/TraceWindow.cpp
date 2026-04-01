@@ -21,18 +21,21 @@
 
 #include "TraceWindow.h"
 #include "ui_TraceWindow.h"
+
+#include <QCheckBox>
+#include <QDomDocument>
+#include <QHeaderView>
+#include <QScrollBar>
+#include <QSortFilterProxyModel>
+
+#include <core/Backend.h>
 #include <window/ConditionalLoggingDialog.h>
 
-#include <QDomDocument>
-#include <QSortFilterProxyModel>
-#include "LinearTraceViewModel.h"
 #include "AggregatedTraceViewModel.h"
-#include "UnifiedTraceViewModel.h"
+#include "LinearTraceViewModel.h"
+#include "TraceFilterDialog.h"
 #include "TraceFilterModel.h"
-#include <QCheckBox>
-#include <QScrollBar>
-#include <QHeaderView>
-#include <core/Backend.h>
+#include "UnifiedTraceViewModel.h"
 
 
 TraceWindow::TraceWindow(QWidget *parent, Backend &backend) :
@@ -106,6 +109,7 @@ TraceWindow::TraceWindow(QWidget *parent, Backend &backend) :
     connect(ui->filterLineEdit, &QLineEdit::textChanged, this, &TraceWindow::on_cbFilterChanged);
     connect(ui->TraceClearpushButton, &QPushButton::released, this, &TraceWindow::on_cbTraceClearpushButton);
     connect(ui->cbViewMode, &QComboBox::currentIndexChanged, this, &TraceWindow::on_cbViewMode_currentIndexChanged);
+    connect(ui->filterButton, &QPushButton::clicked, this, &TraceWindow::openFilterDialog);
 
     _scrollTimer.setInterval(100);
     _scrollTimer.setSingleShot(true);
@@ -203,6 +207,32 @@ bool TraceWindow::saveXML(Backend &backend, QDomDocument &xml, QDomElement &root
     elAggregated.setAttribute("SortColumn", _aggregatedProxyModel->sortColumn());
     root.appendChild(elAggregated);
 
+    QDomElement filterEl = xml.createElement("TraceFilter");
+    filterEl.setAttribute("showTx", _filterShowTx ? "1" : "0");
+    filterEl.setAttribute("showRx", _filterShowRx ? "1" : "0");
+
+    QStringList hiddenMsgs;
+    for (uint32_t id : _filterHiddenMessageIds)
+    {
+        hiddenMsgs.append(QString::number(id));
+    }
+    if (!hiddenMsgs.isEmpty())
+    {
+        filterEl.setAttribute("hiddenMessages", hiddenMsgs.join(","));
+    }
+
+    QStringList hiddenIfs;
+    for (CanInterfaceId id : _filterHiddenInterfaces)
+    {
+        hiddenIfs.append(QString::number(id));
+    }
+    if (!hiddenIfs.isEmpty())
+    {
+        filterEl.setAttribute("hiddenInterfaces", hiddenIfs.join(","));
+    }
+
+    root.appendChild(filterEl);
+
     return true;
 }
 
@@ -221,6 +251,33 @@ bool TraceWindow::loadXML(Backend &backend, QDomElement &el)
     QDomElement elAggregated = el.firstChildElement("AggregatedTraceView");
     int sortColumn = elAggregated.attribute("SortColumn", "-1").toInt();
     ui->treeAgg->sortByColumn(sortColumn, Qt::AscendingOrder);
+
+    QDomElement filterEl = el.firstChildElement("TraceFilter");
+    if (!filterEl.isNull())
+    {
+        _filterShowTx = filterEl.attribute("showTx", "1") == "1";
+        _filterShowRx = filterEl.attribute("showRx", "1") == "1";
+
+        QString hiddenMsgsStr = filterEl.attribute("hiddenMessages");
+        if (!hiddenMsgsStr.isEmpty())
+        {
+            for (const QString &s : hiddenMsgsStr.split(","))
+            {
+                _filterHiddenMessageIds.insert(s.toUInt());
+            }
+        }
+
+        QString hiddenIfsStr = filterEl.attribute("hiddenInterfaces");
+        if (!hiddenIfsStr.isEmpty())
+        {
+            for (const QString &s : hiddenIfsStr.split(","))
+            {
+                _filterHiddenInterfaces.insert(static_cast<CanInterfaceId>(s.toUInt()));
+            }
+        }
+
+        applyDialogFilters();
+    }
 
     return true;
 }
@@ -298,5 +355,43 @@ void TraceWindow::on_cbTraceClearpushButton()
 void TraceWindow::on_cbViewMode_currentIndexChanged(int index)
 {
     setMode((mode_t)ui->cbViewMode->itemData(index).toInt());
+}
+
+void TraceWindow::openFilterDialog()
+{
+    TraceFilterDialog dlg(*_backend, this);
+    dlg.setShowTx(_filterShowTx);
+    dlg.setShowRx(_filterShowRx);
+    dlg.setHiddenMessageIds(_filterHiddenMessageIds);
+    dlg.setHiddenInterfaces(_filterHiddenInterfaces);
+
+    if (dlg.exec() == QDialog::Accepted)
+    {
+        _filterShowTx = dlg.showTx();
+        _filterShowRx = dlg.showRx();
+        _filterHiddenMessageIds = dlg.hiddenMessageIds();
+        _filterHiddenInterfaces = dlg.hiddenInterfaces();
+
+        applyDialogFilters();
+        emit settingsChanged(this);
+    }
+}
+
+void TraceWindow::applyDialogFilters()
+{
+    auto applyToModel = [&](TraceFilterModel *model)
+    {
+        model->setShowTx(_filterShowTx);
+        model->setShowRx(_filterShowRx);
+        model->setHiddenMessageIds(_filterHiddenMessageIds);
+        model->setHiddenInterfaces(_filterHiddenInterfaces);
+        model->invalidate();
+    };
+
+    for (int i = 0; i < Cat_Count; ++i)
+    {
+        applyToModel(_filterModels[i]);
+    }
+    applyToModel(_aggMonitorFilterModel);
 }
 

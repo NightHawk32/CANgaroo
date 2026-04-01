@@ -78,7 +78,8 @@
          <string>Clear</string>
         </property>
         <property name="icon">
-         <iconset theme="user-trash-full"/>
+         <iconset theme="user-trash-full">
+          <normaloff>.</normaloff>.</iconset>
         </property>
         <property name="iconSize">
          <size>
@@ -111,6 +112,17 @@
         </property>
         <property name="placeholderText">
          <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="filterButton">
+        <property name="text">
+         <string>Filter</string>
+        </property>
+        <property name="icon">
+         <iconset resource="../../cangaroo.qrc">
+          <normaloff>:/assets/filter-symbolic.svg</normaloff>:/assets/filter-symbolic.svg</iconset>
         </property>
        </widget>
       </item>

@@ -1,5 +1,6 @@
 SOURCES += \
     $$PWD/TraceFilterModel.cpp \
+    $$PWD/TraceFilterDialog.cpp \
     $$PWD/LinearTraceViewModel.cpp \
     $$PWD/AggregatedTraceViewModel.cpp \
     $$PWD/BaseTraceViewModel.cpp \
@@ -14,6 +15,7 @@ HEADERS  += \
     $$PWD/BaseTraceViewModel.h \
     $$PWD/AggregatedTraceViewItem.h \
     $$PWD/TraceFilterModel.h \
+    $$PWD/TraceFilterDialog.h \
     $$PWD/UnifiedTraceItem.h \
     $$PWD/UnifiedTraceViewModel.h \
     $$PWD/TraceWindow.h \

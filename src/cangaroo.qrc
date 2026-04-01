@@ -13,5 +13,6 @@
         <file>assets/dark_theme.qss</file>
         <file>assets/trash-can-black-icon.svg</file>
         <file>assets/stack.png</file>
+        <file>assets/filter-symbolic.svg</file>
     </qresource>
 </RCC>
