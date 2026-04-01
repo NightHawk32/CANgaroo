@@ -18,7 +18,6 @@
   along with cangaroo.  If not, see <http://www.gnu.org/licenses/>.
 
 */
-
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -75,29 +74,34 @@
 
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
-    ui(new Ui::MainWindow)
+                                          ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
     _baseWindowTitle = windowTitle();
 
     QCoreApplication::setApplicationVersion(VERSION_STRING);
-    QCoreApplication::setOrganizationName("Schildkroet");
+    QCoreApplication::setOrganizationName("CANgaroo");
     QCoreApplication::setApplicationName("CANgaroo");
 
-    QLabel* versionLabel = new QLabel(this);
+    QLabel *versionLabel = new QLabel(this);
     versionLabel->setText(QString("v%1").arg(QCoreApplication::applicationVersion()));
-    versionLabel->setStyleSheet("padding-right: 15px; font-weight: bold; font-size: 11px;");
+    versionLabel->setStyleSheet("padding-right: 15px; font-weight: bold; font-size: 12px;");
     statusBar()->addPermanentWidget(versionLabel);
 
     QIcon icon(":/assets/cangaroo.png");
     setWindowIcon(icon);
 
-    connect(ui->action_Trace_View, &QAction::triggered, this, [this]() { createTraceWindow(); });
-    connect(ui->actionLog_View, &QAction::triggered, this, [this]() { addLogWidget(); });
-    connect(ui->actionGraph_View, &QAction::triggered, this, [this]() { createGraphWindow(); });
-    connect(ui->actionGraph_View_2, &QAction::triggered, this, [this]() { addGraphWidget(); });
+    connect(ui->action_Trace_View, &QAction::triggered, this, [this]()
+            { createTraceWindow(); });
+    connect(ui->actionLog_View, &QAction::triggered, this, [this]()
+            { addLogWidget(); });
+    connect(ui->actionGraph_View, &QAction::triggered, this, [this]()
+            { createGraphWindow(); });
+    connect(ui->actionGraph_View_2, &QAction::triggered, this, [this]()
+            { addGraphWidget(); });
     connect(ui->actionSetup, &QAction::triggered, this, &MainWindow::showSetupDialog);
-    connect(ui->actionTransmit_View, &QAction::triggered, this, [this]() { addRawTxWidget(); });
+    connect(ui->actionTransmit_View, &QAction::triggered, this, [this]()
+            { addRawTxWidget(); });
     connect(ui->actionGenerator_View, &QAction::triggered, this, &MainWindow::on_actionGenerator_View_triggered);
     connect(ui->actionScript_View, &QAction::triggered, this, &MainWindow::on_actionScript_View_triggered);
     connect(ui->actionReplay_View, &QAction::triggered, this, &MainWindow::on_actionReplay_View_triggered);
@@ -215,9 +219,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
                 if (!tabState.isEmpty())
                 {
                     QTimer::singleShot(0, tab, [tab, tabState]()
-                    {
-                        tab->restoreState(tabState);
-                    });
+                                       { tab->restoreState(tabState); });
                 }
             }
         }
@@ -277,8 +279,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
         "}"
         "QPushButton#btnStopMeasurement:disabled {"
         "  background-color: #f1aeb5;"
-        "}"
-        );
+        "}");
 
     qApp->installTranslator(&m_translator);
     createLanguageMenu();
@@ -302,8 +303,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
             QApplication::setStyle(QStyleFactory::create(savedStyle));
             qDebug() << "Loaded saved style:" << savedStyle;
 
-
-            if(isDarkMode())
+            if (isDarkMode())
             {
                 qDebug() << "DarkMode";
                 ThemeManager::instance().applyTheme(ThemeManager::Dark);
@@ -335,8 +335,8 @@ MainWindow::~MainWindow()
 void MainWindow::addToRecentFiles(const QString &filename)
 {
     QStringList recent = settings.value("recentFiles/list").toStringList();
-    recent.removeAll(filename);        // remove duplicate if present
-    recent.prepend(filename);          // most recent first
+    recent.removeAll(filename); // remove duplicate if present
+    recent.prepend(filename);   // most recent first
     while (recent.size() > MaxRecentFiles)
     {
         recent.removeLast();
@@ -356,12 +356,11 @@ void MainWindow::updateRecentFilesMenu()
         action->setToolTip(path);
         action->setStatusTip(path);
         connect(action, &QAction::triggered, this, [this, path]()
-        {
+                {
             if (askSaveBecauseWorkspaceModified() != QMessageBox::Cancel)
             {
                 loadWorkspaceFromFile(path);
-            }
-        });
+            } });
     }
 
     m_recentFilesMenu->setEnabled(!recent.isEmpty());
@@ -371,10 +370,9 @@ void MainWindow::updateRecentFilesMenu()
         m_recentFilesMenu->addSeparator();
         QAction *clearAction = m_recentFilesMenu->addAction(tr("Clear Recent Files"));
         connect(clearAction, &QAction::triggered, this, [this]()
-        {
+                {
             settings.remove("recentFiles/list");
-            updateRecentFilesMenu();
-        });
+            updateRecentFilesMenu(); });
     }
 }
 
@@ -393,11 +391,11 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
         event->accept();
     }
-    else if(cmd == QMessageBox::Discard)
+    else if (cmd == QMessageBox::Discard)
     {
         event->accept();
     }
-    else if(cmd == QMessageBox::Cancel)
+    else if (cmd == QMessageBox::Cancel)
     {
         event->ignore();
         return;
@@ -471,7 +469,7 @@ QMainWindow *MainWindow::createTab(QString title)
 
 QMainWindow *MainWindow::currentTab()
 {
-    return (QMainWindow*)ui->mainTabs->currentWidget();
+    return (QMainWindow *)ui->mainTabs->currentWidget();
 }
 
 void MainWindow::stopAndClearMeasurement()
@@ -484,16 +482,19 @@ void MainWindow::stopAndClearMeasurement()
 
 void MainWindow::clearWorkspace()
 {
-    while (ui->mainTabs->count() > 0) {
+    while (ui->mainTabs->count() > 0)
+    {
         QWidget *w = ui->mainTabs->widget(0);
         ui->mainTabs->removeTab(0);
         delete w;
     }
 
     // Close and clear standalone windows to prevent dangling pointers to signals
-    while (!_standaloneGraphWindows.isEmpty()) {
+    while (!_standaloneGraphWindows.isEmpty())
+    {
         GraphWindow *gw = _standaloneGraphWindows.takeFirst();
-        if (gw) {
+        if (gw)
+        {
             gw->close(); // This will trigger WA_DeleteOnClose
         }
     }
@@ -521,7 +522,7 @@ bool MainWindow::loadWorkspaceTab(QDomElement el)
 
     if (mw)
     {
-        ConfigurableWidget *mdi = dynamic_cast<ConfigurableWidget*>(mw->centralWidget());
+        ConfigurableWidget *mdi = dynamic_cast<ConfigurableWidget *>(mw->centralWidget());
         if (mdi)
         {
             mdi->loadXML(backend(), el);
@@ -550,9 +551,7 @@ bool MainWindow::loadWorkspaceTab(QDomElement el)
         {
             QByteArray state = QByteArray::fromBase64(dockState.toLatin1());
             QTimer::singleShot(0, mw, [mw, state]()
-            {
-                mw->restoreState(state);
-            });
+                               { mw->restoreState(state); });
         }
     }
 
@@ -641,12 +640,12 @@ bool MainWindow::saveWorkspaceToFile(QString filename)
 
     for (int i = 0; i < ui->mainTabs->count(); i++)
     {
-        QMainWindow *w = (QMainWindow*)ui->mainTabs->widget(i);
+        QMainWindow *w = (QMainWindow *)ui->mainTabs->widget(i);
 
         QDomElement tabEl = doc.createElement("tab");
         tabEl.setAttribute("title", ui->mainTabs->tabText(i));
 
-        ConfigurableWidget *mdi = dynamic_cast<ConfigurableWidget*>(w->centralWidget());
+        ConfigurableWidget *mdi = dynamic_cast<ConfigurableWidget *>(w->centralWidget());
         if (!mdi || !mdi->saveXML(backend(), doc, tabEl))
         {
             log_error(QString(tr("Cannot save window settings to file: %1")).arg(filename));
@@ -837,31 +836,32 @@ QMainWindow *MainWindow::createTraceWindow(QString title)
     QDockWidget *dockScriptWidget = addScriptWidget(mm);
     QDockWidget *dockReplayWidget = addReplayWidget(mm);
 
-    TxGeneratorWindow *gen = qobject_cast<TxGeneratorWindow*>(dockGeneratorWidget->widget());
-    if (gen) {
+    TxGeneratorWindow *gen = qobject_cast<TxGeneratorWindow *>(dockGeneratorWidget->widget());
+    if (gen)
+    {
         connect(gen, &TxGeneratorWindow::loopbackFrame, trace, &TraceWindow::addMessage);
     }
 
-    mm->splitDockWidget(dockGeneratorWidget,dockLogWidget,Qt::Horizontal);
-    mm->splitDockWidget(dockGraphWidget,dockLogWidget,Qt::Horizontal);
-    mm->splitDockWidget(dockScriptWidget,dockLogWidget,Qt::Horizontal);
-    mm->splitDockWidget(dockReplayWidget,dockLogWidget,Qt::Horizontal);
+    mm->splitDockWidget(dockGeneratorWidget, dockLogWidget, Qt::Horizontal);
+    mm->splitDockWidget(dockGraphWidget, dockLogWidget, Qt::Horizontal);
+    mm->splitDockWidget(dockScriptWidget, dockLogWidget, Qt::Horizontal);
+    mm->splitDockWidget(dockReplayWidget, dockLogWidget, Qt::Horizontal);
     mm->tabifyDockWidget(dockGeneratorWidget, dockGraphWidget);
     mm->tabifyDockWidget(dockGraphWidget, dockScriptWidget);
     mm->tabifyDockWidget(dockScriptWidget, dockReplayWidget);
-    mm->splitDockWidget(dockStatusWidget,dockLogWidget,Qt::Horizontal);
+    mm->splitDockWidget(dockStatusWidget, dockLogWidget, Qt::Horizontal);
     mm->tabifyDockWidget(dockStatusWidget, dockLogWidget); // Status first, Log next
 
     // Use QTimer to resize docks and ensure correct focus/visibility after layout is complete
-    QTimer::singleShot(0, mm, [mm, dockLogWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget, dockReplayWidget]() {
+    QTimer::singleShot(0, mm, [mm, dockLogWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget, dockReplayWidget]()
+                       {
         dockStatusWidget->show();
         dockStatusWidget->raise();
         dockGeneratorWidget->show();
         dockGeneratorWidget->raise();
 
         mm->resizeDocks({dockLogWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget, dockReplayWidget}, {600, 600, 600, 600, 600}, Qt::Vertical);
-        mm->resizeDocks({dockLogWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget, dockReplayWidget}, {1200, 1200, 1200, 1200, 1200}, Qt::Horizontal);
-    });
+        mm->resizeDocks({dockLogWidget, dockGeneratorWidget, dockStatusWidget, dockScriptWidget, dockReplayWidget}, {1200, 1200, 1200, 1200, 1200}, Qt::Horizontal); });
 
     ui->mainTabs->setCurrentWidget(mm);
 
@@ -888,9 +888,8 @@ void MainWindow::createStandaloneGraphWindow()
     gw->setAttribute(Qt::WA_DeleteOnClose);
 
     _standaloneGraphWindows.append(gw);
-    connect(gw, &QObject::destroyed, this, [this, gw]() {
-        _standaloneGraphWindows.removeAll(gw);
-    });
+    connect(gw, &QObject::destroyed, this, [this, gw]()
+            { _standaloneGraphWindows.removeAll(gw); });
 
     gw->show();
 }
@@ -981,7 +980,8 @@ QDockWidget *MainWindow::addScriptWidget(QMainWindow *parent)
     QDockWidget *dock = new QDockWidget(tr("Python Script"), parent);
     dock->setObjectName(QStringLiteral("dock_script"));
     auto *scriptWindow = new ScriptWindow(dock, backend());
-    connect(scriptWindow, &ConfigurableWidget::settingsChanged, this, [this]() { setWorkspaceModified(true); });
+    connect(scriptWindow, &ConfigurableWidget::settingsChanged, this, [this]()
+            { setWorkspaceModified(true); });
     dock->setWidget(scriptWindow);
     parent->addDockWidget(Qt::BottomDockWidgetArea, dock);
     setupDockFloatReparent(dock, parent);
@@ -1006,9 +1006,9 @@ QDockWidget *MainWindow::addReplayWidget(QMainWindow *parent)
 
 void MainWindow::setupDockFloatReparent(QDockWidget *dock, QMainWindow *innerParent)
 {
-    (void) innerParent;
+    (void)innerParent;
     connect(dock, &QDockWidget::topLevelChanged, this, [dock](bool floating)
-    {
+            {
         if (floating)
         {
             // Deferred so we don't destroy the window handle mid-drag.
@@ -1020,8 +1020,7 @@ void MainWindow::setupDockFloatReparent(QDockWidget *dock, QMainWindow *innerPar
                                      | Qt::WindowTitleHint | Qt::WindowCloseButtonHint);
                 dock->show();
             });
-        }
-    });
+        } });
 }
 
 void MainWindow::on_actionCan_Status_View_triggered()
@@ -1096,6 +1095,10 @@ void MainWindow::startMeasurement()
     }
     else
     {
+        if (settings.value("ui/clearTraceOnStart", true).toBool())
+        {
+            backend().clearTrace();
+        }
         backend().startMeasurement();
     }
 }
@@ -1104,7 +1107,7 @@ void MainWindow::stopMeasurement()
 {
     backend().stopMeasurement();
 
-    for (auto *gen : findChildren<TxGeneratorWindow*>())
+    for (auto *gen : findChildren<TxGeneratorWindow *>())
     {
         gen->stopAll();
     }
@@ -1119,19 +1122,23 @@ void MainWindow::saveTraceToFile()
     fileDialog.setAcceptMode(QFileDialog::AcceptSave);
     fileDialog.setOption(QFileDialog::DontConfirmOverwrite, false);
     fileDialog.selectNameFilter(defaultFilter);
-    fileDialog.setDefaultSuffix("asc");
+    // fileDialog.setDefaultSuffix("asc");
     if (fileDialog.exec())
     {
         QString filename = fileDialog.selectedFiles().at(0);
 
         // If the user typed a name without extension, derive it from the selected filter
-        if (!filename.contains('.')) {
+        if (!filename.contains('.'))
+        {
             QString selectedFilter = fileDialog.selectedNameFilter();
             QRegularExpression extRe("\\*(\\.\\w+)");
             QRegularExpressionMatch match = extRe.match(selectedFilter);
-            if (match.hasMatch()) {
+            if (match.hasMatch())
+            {
                 filename += match.captured(1);
-            } else {
+            }
+            else
+            {
                 filename += ".asc";
             }
         }
@@ -1448,7 +1455,6 @@ void MainWindow::importFullTrace()
     agg->layoutChanged();*/
 }
 
-
 void MainWindow::showSettingsDialog()
 {
     SettingsDialog dlg(settings, m_languageActionGroup, this);
@@ -1499,6 +1505,9 @@ void MainWindow::showSettingsDialog()
     // Apply restore window setting
     ui->actionRestore_Window->setChecked(dlg.restoreWindowEnabled());
     settings.setValue("ui/restoreWindowGeometry", dlg.restoreWindowEnabled());
+
+    // Apply clear trace on start setting
+    settings.setValue("ui/clearTraceOnStart", dlg.clearTraceOnStart());
 }
 
 void MainWindow::applyFontSize(int pointSize)
@@ -1515,4 +1524,3 @@ void MainWindow::applyFontSize(int pointSize)
         w->setFont(wf);
     }
 }
-

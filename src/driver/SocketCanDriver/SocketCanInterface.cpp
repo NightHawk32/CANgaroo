@@ -63,8 +63,6 @@ SocketCanInterface::SocketCanInterface(SocketCanDriver *driver, int index, QStri
     _status.tx_errors = 0;
     _status.tx_dropped = 0;
 
-    _status.tx_dropped = 0;
-
     memset(&_config, 0, sizeof(_config));
     memset(&_offset_stats, 0, sizeof(_offset_stats));
 
@@ -249,6 +247,11 @@ bool SocketCanInterface::updateStatus()
                 _status.rx_errors = rtnl_link_can_berr_rx(link);
                 _status.tx_errors = rtnl_link_can_berr_tx(link);
             } else {
+                const char *type = rtnl_link_get_type(link);
+                if (type && strcmp(type, "vcan") == 0)
+                {
+                    _status.can_state = state_ok;
+                }
                 _status.rx_errors = 0;
                 _status.tx_errors = 0;
             }
@@ -479,6 +482,7 @@ bool SocketCanInterface::isOpen()
 
 void SocketCanInterface::close() {
     ::close(_fd);
+    _fd = -1;
     _isOpen = false;
 }
 
@@ -515,13 +519,7 @@ void SocketCanInterface::sendMessage(const CanMessage &msg) {
 
         if (::write(_fd, &frame, sizeof(struct canfd_frame)) < 0) {
             log_error(QString("SocketCanInterface: Error writing FD frame to %1: %2").arg(_name, strerror(errno)));
-        } else {
-            CanMessage txMsg = msg;
-            txMsg.setRX(false);
-            auto now = std::chrono::system_clock::now().time_since_epoch();
-            txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
-            QMutexLocker lock(&_txMutex);
-            txMsgList.append(txMsg);
+            return;
         }
     } else {
         struct can_frame frame;
@@ -552,29 +550,31 @@ void SocketCanInterface::sendMessage(const CanMessage &msg) {
 
         if (::write(_fd, &frame, sizeof(struct can_frame)) < 0) {
             log_error(QString("SocketCanInterface: Error writing frame to %1: %2").arg(_name, strerror(errno)));
-        } else {
-            CanMessage txMsg = msg;
-            txMsg.setRX(false);
-            auto now = std::chrono::system_clock::now().time_since_epoch();
-            txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
-            QMutexLocker lock(&_txMutex);
-            txMsgList.append(txMsg);
+            return;
         }
     }
-    // Track sent bits
+
+    // Only reached on successful write
     addFrameBits(msg);
+
+    CanMessage txMsg = msg;
+    txMsg.setRX(false);
+    auto now = std::chrono::system_clock::now().time_since_epoch();
+    txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
+    QMutexLocker lock(&_txMutex);
+    txMsgList.append(txMsg);
 }
 
-bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) {
-
+bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
+{
     struct canfd_frame frame;
     struct timespec ts_rcv;
     struct timeval tv_rcv;
     struct timeval timeout;
     fd_set fdset;
 
-    timeout.tv_sec = timeout_ms / 1000;
-    timeout.tv_usec = 1000 * (timeout_ms % 1000);
+    timeout.tv_sec = 0;//timeout_ms / 1000;
+    timeout.tv_usec = 0;//1000 * (timeout_ms % 1000);
 
     FD_ZERO(&fdset);
     FD_SET(_fd, &fdset);
@@ -588,7 +588,7 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
 
     CanMessage msg;
 
-    for (int retry = 0; retry < 12; retry++)
+    for (int retry = 0; retry < 4; retry++)
     {
         int rv = select(_fd+1, &fdset, nullptr, nullptr, &timeout);
         if (rv <= 0) {
@@ -598,7 +598,7 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
         int nbytes = ::read(_fd, &frame, sizeof(struct canfd_frame));
         if (nbytes < 0)
         {
-            return false;
+            break;
         }
 
         if (_ts_mode == ts_mode_SIOCSHWTSTAMP)
@@ -618,8 +618,9 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
 
         if (_ts_mode == ts_mode_SIOCGSTAMP)
         {
-            ioctl(_fd, SIOCGSTAMP, &tv_rcv);
-            msg.setTimestamp(tv_rcv.tv_sec, tv_rcv.tv_usec);
+            if (ioctl(_fd, SIOCGSTAMP, &tv_rcv) == 0) {
+                msg.setTimestamp(tv_rcv.tv_sec, tv_rcv.tv_usec);
+            }
         }
 
         msg.setId(frame.can_id & CAN_EFF_MASK);

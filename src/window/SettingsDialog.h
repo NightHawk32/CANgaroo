@@ -18,11 +18,13 @@ public:
     QString selectedTheme() const;
     QString selectedLanguage() const;
     bool restoreWindowEnabled() const;
+    bool clearTraceOnStart() const;
     int selectedFontSize() const;
 
 private:
     QComboBox *m_themeCombo;
     QComboBox *m_languageCombo;
     QCheckBox *m_restoreWindowCheck;
+    QCheckBox *m_clearTraceOnStartCheck;
     QSpinBox *m_fontSizeSpin;
 };

@@ -70,6 +70,11 @@ SettingsDialog::SettingsDialog(QSettings &settings, QActionGroup *languageGroup,
     m_restoreWindowCheck->setChecked(settings.value("ui/restoreWindowGeometry", false).toBool());
     form->addRow(m_restoreWindowCheck);
 
+    // --- Clear trace on measurement start ---
+    m_clearTraceOnStartCheck = new QCheckBox(tr("Clear trace on measurement start"), this);
+    m_clearTraceOnStartCheck->setChecked(settings.value("ui/clearTraceOnStart", true).toBool());
+    form->addRow(m_clearTraceOnStartCheck);
+
     mainLayout->addLayout(form);
     mainLayout->addSpacing(10);
 
@@ -93,6 +98,11 @@ QString SettingsDialog::selectedLanguage() const
 bool SettingsDialog::restoreWindowEnabled() const
 {
     return m_restoreWindowCheck->isChecked();
+}
+
+bool SettingsDialog::clearTraceOnStart() const
+{
+    return m_clearTraceOnStartCheck->isChecked();
 }
 
 int SettingsDialog::selectedFontSize() const
