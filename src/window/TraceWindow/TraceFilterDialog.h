@@ -33,6 +33,8 @@ public:
 
 private slots:
     void clearFilters();
+    void selectAllMessages();
+    void deselectAllMessages();
 
 private:
     void populateMessages(Backend &backend);

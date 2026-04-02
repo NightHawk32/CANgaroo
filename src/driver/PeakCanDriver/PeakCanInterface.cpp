@@ -219,6 +219,10 @@ bool PeakCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int time
     }
 
     bool hasTx = !msglist.isEmpty();
+    if (hasTx)
+    {
+        timeout_ms = 1;
+    }
 
     DWORD waitResult = WaitForSingleObject(static_cast<HANDLE>(_rxEvent), timeout_ms);
     if (waitResult != WAIT_OBJECT_0) {

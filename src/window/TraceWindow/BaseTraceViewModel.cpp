@@ -52,7 +52,7 @@ QVariant BaseTraceViewModel::headerData(int section, Qt::Orientation orientation
                 case column_index:
                 return QString(tr("Index"));
                 case column_timestamp:
-                    return QString(tr("Timestamp"));
+                    return QString(tr("Time"));
                 case column_channel:
                     return QString(tr("Channel"));
                 case column_direction:

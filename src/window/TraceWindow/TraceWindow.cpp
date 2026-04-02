@@ -83,7 +83,7 @@ TraceWindow::TraceWindow(QWidget *parent, Backend &backend) :
         tree->setColumnWidth(BaseTraceViewModel::column_index, 70);
         tree->setColumnWidth(BaseTraceViewModel::column_timestamp, 100);
         tree->setColumnWidth(BaseTraceViewModel::column_channel, 120);
-        tree->setColumnWidth(BaseTraceViewModel::column_direction, 50);
+        tree->setColumnWidth(BaseTraceViewModel::column_direction, 56);
         tree->setColumnWidth(BaseTraceViewModel::column_type, 80);
         tree->setColumnWidth(BaseTraceViewModel::column_canid, 110);
         tree->setColumnWidth(BaseTraceViewModel::column_sender, 150);

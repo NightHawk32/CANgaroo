@@ -239,6 +239,10 @@ bool KvaserInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeo
         _txMsgList.clear();
     }
     bool hasTx = !msglist.isEmpty();
+    if (hasTx)
+    {
+        timeout_ms = 1;
+    }
 
     long id;
     uint8_t data[8];

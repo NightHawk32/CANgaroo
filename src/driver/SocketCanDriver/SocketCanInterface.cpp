@@ -573,8 +573,8 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
     struct timeval timeout;
     fd_set fdset;
 
-    timeout.tv_sec = 0;//timeout_ms / 1000;
-    timeout.tv_usec = 0;//1000 * (timeout_ms % 1000);
+    timeout.tv_sec = timeout_ms / 1000;
+    timeout.tv_usec = 1000 * (timeout_ms % 1000);
 
     FD_ZERO(&fdset);
     FD_SET(_fd, &fdset);
@@ -584,6 +584,12 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
         QMutexLocker lock(&_txMutex);
         msglist.append(txMsgList);
         txMsgList.clear();
+    }
+
+    if (!msglist.isEmpty())
+    {
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 0;
     }
 
     CanMessage msg;

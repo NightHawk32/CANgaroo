@@ -40,6 +40,17 @@ TraceFilterDialog::TraceFilterDialog(Backend &backend, QWidget *parent)
     // --- DBC Messages ---
     auto *msgGroup = new QGroupBox(tr("DBC Messages"), this);
     auto *msgLayout = new QVBoxLayout(msgGroup);
+
+    auto *msgBtnLayout = new QHBoxLayout;
+    auto *selectAllBtn = new QPushButton(tr("Select All"), msgGroup);
+    auto *deselectAllBtn = new QPushButton(tr("Deselect All"), msgGroup);
+    connect(selectAllBtn, &QPushButton::clicked, this, &TraceFilterDialog::selectAllMessages);
+    connect(deselectAllBtn, &QPushButton::clicked, this, &TraceFilterDialog::deselectAllMessages);
+    msgBtnLayout->addWidget(selectAllBtn);
+    msgBtnLayout->addWidget(deselectAllBtn);
+    msgBtnLayout->addStretch();
+    msgLayout->addLayout(msgBtnLayout);
+
     m_messageList = new QListWidget(msgGroup);
     msgLayout->addWidget(m_messageList);
     populateMessages(backend);
@@ -183,6 +194,30 @@ void TraceFilterDialog::setHiddenInterfaces(const QSet<CanInterfaceId> &ids)
         {
             auto ifId = static_cast<CanInterfaceId>(item->data(Qt::UserRole).toUInt());
             item->setCheckState(ids.contains(ifId) ? Qt::Unchecked : Qt::Checked);
+        }
+    }
+}
+
+void TraceFilterDialog::selectAllMessages()
+{
+    for (int i = 0; i < m_messageList->count(); ++i)
+    {
+        auto *item = m_messageList->item(i);
+        if (item->flags() & Qt::ItemIsUserCheckable)
+        {
+            item->setCheckState(Qt::Checked);
+        }
+    }
+}
+
+void TraceFilterDialog::deselectAllMessages()
+{
+    for (int i = 0; i < m_messageList->count(); ++i)
+    {
+        auto *item = m_messageList->item(i);
+        if (item->flags() & Qt::ItemIsUserCheckable)
+        {
+            item->setCheckState(Qt::Unchecked);
         }
     }
 }

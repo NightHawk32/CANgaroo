@@ -196,6 +196,10 @@ bool TinyCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int time
         _txMsgList.clear();
     }
     bool hasTx = !msglist.isEmpty();
+    if (hasTx)
+    {
+        timeout_ms = 1;
+    }
 
     if (!_device->framesAvailable()) {
         if (!_device->waitForFramesReceived(static_cast<int>(timeout_ms))) {
