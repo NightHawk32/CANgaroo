@@ -42,9 +42,9 @@
 #### Install dependencies:
 | Distribution | Command |
 | :--- | :--- |
-| **Ubuntu / Debian** | `sudo apt install build-essential qt6-base-dev qt6-charts-dev qt6-serialport-dev qt6-serialbus-dev qt6-tools-dev qt6-l10n-tools libqt6opengl6-dev libnl-3-dev libnl-route-3-dev python3-dev pybind11-dev pkg-config` |
-| **Fedora** | `sudo dnf install gcc-c++ make qt6-qtbase-devel qt6-qtcharts-devel qt6-qtserialport-devel qt6-qtserialbus-devel qt6-qttools-devel libnl3-devel python3-devel pybind11-devel pkgconfig` |
-| **Arch Linux** | `sudo pacman -S base-devel qt6-base qt6-charts qt6-serialport qt6-serialbus qt6-tools libnl python pybind11 pkgconf` |
+| **Ubuntu / Debian** | `sudo apt install build-essential qt6-base-dev qt6-charts-dev qt6-serialport-dev qt6-serialbus-dev qt6-svg-dev qt6-tools-dev qt6-l10n-tools libqt6opengl6-dev libnl-3-dev libnl-route-3-dev python3-dev pybind11-dev pkg-config` |
+| **Fedora** | `sudo dnf install gcc-c++ make qt6-qtbase-devel qt6-qtcharts-devel qt6-qtserialport-devel qt6-qtserialbus-devel qt6-qtsvg-devel qt6-qttools-devel libnl3-devel python3-devel pybind11-devel pkgconfig` |
+| **Arch Linux** | `sudo pacman -S base-devel qt6-base qt6-charts qt6-serialport qt6-serialbus qt6-svg qt6-tools libnl python pybind11 pkgconf` |
 
 #### Build:
 ```bash
