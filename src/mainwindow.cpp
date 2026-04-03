@@ -1040,6 +1040,8 @@ bool MainWindow::showSetupDialog()
     {
         new_setup.cloneFrom(backend().getSetup());
     }
+
+#if defined(__linux__)
     // Default SocketCAN interfaces to "configured by OS" when not running as root
     if (geteuid() != 0)
     {
@@ -1055,6 +1057,7 @@ bool MainWindow::showSetupDialog()
             }
         }
     }
+#endif
 
     if (_setupDlg->showSetupDialog(new_setup))
     {
