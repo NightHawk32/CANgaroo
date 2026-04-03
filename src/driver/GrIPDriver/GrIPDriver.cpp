@@ -35,8 +35,8 @@
 
 
 GrIPDriver::GrIPDriver(Backend &backend)
-  : CanDriver(backend),
-    setupPage(new GenericCanSetupPage())
+    : CanDriver(backend),
+      setupPage(new GenericCanSetupPage())
 {
     QObject::connect(&backend, &Backend::onSetupDialogCreated, setupPage, &GenericCanSetupPage::onSetupDialogCreated);
     m_GrIPHandler = nullptr;
@@ -44,7 +44,7 @@ GrIPDriver::GrIPDriver(Backend &backend)
 
 GrIPDriver::~GrIPDriver()
 {
-    if(m_GrIPHandler)
+    if (m_GrIPHandler)
         delete m_GrIPHandler;
 }
 
@@ -60,15 +60,15 @@ bool GrIPDriver::update()
         // fprintf(stderr, "   Description : %s \r\n", info.description().toStdString().c_str());
         // fprintf(stderr, "   Manufacturer: %s \r\n", info.manufacturer().toStdString().c_str());
 
-        if(info.vendorIdentifier() == 0x1A86 && info.productIdentifier() == 0x55D3)
+        if (info.vendorIdentifier() == 0x1A86 && info.productIdentifier() == 0x55D3)
         {
             std::cout << "   ++ CANIL detected" << std::endl;
 
-            if(m_GrIPHandler == nullptr)
+            if (m_GrIPHandler == nullptr)
             {
                 m_GrIPHandler = new GrIPHandler(info.portName());
 
-                if(!m_GrIPHandler->Start())
+                if (!m_GrIPHandler->Start())
                 {
                 }
 
@@ -78,21 +78,21 @@ bool GrIPDriver::update()
 
             // Create new CANIL interface
             _manufacturer = GrIPInterface::CANIL;
-            for(int i = 0; i < m_GrIPHandler->Channels_CAN(); i++)
+            for (int i = 0; i < m_GrIPHandler->Channels_CAN(); i++)
             {
-                createOrUpdateInterface(interface_cnt, m_GrIPHandler, "CANIL-CAN"+QString::number(interface_cnt), false, _manufacturer);
+                createOrUpdateInterface(interface_cnt, m_GrIPHandler, "CANIL-CAN" + QString::number(interface_cnt), false, _manufacturer);
                 interface_cnt++;
             }
             // Create new CANIL interface wit FD support
-            for(int i = 0; i < m_GrIPHandler->Channels_CANFD(); i++)
+            for (int i = 0; i < m_GrIPHandler->Channels_CANFD(); i++)
             {
-                createOrUpdateInterface(interface_cnt, m_GrIPHandler, "CANIL-CANFD"+QString::number(interface_cnt), true, _manufacturer);
+                createOrUpdateInterface(interface_cnt, m_GrIPHandler, "CANIL-CANFD" + QString::number(interface_cnt), true, _manufacturer);
                 interface_cnt++;
             }
         }
         else
         {
-            //std::cout << "   !! This is not a GrIP device!" << std::endl;
+            // std::cout << "   !! This is not a GrIP device!" << std::endl;
         }
     }
 
@@ -108,7 +108,7 @@ GrIPInterface *GrIPDriver::createOrUpdateInterface(int index, GrIPHandler *hdl, 
 {
     for (auto *intf : getInterfaces())
     {
-        GrIPInterface *scif = dynamic_cast<GrIPInterface*>(intf);
+        GrIPInterface *scif = dynamic_cast<GrIPInterface *>(intf);
         if (scif->getIfIndex() == index)
         {
             scif->setName(name);

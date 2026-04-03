@@ -33,15 +33,14 @@
 
 #include "GrIP/GrIPHandler.h"
 
-
 GrIPInterface::GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer)
-    : CanInterface(reinterpret_cast<CanDriver*>(driver)),
-    _manufacturer(manufacturer),
-    _idx(index),
-    _isOpen(false),
-    _isOffline(false),
-    _name(name),
-    m_GrIPHandler(hdl)
+    : CanInterface(reinterpret_cast<CanDriver *>(driver)),
+      _manufacturer(manufacturer),
+      _idx(index),
+      _isOpen(false),
+      _isOffline(false),
+      _name(name),
+      m_GrIPHandler(hdl)
 {
     _settings.setBitrate(500000);
     _settings.setSamplePoint(875);
@@ -76,12 +75,11 @@ QString GrIPInterface::getDetailsStr() const
     if (_manufacturer == CANIL)
     {
         return _config.supports_canfd
-            ? tr("CANIL with CANFD support")
-            : tr("CANIL with standard CAN support");
+                   ? tr("CANIL with CANFD support")
+                   : tr("CANIL with standard CAN support");
     }
     return tr("Not Supported");
 }
-
 
 QString GrIPInterface::getName() const
 {
@@ -267,8 +265,8 @@ void GrIPInterface::open()
 
     // Apply bit rate — use custom value if set, otherwise use the selected preset.
     const uint32_t baud = _settings.isCustomBitrate()
-        ? _settings.customBitrate()
-        : _settings.bitrate();
+                              ? _settings.customBitrate()
+                              : _settings.bitrate();
     m_GrIPHandler->CAN_SetBaudrate(_idx, baud > 0 ? baud : 10000);
 
     m_GrIPHandler->Mode(_idx, _settings.isListenOnlyMode());

@@ -33,7 +33,6 @@
 
 class GrIPDriver;
 
-
 struct can_config_t
 {
     bool supports_canfd;
@@ -44,7 +43,6 @@ struct can_config_t
     uint32_t ctrl_mode;
     uint32_t restart_ms;
 };
-
 
 struct can_status_t
 {
@@ -58,7 +56,6 @@ struct can_status_t
     int tx_errors;
     uint64_t tx_dropped;
 };
-
 
 class GrIPInterface : public CanInterface
 {
@@ -126,8 +123,8 @@ private:
     can_config_t _config;
     can_status_t _status;
 
-    qint64 _lastStateMsec;  ///< Timestamp of last open(); used to auto-clear error state after 3 s.
-    qint64 _lastReadMsec;   ///< Timestamp of last readMessage() execution; used for rate-limiting.
+    qint64 _lastStateMsec; ///< Timestamp of last open(); used to auto-clear error state after 3 s.
+    qint64 _lastReadMsec;  ///< Timestamp of last readMessage() execution; used for rate-limiting.
 
     GrIPHandler *m_GrIPHandler;
 

@@ -28,12 +28,8 @@
 #include <core/CanDbMessage.h>
 #include <driver/CanInterface.h>
 
-
 ReplayWindow::ReplayWindow(QWidget *parent, Backend &backend)
-    : ConfigurableWidget(parent)
-    , _backend(&backend)
-    , _playbackIndex(0)
-    , _playing(false)
+    : ConfigurableWidget(parent), _backend(&backend), _playbackIndex(0), _playing(false)
 {
     auto *mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(2, 2, 2, 2);
@@ -148,16 +144,18 @@ void ReplayWindow::retranslateUi()
 void ReplayWindow::onLoadClicked()
 {
     QString filename = QFileDialog::getOpenFileName(this, tr("Load Trace File"),
-        _traceFilePath,
-        tr("All Supported (*.asc *.candump *.pcap *.pcapng);;Vector ASC (*.asc);;Linux candump (*.candump);;PCAP (*.pcap);;PCAPng (*.pcapng);;All Files (*)"));
-    if (filename.isEmpty()) { return; }
+                                                    _traceFilePath,
+                                                    tr("All Supported (*.asc *.candump *.pcap *.pcapng);;Vector ASC (*.asc);;Linux candump (*.candump);;PCAP (*.pcap);;PCAPng (*.pcapng);;All Files (*)"));
+    if (filename.isEmpty())
+    {
+        return;
+    }
     loadTraceFile(filename);
 }
 
 void ReplayWindow::loadTraceFile(const QString &filename)
 {
-    bool isBinary = filename.endsWith(".pcap", Qt::CaseInsensitive)
-                 || filename.endsWith(".pcapng", Qt::CaseInsensitive);
+    bool isBinary = filename.endsWith(".pcap", Qt::CaseInsensitive) || filename.endsWith(".pcapng", Qt::CaseInsensitive);
 
     QFile file(filename);
     if (!file.open(isBinary ? QIODevice::ReadOnly : (QIODevice::ReadOnly | QIODevice::Text)))
@@ -212,9 +210,9 @@ void ReplayWindow::loadTraceFile(const QString &filename)
 
     double duration = _messages.last().getFloatTimestamp() - _messages.first().getFloatTimestamp();
     QString info = tr("File: %1\nMessages: %2\nDuration: %3 s")
-        .arg(QFileInfo(filename).fileName())
-        .arg(_messages.size())
-        .arg(duration, 0, 'f', 3);
+                       .arg(QFileInfo(filename).fileName())
+                       .arg(_messages.size())
+                       .arg(duration, 0, 'f', 3);
     _infoBox->setPlainText(info);
 
     buildFilterTree();
@@ -234,10 +232,16 @@ bool ReplayWindow::parseCanDump(QFile &file)
     while (!stream.atEnd())
     {
         QString line = stream.readLine().trimmed();
-        if (line.isEmpty()) { continue; }
+        if (line.isEmpty())
+        {
+            continue;
+        }
 
         QRegularExpressionMatch match = re.match(line);
-        if (!match.hasMatch()) { continue; }
+        if (!match.hasMatch())
+        {
+            continue;
+        }
 
         double timestamp = match.captured(1).toDouble();
         QString interface = match.captured(2);
@@ -249,7 +253,8 @@ bool ReplayWindow::parseCanDump(QFile &file)
         msg.setTimestamp(timestamp);
 
         // Error frame: error flag bit set in ID
-        if (rawId & 0x20000000) {
+        if (rawId & 0x20000000)
+        {
             msg.setErrorFrame(true);
             msg.setId(rawId & ~0x20000000);
             msg.setLength(0);
@@ -263,30 +268,38 @@ bool ReplayWindow::parseCanDump(QFile &file)
         msg.setId(rawId);
         msg.setRX(true);
 
-        if (separator == "##") {
+        if (separator == "##")
+        {
             // CANFD: first char is flags byte, rest is data
             msg.setFD(true);
-            if (!payload.isEmpty()) {
+            if (!payload.isEmpty())
+            {
                 uint8_t flags = QString(payload[0]).toUInt(nullptr, 16);
                 msg.setBRS((flags & 0x1) != 0);
                 QString dataStr = payload.mid(1);
                 int dlc = dataStr.length() / 2;
                 msg.setLength(dlc);
-                for (int i = 0; i < dlc; i++) {
+                for (int i = 0; i < dlc; i++)
+                {
                     msg.setByte(i, dataStr.mid(i * 2, 2).toUInt(nullptr, 16));
                 }
             }
-        } else if (payload.startsWith('R') || payload.startsWith('r')) {
+        }
+        else if (payload.startsWith('R') || payload.startsWith('r'))
+        {
             // RTR: #R or #R8 (R followed by optional DLC)
             msg.setRTR(true);
             QString dlcStr = payload.mid(1);
             int dlc = dlcStr.isEmpty() ? 0 : dlcStr.toInt();
             msg.setLength(dlc);
-        } else {
+        }
+        else
+        {
             // Classic CAN
             int dlc = payload.length() / 2;
             msg.setLength(dlc);
-            for (int i = 0; i < dlc; i++) {
+            for (int i = 0; i < dlc; i++)
+            {
                 msg.setByte(i, payload.mid(i * 2, 2).toUInt(nullptr, 16));
             }
         }
@@ -306,17 +319,29 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
     while (!stream.atEnd())
     {
         QString line = stream.readLine().trimmed();
-        if (line.isEmpty()) { continue; }
+        if (line.isEmpty())
+        {
+            continue;
+        }
 
         // Data lines start with a number (timestamp)
-        if (!line[0].isDigit()) { continue; }
+        if (!line[0].isDigit())
+        {
+            continue;
+        }
 
         QStringList parts = line.split(QRegularExpression("\\s+"));
-        if (parts.size() < 3) { continue; }
+        if (parts.size() < 3)
+        {
+            continue;
+        }
 
         bool ok = false;
         double timestamp = parts[0].toDouble(&ok);
-        if (!ok) { continue; }
+        if (!ok)
+        {
+            continue;
+        }
 
         QString channel = parts[1];
 
@@ -334,30 +359,51 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
             continue;
         }
 
-        if (parts.size() < 6) { continue; }
+        if (parts.size() < 6)
+        {
+            continue;
+        }
 
-                // CANFD format: timestamp CANFD channel Rx/Tx ID flags 0 0 DLC DataLength data...
+        // CANFD format: timestamp CANFD channel Rx/Tx ID flags 0 0 DLC DataLength data...
         if (parts[1].compare("CANFD", Qt::CaseInsensitive) == 0)
         {
-            if (parts.size() < 10) { continue; }
+            if (parts.size() < 10)
+            {
+                continue;
+            }
 
             QString channel = parts[2];
             QString dir = parts[3];
             QString idStr = parts[4];
             bool extended = idStr.endsWith('x') || idStr.endsWith('X');
-            if (extended) { idStr.chop(1); }
+            if (extended)
+            {
+                idStr.chop(1);
+            }
 
             uint32_t canId = idStr.toUInt(&ok, 16);
-            if (!ok) { continue; }
+            if (!ok)
+            {
+                continue;
+            }
 
             int flags = parts[5].toInt(&ok);
-            if (!ok) { flags = 0; }
+            if (!ok)
+            {
+                flags = 0;
+            }
 
             // parts[6] and parts[7] are reserved (0 0)
             int dlc = parts[8].toInt(&ok);
-            if (!ok) { continue; }
+            if (!ok)
+            {
+                continue;
+            }
             int dataLength = parts[9].toInt(&ok);
-            if (!ok) { dataLength = dlc; }
+            if (!ok)
+            {
+                dataLength = dlc;
+            }
 
             CanMessage msg;
             msg.setTimestamp(timestamp);
@@ -381,10 +427,16 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
 
         QString idStr = parts[2];
         bool extended = idStr.endsWith('x') || idStr.endsWith('X');
-        if (extended) { idStr.chop(1); }
+        if (extended)
+        {
+            idStr.chop(1);
+        }
 
         uint32_t canId = idStr.toUInt(&ok, 16);
-        if (!ok) { continue; }
+        if (!ok)
+        {
+            continue;
+        }
 
         QString dir = parts[3];
         // parts[4] = "d" or "r" (data/remote frame)
@@ -392,7 +444,10 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
 
         int dlcIdx = 5;
         int dlc = parts[dlcIdx].toInt(&ok);
-        if (!ok) { continue; }
+        if (!ok)
+        {
+            continue;
+        }
 
         CanMessage msg;
         msg.setTimestamp(timestamp);
@@ -422,10 +477,11 @@ static bool parseSocketCanFrame(QDataStream &ds, quint32 capturedLen,
     static const quint32 CAN_EFF_FLAG = 0x80000000;
     static const quint32 CAN_RTR_FLAG = 0x40000000;
     static const quint32 CAN_ERR_FLAG = 0x20000000;
-    static const quint32 CAN_ID_MASK  = 0x1FFFFFFF;
+    static const quint32 CAN_ID_MASK = 0x1FFFFFFF;
 
     valid = false;
-    if (capturedLen < 16) return false;
+    if (capturedLen < 16)
+        return false;
 
     quint32 can_id;
     quint8 dlc_or_len, pad1, pad2, pad3;
@@ -437,14 +493,16 @@ static bool parseSocketCanFrame(QDataStream &ds, quint32 capturedLen,
     // Read data bytes
     uint8_t data[64] = {};
     int toRead = qMin(static_cast<int>(capturedLen) - 8, dataLen);
-    for (int i = 0; i < toRead; i++) {
+    for (int i = 0; i < toRead; i++)
+    {
         quint8 b;
         ds >> b;
         data[i] = b;
     }
     // Skip remaining bytes if any
     int remaining = static_cast<int>(capturedLen) - 8 - toRead;
-    for (int i = 0; i < remaining; i++) {
+    for (int i = 0; i < remaining; i++)
+    {
         quint8 b;
         ds >> b;
     }
@@ -455,17 +513,21 @@ static bool parseSocketCanFrame(QDataStream &ds, quint32 capturedLen,
     msg.setErrorFrame((can_id & CAN_ERR_FLAG) != 0);
     msg.setRX(true);
 
-    if (isFD) {
+    if (isFD)
+    {
         msg.setFD(true);
         msg.setBRS((pad1 & 0x01) != 0); // pad1 is flags in canfd_frame
         msg.setLength(dlc_or_len);
-    } else {
+    }
+    else
+    {
         msg.setFD(false);
         quint8 d = dlc_or_len > 8 ? 8 : dlc_or_len;
         msg.setLength(d);
     }
 
-    for (int i = 0; i < msg.getLength(); i++) {
+    for (int i = 0; i < msg.getLength(); i++)
+    {
         msg.setByte(i, data[i]);
     }
 
@@ -476,8 +538,8 @@ static bool parseSocketCanFrame(QDataStream &ds, quint32 capturedLen,
 bool ReplayWindow::parsePcap(QFile &file)
 {
     // PCAP global header: magic(4) + ver_maj(2) + ver_min(2) + thiszone(4) + sigfigs(4) + snaplen(4) + linktype(4)
-    static const quint32 PCAP_MAGIC_LE    = 0xA1B2C3D4;
-    static const quint32 PCAP_MAGIC_BE    = 0xD4C3B2A1;
+    static const quint32 PCAP_MAGIC_LE = 0xA1B2C3D4;
+    static const quint32 PCAP_MAGIC_BE = 0xD4C3B2A1;
     static const quint32 PCAP_MAGIC_NS_LE = 0xA1B23C4D; // nanosecond variant
     static const quint32 PCAP_MAGIC_NS_BE = 0x4D3CB2A1;
     static const quint32 LINKTYPE_CAN_SOCKETCAN = 227;
@@ -489,13 +551,18 @@ bool ReplayWindow::parsePcap(QFile &file)
     ds >> magic;
 
     bool nanoSecond = false;
-    if (magic == PCAP_MAGIC_LE || magic == PCAP_MAGIC_NS_LE) {
+    if (magic == PCAP_MAGIC_LE || magic == PCAP_MAGIC_NS_LE)
+    {
         ds.setByteOrder(QDataStream::LittleEndian);
         nanoSecond = (magic == PCAP_MAGIC_NS_LE);
-    } else if (magic == PCAP_MAGIC_BE || magic == PCAP_MAGIC_NS_BE) {
+    }
+    else if (magic == PCAP_MAGIC_BE || magic == PCAP_MAGIC_NS_BE)
+    {
         ds.setByteOrder(QDataStream::BigEndian);
         nanoSecond = (magic == PCAP_MAGIC_NS_BE);
-    } else {
+    }
+    else
+    {
         return false;
     }
 
@@ -504,19 +571,25 @@ bool ReplayWindow::parsePcap(QFile &file)
     quint32 sigfigs, snaplen, linktype;
     ds >> verMaj >> verMin >> thiszone >> sigfigs >> snaplen >> linktype;
 
-    if (linktype != LINKTYPE_CAN_SOCKETCAN) {
+    if (linktype != LINKTYPE_CAN_SOCKETCAN)
+    {
         return false;
     }
 
-    while (!ds.atEnd()) {
+    while (!ds.atEnd())
+    {
         quint32 ts_sec, ts_frac, capturedLen, originalLen;
         ds >> ts_sec >> ts_frac >> capturedLen >> originalLen;
-        if (ds.status() != QDataStream::Ok) break;
+        if (ds.status() != QDataStream::Ok)
+            break;
 
         int64_t ts_us;
-        if (nanoSecond) {
+        if (nanoSecond)
+        {
             ts_us = static_cast<int64_t>(ts_sec) * 1000000 + static_cast<int64_t>(ts_frac) / 1000;
-        } else {
+        }
+        else
+        {
             ts_us = static_cast<int64_t>(ts_sec) * 1000000 + static_cast<int64_t>(ts_frac);
         }
 
@@ -524,7 +597,8 @@ bool ReplayWindow::parsePcap(QFile &file)
         bool valid;
         parseSocketCanFrame(ds, capturedLen, msg, valid);
 
-        if (valid) {
+        if (valid)
+        {
             msg.setTimestamp_us(ts_us);
             _messages.append(msg);
             _messageInterfaces.append(QStringLiteral("pcap0"));
@@ -548,29 +622,39 @@ bool ReplayWindow::parsePcapNg(QFile &file)
     QDataStream ds(&file);
 
     // Interface metadata collected from IDB blocks
-    struct IfaceInfo {
+    struct IfaceInfo
+    {
         QString name;
         quint32 linkType = 0;
         quint8 tsResol = 6; // default: 10^-6 (microseconds)
     };
     QVector<IfaceInfo> interfaces;
 
-    while (!ds.atEnd()) {
+    while (!ds.atEnd())
+    {
         qint64 blockStart = file.pos();
         quint32 blockType, blockTotalLen;
         ds >> blockType >> blockTotalLen;
-        if (ds.status() != QDataStream::Ok) break;
-        if (blockTotalLen < 12) break;
+        if (ds.status() != QDataStream::Ok)
+            break;
+        if (blockTotalLen < 12)
+            break;
 
-        if (blockType == BT_SHB) {
+        if (blockType == BT_SHB)
+        {
             // Section Header Block — determine byte order
             quint32 bom;
             ds >> bom;
-            if (bom == BYTE_ORDER_MAGIC) {
+            if (bom == BYTE_ORDER_MAGIC)
+            {
                 ds.setByteOrder(QDataStream::LittleEndian);
-            } else if (bom == 0x4D3C2B1A) {
+            }
+            else if (bom == 0x4D3C2B1A)
+            {
                 ds.setByteOrder(QDataStream::BigEndian);
-            } else {
+            }
+            else
+            {
                 return false;
             }
             // Re-read blockTotalLen with correct byte order
@@ -579,7 +663,8 @@ bool ReplayWindow::parsePcapNg(QFile &file)
             // Skip rest: version(4) + section_length(8) + options
             interfaces.clear();
         }
-        else if (blockType == BT_IDB) {
+        else if (blockType == BT_IDB)
+        {
             // Interface Description Block: linktype(2) + reserved(2) + snaplen(4) + options
             quint16 linkType, reserved;
             quint32 snaplen;
@@ -591,20 +676,26 @@ bool ReplayWindow::parsePcapNg(QFile &file)
             // Parse options for if_name (code 2) and if_tsresol (code 9)
             qint64 optStart = file.pos();
             qint64 optEnd = blockStart + blockTotalLen - 4; // exclude trailing total_length
-            while (file.pos() + 4 <= optEnd) {
+            while (file.pos() + 4 <= optEnd)
+            {
                 quint16 optCode, optLen;
                 ds >> optCode >> optLen;
-                if (optCode == 0) break; // opt_endofopt
+                if (optCode == 0)
+                    break; // opt_endofopt
                 qint64 valStart = file.pos();
 
-                if (optCode == 2 && optLen > 0) {
+                if (optCode == 2 && optLen > 0)
+                {
                     // if_name
                     QByteArray nameBytes(optLen, 0);
                     ds.readRawData(nameBytes.data(), optLen);
                     // Remove trailing null if present
-                    if (nameBytes.endsWith('\0')) nameBytes.chop(1);
+                    if (nameBytes.endsWith('\0'))
+                        nameBytes.chop(1);
                     info.name = QString::fromUtf8(nameBytes);
-                } else if (optCode == 9 && optLen == 1) {
+                }
+                else if (optCode == 9 && optLen == 1)
+                {
                     // if_tsresol
                     quint8 tsresol;
                     ds >> tsresol;
@@ -616,24 +707,28 @@ bool ReplayWindow::parsePcapNg(QFile &file)
                 file.seek(valStart + paddedLen);
             }
 
-            if (info.name.isEmpty()) {
+            if (info.name.isEmpty())
+            {
                 info.name = QStringLiteral("if%1").arg(interfaces.size());
             }
             interfaces.append(info);
         }
-        else if (blockType == BT_EPB) {
+        else if (blockType == BT_EPB)
+        {
             // Enhanced Packet Block: interface_id(4) + ts_high(4) + ts_low(4) + captured_len(4) + original_len(4) + data
             quint32 ifaceIdx, tsHigh, tsLow, capturedLen, originalLen;
             ds >> ifaceIdx >> tsHigh >> tsLow >> capturedLen >> originalLen;
 
-            if (ifaceIdx >= static_cast<quint32>(interfaces.size())) {
+            if (ifaceIdx >= static_cast<quint32>(interfaces.size()))
+            {
                 // Unknown interface, skip
                 file.seek(blockStart + blockTotalLen);
                 continue;
             }
 
             const IfaceInfo &iface = interfaces[ifaceIdx];
-            if (iface.linkType != LINKTYPE_CAN_SOCKETCAN) {
+            if (iface.linkType != LINKTYPE_CAN_SOCKETCAN)
+            {
                 file.seek(blockStart + blockTotalLen);
                 continue;
             }
@@ -641,16 +736,24 @@ bool ReplayWindow::parsePcapNg(QFile &file)
             // Convert timestamp to microseconds
             uint64_t tsRaw = (static_cast<uint64_t>(tsHigh) << 32) | tsLow;
             int64_t ts_us;
-            if (iface.tsResol == 6) {
+            if (iface.tsResol == 6)
+            {
                 ts_us = static_cast<int64_t>(tsRaw); // already microseconds
-            } else if (iface.tsResol == 9) {
+            }
+            else if (iface.tsResol == 9)
+            {
                 ts_us = static_cast<int64_t>(tsRaw / 1000); // nanoseconds
-            } else if (iface.tsResol == 3) {
+            }
+            else if (iface.tsResol == 3)
+            {
                 ts_us = static_cast<int64_t>(tsRaw * 1000); // milliseconds
-            } else {
+            }
+            else
+            {
                 // Generic power-of-10: tsResol is the exponent
                 double scale = 1e6;
-                for (quint8 e = 0; e < iface.tsResol; e++) scale /= 10.0;
+                for (quint8 e = 0; e < iface.tsResol; e++)
+                    scale /= 10.0;
                 ts_us = static_cast<int64_t>(tsRaw * scale);
             }
 
@@ -658,7 +761,8 @@ bool ReplayWindow::parsePcapNg(QFile &file)
             bool valid;
             parseSocketCanFrame(ds, capturedLen, msg, valid);
 
-            if (valid) {
+            if (valid)
+            {
                 msg.setTimestamp_us(ts_us);
                 _messages.append(msg);
                 _messageInterfaces.append(iface.name);
@@ -679,7 +783,8 @@ void ReplayWindow::buildFilterTree()
     _enabledDirs.clear();
     _channelCombos.clear();
 
-    struct IdInfo {
+    struct IdInfo
+    {
         int count = 0;
         bool hasRx = false;
         bool hasTx = false;
@@ -811,8 +916,10 @@ void ReplayWindow::onFilterItemChanged(QTreeWidgetItem *item, int column)
                 auto *child = item->child(i);
                 uint32_t id = child->data(0, Qt::UserRole).toUInt();
                 uint8_t dirs = 0;
-                if (child->data(2, Qt::CheckStateRole).isValid() && child->checkState(2) == Qt::Checked) dirs |= DirRx;
-                if (child->data(3, Qt::CheckStateRole).isValid() && child->checkState(3) == Qt::Checked) dirs |= DirTx;
+                if (child->data(2, Qt::CheckStateRole).isValid() && child->checkState(2) == Qt::Checked)
+                    dirs |= DirRx;
+                if (child->data(3, Qt::CheckStateRole).isValid() && child->checkState(3) == Qt::Checked)
+                    dirs |= DirTx;
                 _enabledDirs[iface][id] = dirs;
             }
         }
@@ -830,8 +937,10 @@ void ReplayWindow::onFilterItemChanged(QTreeWidgetItem *item, int column)
         if (item->checkState(0) == Qt::Checked)
         {
             uint8_t dirs = 0;
-            if (item->data(2, Qt::CheckStateRole).isValid() && item->checkState(2) == Qt::Checked) dirs |= DirRx;
-            if (item->data(3, Qt::CheckStateRole).isValid() && item->checkState(3) == Qt::Checked) dirs |= DirTx;
+            if (item->data(2, Qt::CheckStateRole).isValid() && item->checkState(2) == Qt::Checked)
+                dirs |= DirRx;
+            if (item->data(3, Qt::CheckStateRole).isValid() && item->checkState(3) == Qt::Checked)
+                dirs |= DirTx;
             _enabledDirs[iface][id] = dirs;
         }
         else if (column == 0)
@@ -842,8 +951,10 @@ void ReplayWindow::onFilterItemChanged(QTreeWidgetItem *item, int column)
         {
             // RX/TX checkbox changed — update direction flags
             uint8_t dirs = 0;
-            if (item->data(2, Qt::CheckStateRole).isValid() && item->checkState(2) == Qt::Checked) dirs |= DirRx;
-            if (item->data(3, Qt::CheckStateRole).isValid() && item->checkState(3) == Qt::Checked) dirs |= DirTx;
+            if (item->data(2, Qt::CheckStateRole).isValid() && item->checkState(2) == Qt::Checked)
+                dirs |= DirRx;
+            if (item->data(3, Qt::CheckStateRole).isValid() && item->checkState(3) == Qt::Checked)
+                dirs |= DirTx;
             _enabledDirs[iface][id] = dirs;
         }
 
@@ -885,8 +996,16 @@ void ReplayWindow::onSelectAllClicked()
             child->setCheckState(0, Qt::Checked);
             uint32_t id = child->data(0, Qt::UserRole).toUInt();
             uint8_t dirs = 0;
-            if (child->data(2, Qt::CheckStateRole).isValid()) { child->setCheckState(2, Qt::Checked); dirs |= DirRx; }
-            if (child->data(3, Qt::CheckStateRole).isValid()) { child->setCheckState(3, Qt::Checked); dirs |= DirTx; }
+            if (child->data(2, Qt::CheckStateRole).isValid())
+            {
+                child->setCheckState(2, Qt::Checked);
+                dirs |= DirRx;
+            }
+            if (child->data(3, Qt::CheckStateRole).isValid())
+            {
+                child->setCheckState(3, Qt::Checked);
+                dirs |= DirTx;
+            }
             _enabledDirs[iface][id] = dirs;
         }
     }
@@ -906,8 +1025,10 @@ void ReplayWindow::onDeselectAllClicked()
         {
             auto *child = ifaceItem->child(j);
             child->setCheckState(0, Qt::Unchecked);
-            if (child->data(2, Qt::CheckStateRole).isValid()) child->setCheckState(2, Qt::Unchecked);
-            if (child->data(3, Qt::CheckStateRole).isValid()) child->setCheckState(3, Qt::Unchecked);
+            if (child->data(2, Qt::CheckStateRole).isValid())
+                child->setCheckState(2, Qt::Unchecked);
+            if (child->data(3, Qt::CheckStateRole).isValid())
+                child->setCheckState(3, Qt::Unchecked);
         }
     }
     _filterTree->blockSignals(false);
@@ -918,9 +1039,11 @@ bool ReplayWindow::isMessageEnabled(int index) const
     const QString &iface = _messageInterfaces[index];
     uint32_t id = _messages[index].isErrorFrame() ? ErrorFrameId : _messages[index].getId();
     auto ifaceIt = _enabledDirs.constFind(iface);
-    if (ifaceIt == _enabledDirs.constEnd()) return false;
+    if (ifaceIt == _enabledDirs.constEnd())
+        return false;
     auto idIt = ifaceIt->constFind(id);
-    if (idIt == ifaceIt->constEnd()) return false;
+    if (idIt == ifaceIt->constEnd())
+        return false;
     uint8_t flag = _messages[index].isRX() ? DirRx : DirTx;
     return (*idIt & flag) != 0;
 }
@@ -928,13 +1051,19 @@ bool ReplayWindow::isMessageEnabled(int index) const
 CanInterfaceId ReplayWindow::getMappedInterface(const QString &channel) const
 {
     auto it = _channelCombos.constFind(channel);
-    if (it == _channelCombos.constEnd()) { return -1; }
+    if (it == _channelCombos.constEnd())
+    {
+        return -1;
+    }
     return static_cast<CanInterfaceId>(it.value()->currentData().toInt());
 }
 
 void ReplayWindow::onPlayClicked()
 {
-    if (_messages.isEmpty()) { return; }
+    if (_messages.isEmpty())
+    {
+        return;
+    }
 
     _playing = true;
     _btnPlay->setEnabled(false);
@@ -1006,7 +1135,10 @@ void ReplayWindow::onTimerTick()
     while (_playbackIndex < _messages.size())
     {
         double msgTime = _messages[_playbackIndex].getFloatTimestamp();
-        if (msgTime > traceDeadline) { break; }
+        if (msgTime > traceDeadline)
+        {
+            break;
+        }
 
         if (isMessageEnabled(_playbackIndex))
         {
@@ -1028,15 +1160,23 @@ void ReplayWindow::onTimerTick()
 
             if (!sentOnInterface)
             {
-                if (mappedInt >= 0) {
+                if (mappedInt >= 0)
+                {
                     msg.setInterfaceId(static_cast<CanInterfaceId>(mappedInt));
                 }
 
                 bool moreToFollow = false;
                 for (int next = _playbackIndex + 1; next < _messages.size(); next++)
                 {
-                    if (_messages[next].getFloatTimestamp() > traceDeadline) { break; }
-                    if (isMessageEnabled(next)) { moreToFollow = true; break; }
+                    if (_messages[next].getFloatTimestamp() > traceDeadline)
+                    {
+                        break;
+                    }
+                    if (isMessageEnabled(next))
+                    {
+                        moreToFollow = true;
+                        break;
+                    }
                 }
 
                 trace->enqueueMessage(msg, moreToFollow);
@@ -1071,7 +1211,7 @@ void ReplayWindow::updatePositionLabel()
 
 bool ReplayWindow::saveXML(Backend &backend, QDomDocument &xml, QDomElement &root)
 {
-    (void) backend;
+    (void)backend;
     root.setAttribute("file", _traceFilePath);
     root.setAttribute("autoplay", _cbAutoplay->isChecked() ? "1" : "0");
     root.setAttribute("loop", _cbLoop->isChecked() ? "1" : "0");
@@ -1107,7 +1247,7 @@ bool ReplayWindow::saveXML(Backend &backend, QDomDocument &xml, QDomElement &roo
 
 bool ReplayWindow::loadXML(Backend &backend, QDomElement &el)
 {
-    (void) backend;
+    (void)backend;
     _cbAutoplay->setChecked(el.attribute("autoplay", "0") == "1");
     _cbLoop->setChecked(el.attribute("loop", "0") == "1");
     _speedSpin->setValue(el.attribute("speed", "1.0").toDouble());
@@ -1131,7 +1271,10 @@ bool ReplayWindow::loadXML(Backend &backend, QDomElement &el)
             QString mappedName = filterEl.attribute("mappedInterface");
             QComboBox *combo = _channelCombos[channel];
             int idx = combo->findText(mappedName);
-            if (idx >= 0) { combo->setCurrentIndex(idx); }
+            if (idx >= 0)
+            {
+                combo->setCurrentIndex(idx);
+            }
         }
 
         // Restore filter dir flags
@@ -1154,13 +1297,19 @@ bool ReplayWindow::loadXML(Backend &backend, QDomElement &el)
             for (int t = 0; t < _filterTree->topLevelItemCount(); t++)
             {
                 QTreeWidgetItem *ifaceItem = _filterTree->topLevelItem(t);
-                if (ifaceItem->text(0) != channel) { continue; }
+                if (ifaceItem->text(0) != channel)
+                {
+                    continue;
+                }
 
                 for (int c = 0; c < ifaceItem->childCount(); c++)
                 {
                     QTreeWidgetItem *idItem = ifaceItem->child(c);
                     uint32_t id = idItem->data(0, Qt::UserRole).toUInt();
-                    if (!_enabledDirs[channel].contains(id)) { continue; }
+                    if (!_enabledDirs[channel].contains(id))
+                    {
+                        continue;
+                    }
 
                     uint8_t dirs = _enabledDirs[channel][id];
                     _filterTree->blockSignals(true);
