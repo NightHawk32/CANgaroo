@@ -19,7 +19,6 @@ CandleApiInterface::CandleApiInterface(CandleApiDriver *driver, candle_handle ha
     _settings.setSamplePoint(875);
 
 
-
     // Timings for 170MHz processors (CANable 2.0)
     // Tseg1: 2..256 Tseg2: 2..128 sjw: 1..128 brp: 1..512
     // Note: as expressed below, Tseg1 does not include 1 count for prop phase
@@ -199,6 +198,10 @@ QList<CanTiming> CandleApiInterface::getAvailableBitrates()
             }
         }
     }
+    else
+    {
+        log_info(tr("CandleApi::getAvailableBitrates() failed!"));
+    }
 
     return retval;
 }
@@ -207,20 +210,33 @@ bool CandleApiInterface::setBitTiming(uint32_t bitrate, uint32_t samplePoint)
 {
     candle_capability_t caps;
     if (!candle_channel_get_capabilities(_handle, 0, &caps)) {
+        log_info(tr("CandleApi::setBitTiming(): Could not get capabilities!"));
         return false;
     }
 
+    log_info(tr("CandleApi::setBitTiming(): looking for bitrate=%1, samplePoint=%2, fclk_can=%3")
+        .arg(bitrate).arg(samplePoint).arg(caps.fclk_can));
+
     for (const auto &t : _timings) {
+        log_info(tr("CandleApi::setBitTiming(): candidate baseClk=%1, bitrate=%2, samplePoint=%3")
+            .arg(t.getBaseClk()).arg(t.getBitrate()).arg(t.getSamplePoint()));
+
         if ( (t.getBaseClk() == caps.fclk_can)
           && (t.getBitrate()==bitrate)
           && (t.getSamplePoint()==samplePoint) )
         {
             candle_bittiming_t timing = t.getTiming();
-            return candle_channel_set_timing(_handle, 0, &timing);
+            bool ok = candle_channel_set_timing(_handle, 0, &timing);
+            if (!ok) {
+                log_info(tr("CandleApi::setBitTiming(): candle_channel_set_timing() failed!"));
+            }
+            return ok;
         }
     }
 
     // no valid timing found
+    log_info(tr("CandleApi::setBitTiming(): no matching timing entry found for bitrate=%1, samplePoint=%2, fclk_can=%3")
+        .arg(bitrate).arg(samplePoint).arg(caps.fclk_can));
     return false;
 }
 
@@ -228,12 +244,14 @@ void CandleApiInterface::open()
 {
     if (!candle_dev_open(_handle)) {
         // TODO what?
+        log_info(tr("CandleApi::open() failed!"));
         _isOpen = false;
         return;
     }
 
     if (!setBitTiming(_settings.bitrate(), _settings.samplePoint())) {
         // TODO what?
+        log_info(tr("CandleApi::Bitrate failed!"));
         _isOpen = false;
         return;
     }
