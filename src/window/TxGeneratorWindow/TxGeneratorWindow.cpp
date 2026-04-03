@@ -6,6 +6,7 @@
 #include <QDialog>
 #include <QVBoxLayout>
 #include <QDialogButtonBox>
+#include <QComboBox>
 #include <core/Backend.h>
 #include <core/MeasurementNetwork.h>
 #include <core/MeasurementSetup.h>
@@ -41,6 +42,7 @@ TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :
 
     connect(ui->treeActive, &QTreeWidget::itemChanged, this, &TxGeneratorWindow::on_treeActive_itemChanged);
     connect(ui->treeActive, &QTreeWidget::itemDoubleClicked, this, &TxGeneratorWindow::treeActiveItemDoubleClicked);
+
     connect(ui->treeAvailable, &QTreeWidget::itemSelectionChanged, this, &TxGeneratorWindow::on_treeAvailable_itemSelectionChanged);
 
     _bitMatrixWidget = new BitMatrixWidget(this);
@@ -570,13 +572,27 @@ void TxGeneratorWindow::treeActiveItemDoubleClicked(QTreeWidgetItem *item, int c
     connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
 
     CanMessage editedMsg = cm.msg;
+    CanInterfaceId editedInterfaceId = cm.interfaceId;
+    QString editedInterfaceName = cm.interfaceName;
+
     connect(rawTx, &RawTxWindow::messageUpdated, this, [&editedMsg](const CanMessage &msg) {
         editedMsg = msg;
+    });
+    connect(rawTx, &RawTxWindow::interfaceSelected, this, [&](CanInterfaceId id) {
+        editedInterfaceId = id;
+        for (int i = 0; i < ui->comboBoxInterface->count(); ++i) {
+            if (static_cast<CanInterfaceId>(ui->comboBoxInterface->itemData(i).toUInt()) == id) {
+                editedInterfaceName = ui->comboBoxInterface->itemText(i);
+                break;
+            }
+        }
     });
 
     if (dlg.exec() == QDialog::Accepted)
     {
-        cm.msg = editedMsg;
+        cm.msg           = editedMsg;
+        cm.interfaceId   = editedInterfaceId;
+        cm.interfaceName = editedInterfaceName;
         updateRowUI(row);
     }
 }
@@ -834,3 +850,4 @@ void TxGeneratorWindow::onRandomPayloadReleased()
         }
     }
 }
+

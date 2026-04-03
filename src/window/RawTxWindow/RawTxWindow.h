@@ -30,6 +30,7 @@ public slots:
 
 signals:
     void messageUpdated(const CanMessage &msg);
+    void interfaceSelected(CanInterfaceId interfaceId);
 
 private slots:
     void onFieldChanged();
@@ -43,6 +44,7 @@ private:
 
     QLineEdit *_editId;
     QComboBox *_comboDlc;
+    QComboBox *_comboInterface;
     QCheckBox *_cbExtended;
     QCheckBox *_cbRTR;
     QCheckBox *_cbFD;

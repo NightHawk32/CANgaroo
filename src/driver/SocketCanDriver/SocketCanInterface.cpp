@@ -35,6 +35,7 @@
 #include <core/MeasurementNetwork.h>
 
 #include <unistd.h>
+#include <sys/utsname.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -76,6 +77,14 @@ QString SocketCanInterface::getName() const {
     return _name;
 }
 
+QString SocketCanInterface::getVersion()
+{
+    struct utsname uts;
+    if (uname(&uts) == 0)
+        return QString("Kernel %1").arg(uts.release);
+    return CanInterface::getVersion();
+}
+
 void SocketCanInterface::setName(QString name) {
     _name = name;
 }
@@ -86,7 +95,7 @@ QList<CanTiming> SocketCanInterface::getAvailableBitrates()
     QList<unsigned> bitrates({10000, 20000, 50000, 83333, 100000, 125000, 250000, 500000, 800000, 1000000});
     QList<unsigned> samplePoints({500, 625, 750, 875});
 
-    unsigned i=0;
+    unsigned i = 0;
     for (unsigned br : bitrates) {
         for (unsigned sp : samplePoints) {
             retval << CanTiming(i++, br, 0, sp);
@@ -150,6 +159,9 @@ void SocketCanInterface::applyConfig(const MeasurementInterface &mi)
     }
 
     log_info(QString("calling ip link to reconfigure interface %1").arg(getName()));
+    if (geteuid() != 0) {
+        log_warning(QString("Not running as root — ip link may fail; See README for setup"));
+    }
 
     // Bring interface down first
     QProcess proc_down;
@@ -192,12 +204,82 @@ void SocketCanInterface::applyConfig(const MeasurementInterface &mi)
     }
 }
 
-#if (LIBNL_CURRENT<=216)
-#warning we need at least libnl3 version 3.2.22 to be able to get link status via netlink
-int rtnl_link_can_state(struct rtnl_link *link, uint32_t *state) {
-    (void) link;
-    (void) state;
+#include <linux/netlink.h>
+#include <linux/rtnetlink.h>
+
+// Read CAN state directly via a raw RTNETLINK RTM_GETLINK request.
+// Used as the primary implementation on libnl < 3.2.22 and as a fallback
+// on newer libnl when rtnl_link_can_state() returns an error.
+static int can_state_from_rtnetlink(int ifindex, uint32_t *state)
+{
+    int fd = socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);
+    if (fd < 0)
+        return -1;
+
+    struct {
+        struct nlmsghdr hdr;
+        struct ifinfomsg ifi;
+    } req{};
+    req.hdr.nlmsg_len   = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+    req.hdr.nlmsg_type  = RTM_GETLINK;
+    req.hdr.nlmsg_flags = NLM_F_REQUEST;
+    req.hdr.nlmsg_seq   = 1;
+    req.ifi.ifi_index   = ifindex;
+
+    if (send(fd, &req, req.hdr.nlmsg_len, 0) < 0) {
+        close(fd);
+        return -1;
+    }
+
+    char buf[16384];
+    ssize_t len = recv(fd, buf, sizeof(buf), 0);
+    close(fd);
+    if (len < 0)
+        return -1;
+
+    for (auto *nlh = reinterpret_cast<struct nlmsghdr *>(buf);
+         NLMSG_OK(nlh, static_cast<uint32_t>(len));
+         nlh = NLMSG_NEXT(nlh, len))
+    {
+        if (nlh->nlmsg_type != RTM_NEWLINK)
+            continue;
+
+        auto *ifi = reinterpret_cast<struct ifinfomsg *>(NLMSG_DATA(nlh));
+        if (ifi->ifi_index != ifindex)
+            continue;
+
+        auto *rta     = IFLA_RTA(ifi);
+        int   rta_len = static_cast<int>(IFLA_PAYLOAD(nlh));
+        for (; RTA_OK(rta, rta_len); rta = RTA_NEXT(rta, rta_len)) {
+            if (rta->rta_type != IFLA_LINKINFO)
+                continue;
+
+            auto *info     = reinterpret_cast<struct rtattr *>(RTA_DATA(rta));
+            int   info_len = static_cast<int>(RTA_PAYLOAD(rta));
+            for (; RTA_OK(info, info_len); info = RTA_NEXT(info, info_len)) {
+                if (info->rta_type != IFLA_INFO_DATA)
+                    continue;
+
+                auto *ca     = reinterpret_cast<struct rtattr *>(RTA_DATA(info));
+                int   ca_len = static_cast<int>(RTA_PAYLOAD(info));
+                for (; RTA_OK(ca, ca_len); ca = RTA_NEXT(ca, ca_len)) {
+                    if (ca->rta_type != IFLA_CAN_STATE)
+                        continue;
+                    *state = *reinterpret_cast<uint32_t *>(RTA_DATA(ca));
+                    return 0;
+                }
+            }
+        }
+    }
+
     return -1;
+}
+
+#if (LIBNL_CURRENT<=216)
+#warning libnl3 < 3.2.22 detected - using raw RTNETLINK fallback for rtnl_link_can_state
+int rtnl_link_can_state(struct rtnl_link *link, uint32_t *state)
+{
+    return can_state_from_rtnetlink(rtnl_link_get_ifindex(link), state);
 }
 #endif
 
@@ -222,7 +304,9 @@ bool SocketCanInterface::updateStatus()
             _status.tx_dropped = rtnl_link_get_stat(link, RTNL_LINK_TX_DROPPED);
 
             if (rtnl_link_is_can(link)) {
-                if (rtnl_link_can_state(link, &state)==0) {
+                if (rtnl_link_can_state(link, &state) == 0
+                    || can_state_from_rtnetlink(rtnl_link_get_ifindex(link), &state) == 0)
+                {
                     _status.can_state = state;
                 }
                 _status.rx_errors = rtnl_link_can_berr_rx(link);
@@ -325,7 +409,9 @@ unsigned SocketCanInterface::getBitrate() {
             for (auto *mi : network->interfaces()) {
                 if (mi->canInterface() == getId()) {
                     unsigned fallbackBr = mi->bitrate();
-                    log_info(QString("SocketCanInterface %1: getBitrate() fallback to %2 (ID match %3)").arg(_name).arg(fallbackBr).arg(getId()));
+                    if (!_name.startsWith("vcan")) {
+                        log_info(QString("SocketCanInterface %1: getBitrate() fallback to %2 (ID match %3)").arg(_name).arg(fallbackBr).arg(getId()));
+                    }
                     return fallbackBr;
                 }
             }

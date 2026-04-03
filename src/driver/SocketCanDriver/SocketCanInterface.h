@@ -72,6 +72,7 @@ public:
     bool supportsCanFD();
     bool supportsTripleSampling();
 
+    virtual QString getVersion() override;
     virtual unsigned getBitrate();
     virtual uint32_t getCapabilities();
 

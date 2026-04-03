@@ -21,12 +21,17 @@
 
 #include "mainwindow.h"
 #include <QApplication>
+#include <QCoreApplication>
 #include <QStyleFactory>
 #include <QTranslator>
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+
+    QCoreApplication::setOrganizationName("CANgaroo/Schildkroet");
+    QCoreApplication::setOrganizationDomain("CANgaroo/Schildkroet");
+    QCoreApplication::setApplicationName("CANgaroo");
 
     MainWindow w;
     if(w.isMaximizedWindow())

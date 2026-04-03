@@ -273,7 +273,7 @@ void GenericCanSetupPage::fillFdBitrate(CanInterface *intf, unsigned selectedBit
     for (uint32_t fd_br : fdBitrates) {
         ui->cbBitrateFD->addItem(QString::number(fd_br), fd_br);
     }
-    
+
     int idx = ui->cbBitrateFD->findData(selectedBitrate);
     if (idx >= 0) {
         ui->cbBitrateFD->setCurrentIndex(idx);

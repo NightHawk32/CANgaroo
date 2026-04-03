@@ -18,6 +18,9 @@
 #include <core/Backend.h>
 #include <core/CanDbMessage.h>
 #include <core/CanDbSignal.h>
+#include <core/MeasurementSetup.h>
+#include <core/MeasurementNetwork.h>
+#include <core/MeasurementInterface.h>
 #include <driver/CanInterface.h>
 
 RawTxWindow::RawTxWindow(QWidget *parent, Backend &backend)
@@ -36,7 +39,7 @@ RawTxWindow::RawTxWindow(QWidget *parent, Backend &backend)
 
     headerLayout->addWidget(new QLabel(tr("ID (Hex):"), this));
     _editId = new QLineEdit(this);
-    _editId->setMaximumWidth(100);
+    _editId->setMaximumWidth(120);
     _editId->setValidator(new QRegularExpressionValidator(QRegularExpression("^[0-9A-Fa-f]{0,8}$"), this));
     _editId->setPlaceholderText("000");
     headerLayout->addWidget(_editId);
@@ -57,6 +60,17 @@ RawTxWindow::RawTxWindow(QWidget *parent, Backend &backend)
     headerLayout->addWidget(_cbFD);
     headerLayout->addWidget(_cbBRS);
     headerLayout->addStretch();
+
+    headerLayout->addWidget(new QLabel(tr("Interface:"), this));
+    _comboInterface = new QComboBox(this);
+    _comboInterface->setMinimumWidth(180);
+    headerLayout->addWidget(_comboInterface);
+
+    connect(_comboInterface, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
+        CanInterfaceId id = static_cast<CanInterfaceId>(_comboInterface->currentData().toUInt());
+        _slavedInterfaceId = id;
+        emit interfaceSelected(id);
+    });
 
     mainLayout->addLayout(headerLayout);
 
@@ -303,6 +317,28 @@ void RawTxWindow::setMessage(const CanMessage &msg, const QString &name, CanInte
 
     _slavedInterfaceId = interfaceId;
     _currentDbMsg = dbMsg;
+
+    // Populate interface combo and select the current one
+    _comboInterface->blockSignals(true);
+    _comboInterface->clear();
+    MeasurementSetup &setup = _backend.getSetup();
+    for (auto *network : setup.getNetworks()) {
+        for (auto *mi : network->interfaces()) {
+            CanInterfaceId ifid = mi->canInterface();
+            CanInterface *i = _backend.getInterfaceById(ifid);
+            if (i) {
+                QString label = network->name() + ": " + i->getName();
+                _comboInterface->addItem(label, QVariant(ifid));
+            }
+        }
+    }
+    for (int i = 0; i < _comboInterface->count(); ++i) {
+        if (static_cast<CanInterfaceId>(_comboInterface->itemData(i).toUInt()) == interfaceId) {
+            _comboInterface->setCurrentIndex(i);
+            break;
+        }
+    }
+    _comboInterface->blockSignals(false);
 
     // Determine capabilities from interface
     CanInterface *intf = _backend.getInterfaceById(interfaceId);

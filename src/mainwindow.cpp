@@ -37,6 +37,9 @@
 #include <QFileInfo>
 
 #include "core/MeasurementSetup.h"
+#include <core/MeasurementNetwork.h>
+#include <core/MeasurementInterface.h>
+#include <unistd.h>
 #include "core/Backend.h"
 #include "core/CanTrace.h"
 #include "core/ThemeManager.h"
@@ -80,8 +83,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     _baseWindowTitle = windowTitle();
 
     QCoreApplication::setApplicationVersion(VERSION_STRING);
-    QCoreApplication::setOrganizationName("CANgaroo");
-    QCoreApplication::setApplicationName("CANgaroo");
 
     QLabel *versionLabel = new QLabel(this);
     versionLabel->setText(QString("v%1").arg(QCoreApplication::applicationVersion()));
@@ -1041,6 +1042,18 @@ bool MainWindow::showSetupDialog()
     {
         new_setup.cloneFrom(backend().getSetup());
     }
+    // Default SocketCAN interfaces to "configured by OS" when not running as root
+    if (geteuid() != 0) {
+        for (auto *network : new_setup.getNetworks()) {
+            for (auto *mi : network->interfaces()) {
+                CanInterface *intf = backend().getInterfaceById(mi->canInterface());
+                if (intf && intf->getDriver()->getName() == "SocketCAN") {
+                    mi->setDoConfigure(false);
+                }
+            }
+        }
+    }
+
     if (_setupDlg->showSetupDialog(new_setup))
     {
         if (!_setupDlg->isReflashNetworks())
