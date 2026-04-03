@@ -53,6 +53,27 @@ make -j$(nproc)
 ```
 The binary will be in `bin/cangaroo`.
 
+#### SocketCAN privileges
+
+CANgaroo uses `ip link` to configure SocketCAN interfaces (bitrate, sample point, CAN FD), which requires `CAP_NET_ADMIN`. The recommended way is a targeted sudoers rule so no password prompt appears:
+
+```bash
+sudo groupadd cangaroo
+sudo usermod -aG cangaroo $USER
+```
+
+Create `/etc/sudoers.d/cangaroo`:
+```
+%cangaroo ALL=(ALL) NOPASSWD: /sbin/ip link set * down, /sbin/ip link set * up type can *
+```
+
+Log out and back in for the group membership to take effect. If you prefer not to use a group, you can instead grant `CAP_NET_ADMIN` directly to the `ip` binary (applies to all users):
+```bash
+sudo setcap cap_net_admin+ep /sbin/ip
+```
+
+> **Note:** If the interface is set to *"Configured by OS"* in the setup dialog, CANgaroo will not touch the interface configuration and no elevated privileges are needed.
+
 ### 🪟 Windows
 * Install [Qt 6](https://www.qt.io/download-qt-installer) (Community / Open Source) including the **Qt Serial Bus** component.
 * Install [Python 3](https://www.python.org/downloads/) and [pybind11](https://github.com/pybind/pybind11) (`pip install pybind11`).

@@ -142,18 +142,6 @@ QString SocketCanInterface::buildIpRouteCmd(const MeasurementInterface &mi)
     return cmd.join(' ');
 }
 
-QStringList SocketCanInterface::buildCanIfConfigArgs(const MeasurementInterface &mi)
-{
-    QStringList args;
-    args << "-d";
-    args << "-i" << getName();
-    args << "-b" << QString::number(mi.bitrate());
-    args << "-p" << QString::number(mi.samplePoint());
-    args << "-u";
-    return args;
-}
-
-
 void SocketCanInterface::applyConfig(const MeasurementInterface &mi)
 {
     if (!mi.doConfigure()) {
@@ -161,34 +149,27 @@ void SocketCanInterface::applyConfig(const MeasurementInterface &mi)
         return;
     }
 
-    QString cmd;
+    log_info(QString("calling ip link to reconfigure interface %1").arg(getName()));
+
+    // Bring interface down first
+    QProcess proc_down;
+    proc_down.start("ip", {"link", "set", getName(), "down"});
+    proc_down.waitForFinished();
+
+    QString cmd = "ip";
     QStringList args;
+    args << "link" << "set" << getName() << "up" << "type" << "can";
+    args << "bitrate" << QString::number(mi.bitrate());
+    args << "sample-point" << QString::number(static_cast<float>(mi.samplePoint()) / 1000.0f, 'f', 3);
 
-    // Use ip link if CAN FD is requested, as it's the standard way now
     if (mi.isCanFD()) {
-        log_info(QString("calling ip link to reconfigure interface %1 (CAN FD)").arg(getName()));
-
-        // First bring interface down
-        QProcess proc_down;
-        proc_down.start("ip", {"link", "set", getName(), "down"});
-        proc_down.waitForFinished();
-
-        cmd = "ip";
-        args << "link" << "set" << getName() << "up" << "type" << "can";
-        args << "bitrate" << QString::number(mi.bitrate());
-        args << "sample-point" << QString::number(static_cast<float>(mi.samplePoint())/1000.0, 'f', 3);
         args << "dbitrate" << QString::number(mi.fdBitrate());
-        args << "dsample-point" << QString::number(static_cast<float>(mi.fdSamplePoint())/1000.0, 'f', 3);
+        args << "dsample-point" << QString::number(static_cast<float>(mi.fdSamplePoint()) / 1000.0f, 'f', 3);
         args << "fd" << "on";
+    }
 
-        if (mi.doAutoRestart()) {
-            args << "restart-ms" << QString::number(mi.autoRestartMs());
-        }
-
-    } else {
-        log_info(QString("calling canifconfig to reconfigure interface %1").arg(getName()));
-        cmd = "canifconfig";
-        args = buildCanIfConfigArgs(mi);
+    if (mi.doAutoRestart()) {
+        args << "restart-ms" << QString::number(mi.autoRestartMs());
     }
 
     log_info(cmd + " " + args.join(" "));

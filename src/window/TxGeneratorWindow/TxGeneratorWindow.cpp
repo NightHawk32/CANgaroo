@@ -75,7 +75,8 @@ TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :
     ui->btnAddToList->setEnabled(false);
 
     // Fit columns to content; let Name column stretch
-    ui->treeActive->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents); // Status
+    ui->treeActive->header()->setSectionResizeMode(0, QHeaderView::Fixed); // Status
+    ui->treeActive->header()->resizeSection(0, 75);
     ui->treeActive->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents); // ID
     ui->treeActive->header()->setSectionResizeMode(2, QHeaderView::Stretch);           // Name
     ui->treeActive->header()->setSectionResizeMode(3, QHeaderView::ResizeToContents); // Interface

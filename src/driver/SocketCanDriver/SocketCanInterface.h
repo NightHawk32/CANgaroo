@@ -122,5 +122,4 @@ private:
     QList<CanMessage> txMsgList;
 
     QString buildIpRouteCmd(const MeasurementInterface &mi);
-    QStringList buildCanIfConfigArgs(const MeasurementInterface &mi);
 };
