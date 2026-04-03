@@ -33,6 +33,17 @@ CandleApiInterface::CandleApiInterface(CandleApiDriver *driver, candle_handle ha
         << CandleApiTiming(170000000,  500000, 875, 2,  147, 21)
         << CandleApiTiming(170000000, 1000000, 875, 1,  147, 21);
 
+    // Timings for 160MHz processors (CANable 2.5)
+    _timings
+        << CandleApiTiming(160000000,   10000, 875, 68, 217, 31)
+        << CandleApiTiming(160000000,   20000, 875, 34, 217, 31)
+        << CandleApiTiming(160000000,   50000, 875, 17, 173, 25)
+        << CandleApiTiming(160000000,   83333, 875,  8, 221, 32)
+        << CandleApiTiming(160000000,  100000, 875, 10, 147, 21)
+        << CandleApiTiming(160000000,  125000, 875, 8,  147, 21)
+        << CandleApiTiming(160000000,  250000, 875, 4,  147, 21)
+        << CandleApiTiming(160000000,  500000, 875, 2,  147, 21)
+        << CandleApiTiming(160000000, 1000000, 875, 1,  147, 21);
 
     // Timings for 48MHz processors (CANable 0.X)
     _timings
@@ -218,9 +229,6 @@ bool CandleApiInterface::setBitTiming(uint32_t bitrate, uint32_t samplePoint)
         .arg(bitrate).arg(samplePoint).arg(caps.fclk_can));
 
     for (const auto &t : _timings) {
-        log_info(tr("CandleApi::setBitTiming(): candidate baseClk=%1, bitrate=%2, samplePoint=%3")
-            .arg(t.getBaseClk()).arg(t.getBitrate()).arg(t.getSamplePoint()));
-
         if ( (t.getBaseClk() == caps.fclk_can)
           && (t.getBitrate()==bitrate)
           && (t.getSamplePoint()==samplePoint) )
