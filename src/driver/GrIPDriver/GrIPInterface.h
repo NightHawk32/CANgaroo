@@ -70,7 +70,7 @@ public:
     GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer);
     ~GrIPInterface() override;
 
-    QString getDetailsStr() const;
+    QString getDetailsStr() const override;
     QString getName() const override;
     void setName(QString name);
 
@@ -95,6 +95,7 @@ public:
     bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
 
     bool updateStatistics() override;
+    void resetStatistics() override;
     uint32_t getState() override;
     int getNumRxFrames() override;
     int getNumRxErrors() override;

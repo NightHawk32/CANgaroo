@@ -248,6 +248,13 @@ int GrIPHandler::Channels_CANFD() const
 }
 
 
+int GrIPHandler::Channels_LIN() const
+{
+    std::unique_lock<std::mutex> lck(m_MutexData);
+    return m_ChanelsLIN;
+}
+
+
 // ---------------------------------------------------------------------------
 // Low-level send helpers
 // ---------------------------------------------------------------------------
@@ -272,7 +279,7 @@ void GrIPHandler::Send(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType,
 // CAN channel control
 // ---------------------------------------------------------------------------
 
-void GrIPHandler::EnableChannel(uint8_t ch, bool enable)
+void GrIPHandler::CanEnableChannel(uint8_t ch, bool enable)
 {
     Protocol_ChannelStatus_t status = {};
 
@@ -299,7 +306,7 @@ void GrIPHandler::EnableChannel(uint8_t ch, bool enable)
 }
 
 
-void GrIPHandler::Mode(uint8_t ch, bool listen_only)
+void GrIPHandler::CanMode(uint8_t ch, bool listen_only)
 {
     Protocol_ChannelMode_t mode = {};
 
@@ -319,7 +326,7 @@ void GrIPHandler::Mode(uint8_t ch, bool listen_only)
 }
 
 
-void GrIPHandler::CAN_SetBaudrate(uint8_t ch, uint32_t baud)
+void GrIPHandler::CanSetBaudrate(uint8_t ch, uint32_t baud)
 {
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
@@ -360,7 +367,7 @@ bool GrIPHandler::CanAvailable(uint8_t ch) const
 }
 
 
-CanMessage GrIPHandler::ReceiveCan(uint8_t ch)
+CanMessage GrIPHandler::CanReceive(uint8_t ch)
 {
     std::unique_lock<std::mutex> lck(m_MutexData);
 

@@ -130,6 +130,7 @@ void GrIPInterface::applyConfig(const MeasurementInterface &mi)
 
 bool GrIPInterface::updateStatus()
 {
+    // Get status from device
     return false;
 }
 
@@ -193,9 +194,36 @@ bool GrIPInterface::updateStatistics()
     return updateStatus();
 }
 
+void GrIPInterface::resetStatistics()
+{
+    _status.rx_count = 0;
+    _status.rx_errors = 0;
+    _status.rx_overruns = 0;
+    _status.tx_count = 0;
+    _status.tx_errors = 0;
+    _status.tx_dropped = 0;
+
+    CanInterface::resetStatistics();
+}
+
 uint32_t GrIPInterface::getState()
 {
-    return _status.can_state;
+    /*switch (_status.can_state)
+    {
+    case CAN_STATE_ERROR_ACTIVE:
+        return state_ok;
+    case CAN_STATE_ERROR_WARNING:
+        return state_warning;
+    case CAN_STATE_ERROR_PASSIVE:
+        return state_passive;
+    case CAN_STATE_BUS_OFF:
+        return state_bus_off;
+    case CAN_STATE_STOPPED:
+        return state_stopped;
+    default:
+        return state_unknown;
+    }*/
+   return _status.can_state;
 }
 
 int GrIPInterface::getNumRxFrames()
@@ -260,20 +288,20 @@ void GrIPInterface::open()
     }
 
     // Disable the channel before reconfiguring to avoid spurious traffic.
-    m_GrIPHandler->EnableChannel(_idx, false);
+    m_GrIPHandler->CanEnableChannel(_idx, false);
     QThread::msleep(2);
 
     // Apply bit rate — use custom value if set, otherwise use the selected preset.
     const uint32_t baud = _settings.isCustomBitrate()
                               ? _settings.customBitrate()
                               : _settings.bitrate();
-    m_GrIPHandler->CAN_SetBaudrate(_idx, baud > 0 ? baud : 10000);
+    m_GrIPHandler->CanSetBaudrate(_idx, baud > 0 ? baud : 10000);
 
-    m_GrIPHandler->Mode(_idx, _settings.isListenOnlyMode());
+    m_GrIPHandler->CanMode(_idx, _settings.isListenOnlyMode());
 
     m_GrIPHandler->SetStatus(true);
     m_GrIPHandler->SetEchoTx(true);
-    m_GrIPHandler->EnableChannel(_idx, true);
+    m_GrIPHandler->CanEnableChannel(_idx, true);
 
     _isOpen = true;
     _isOffline = false;
@@ -334,7 +362,7 @@ void GrIPInterface::close()
     _isOpen = false;
     _status.can_state = state_bus_off;
 
-    m_GrIPHandler->EnableChannel(_idx, false);
+    m_GrIPHandler->CanEnableChannel(_idx, false);
     m_GrIPHandler->SetStatus(false);
 }
 
@@ -368,7 +396,7 @@ bool GrIPInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout
 
     while (m_GrIPHandler->CanAvailable(_idx))
     {
-        auto msg = m_GrIPHandler->ReceiveCan(_idx);
+        auto msg = m_GrIPHandler->CanReceive(_idx);
         if (msg.getId() != 0)
         {
             msg.setInterfaceId(getId());

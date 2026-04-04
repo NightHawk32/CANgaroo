@@ -23,31 +23,31 @@ public:
     CandleApiInterface(CandleApiDriver *driver, candle_handle handle);
     virtual ~CandleApiInterface();
 
-    virtual QString getName() const;
-    virtual QString getDetailsStr() const;
+    QString getName() const override;
+    QString getDetailsStr() const override;
 
-    virtual void applyConfig(const MeasurementInterface &mi);
+    void applyConfig(const MeasurementInterface &mi) override;
 
-    virtual unsigned getBitrate();
+    unsigned getBitrate() override;
 
-    virtual uint32_t getCapabilities();
-    virtual QList<CanTiming> getAvailableBitrates();
+    uint32_t getCapabilities() override;
+    QList<CanTiming> getAvailableBitrates() override;
 
-    virtual void open();
-    virtual bool isOpen();
-    virtual void close();
+    void open() override;
+    bool isOpen() override;
+    void close() override;
 
-    virtual void sendMessage(const CanMessage &msg);
-    virtual bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms);
+    void sendMessage(const CanMessage &msg) override;
+    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
 
-    virtual bool updateStatistics();
-    virtual uint32_t getState();
-    virtual int getNumRxFrames();
-    virtual int getNumRxErrors();
-    virtual int getNumTxFrames();
-    virtual int getNumTxErrors();
-    virtual int getNumRxOverruns();
-    virtual int getNumTxDropped();
+    bool updateStatistics() override;
+    uint32_t getState() override;
+    int getNumRxFrames() override;
+    int getNumRxErrors() override;
+    int getNumTxFrames() override;
+    int getNumTxErrors() override;
+    int getNumRxOverruns() override;
+    int getNumTxDropped() override;
 
     wstring getPath() const;
 

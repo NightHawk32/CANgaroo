@@ -57,38 +57,37 @@ public:
     CANBlasterInterface(CANBlasterDriver *driver, int index, QString name, bool fd_support);
     virtual ~CANBlasterInterface();
 
-    QString getDetailsStr() const;
-    virtual QString getName() const;
+    QString getDetailsStr() const override;
+    QString getName() const override;
     void setName(QString name);
 
-    virtual QList<CanTiming> getAvailableBitrates();
+    QList<CanTiming> getAvailableBitrates() override;
 
-    virtual void applyConfig(const MeasurementInterface &mi);
+    void applyConfig(const MeasurementInterface &mi) override;
 
     bool supportsTimingConfiguration();
     bool supportsCanFD();
     bool supportsTripleSampling();
 
-    virtual unsigned getBitrate();
-    virtual uint32_t getCapabilities();
+    unsigned getBitrate() override;
+    uint32_t getCapabilities() override;
 
+    void open() override;
+    void close() override;
+    bool isOpen() override;
 
-    virtual void open();
-    virtual void close();
-    virtual bool isOpen();
+    void sendMessage(const CanMessage &msg) override;
+    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
 
-    virtual void sendMessage(const CanMessage &msg);
-    virtual bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms);
+    bool updateStatistics() override;
+    uint32_t getState() override;
+    int getNumRxFrames() override;
+    int getNumRxErrors() override;
+    int getNumRxOverruns() override;
 
-    virtual bool updateStatistics();
-    virtual uint32_t getState();
-    virtual int getNumRxFrames();
-    virtual int getNumRxErrors();
-    virtual int getNumRxOverruns();
-
-    virtual int getNumTxFrames();
-    virtual int getNumTxErrors();
-    virtual int getNumTxDropped();
+    int getNumTxFrames() override;
+    int getNumTxErrors() override;
+    int getNumTxDropped() override;
 
 
     int getIfIndex();

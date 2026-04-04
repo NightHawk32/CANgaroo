@@ -76,13 +76,13 @@ public:
     SLCANInterface(SLCANDriver *driver, int index, QString name, bool fd_support, uint32_t manufacturer);
     virtual ~SLCANInterface();
 
-    QString getDetailsStr() const;
-    virtual QString getName() const;
+    QString getDetailsStr() const override;
+    QString getName() const override;
     void setName(QString name);
 
-    virtual QList<CanTiming> getAvailableBitrates();
+    QList<CanTiming> getAvailableBitrates() override;
 
-    virtual void applyConfig(const MeasurementInterface &mi);
+    void applyConfig(const MeasurementInterface &mi) override;
     virtual bool readConfig();
     virtual bool readConfigFromLink(struct rtnl_link *link);
 
@@ -90,27 +90,27 @@ public:
     bool supportsCanFD();
     bool supportsTripleSampling();
 
-    virtual unsigned getBitrate();
-    virtual uint32_t getCapabilities();
+    unsigned getBitrate() override;
+    uint32_t getCapabilities() override;
 
-    virtual void open();
-    virtual void close();
-    virtual bool isOpen();
+    void open() override;
+    void close() override;
+    bool isOpen() override;
 
-    virtual void sendMessage(const CanMessage &msg);
-    virtual bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms);
+    void sendMessage(const CanMessage &msg) override;
+    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
 
-    virtual bool updateStatistics();
-    virtual uint32_t getState();
-    virtual int getNumRxFrames();
-    virtual int getNumRxErrors();
-    virtual int getNumRxOverruns();
+    bool updateStatistics() override;
+    uint32_t getState() override;
+    int getNumRxFrames() override;
+    int getNumRxErrors() override;
+    int getNumRxOverruns() override;
 
-    virtual int getNumTxFrames();
-    virtual int getNumTxErrors();
-    virtual int getNumTxDropped();
+    int getNumTxFrames() override;
+    int getNumTxErrors() override;
+    int getNumTxDropped() override;
 
-    virtual QString getVersion();
+    QString getVersion() override;
 
     int getIfIndex();
 

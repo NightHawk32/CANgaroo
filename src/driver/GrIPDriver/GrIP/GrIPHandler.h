@@ -29,11 +29,11 @@
  *   GrIPHandler handler("/dev/ttyUSB0");
  *   handler.Start();
  *   handler.RequestVersion();
- *   handler.CAN_SetBaudrate(0, 500000);
- *   handler.EnableChannel(0, true);
+ *   handler.CanSetBaudrate(0, 500000);
+ *   handler.CanEnableChannel(0, true);
  *
  *   while (handler.CanAvailable(0))
- *       process(handler.ReceiveCan(0));
+ *       process(handler.CanReceive(0));
  *
  *   handler.Stop();
  * @endcode
@@ -112,6 +112,9 @@ public:
     /** @return Number of CAN-FD channels reported by the device. */
     int Channels_CANFD() const;
 
+    /** @return Number of LIN channels reported by the device. */
+    int Channels_LIN() const;
+
     /**
      * @brief Enables or disables a CAN channel.
      *
@@ -121,7 +124,7 @@ public:
      * @param ch      Zero-based channel index.
      * @param enable  true to enable, false to disable.
      */
-    void EnableChannel(uint8_t ch, bool enable);
+    void CanEnableChannel(uint8_t ch, bool enable);
 
     /**
      * @brief Sets the operating mode of a CAN channel.
@@ -129,7 +132,7 @@ public:
      * @param listen_only  true for listen-only (bus monitoring) mode,
      *                     false for normal read/write mode.
      */
-    void Mode(uint8_t ch, bool listen_only);
+    void CanMode(uint8_t ch, bool listen_only);
 
     /**
      * @brief Configures the nominal bit rate of a CAN channel.
@@ -140,7 +143,7 @@ public:
      * @param ch    Zero-based channel index.
      * @param baud  Desired bit rate in bits/s (e.g. 500000).
      */
-    void CAN_SetBaudrate(uint8_t ch, uint32_t baud);
+    void CanSetBaudrate(uint8_t ch, uint32_t baud);
 
     /**
      * @brief Returns true if at least one received CAN frame is queued for @p ch.
@@ -156,7 +159,7 @@ public:
      *
      * @param ch  Zero-based channel index.
      */
-    CanMessage ReceiveCan(uint8_t ch);
+    CanMessage CanReceive(uint8_t ch);
 
     /**
      * @brief Transmits a CAN frame on @p ch.
@@ -239,6 +242,8 @@ private:
     int m_ChannelsCAN = 0;                ///< Number of classic CAN channels, set on SYSTEM_REPORT_INFO reply.
     int m_ChannelsCANFD = 0;              ///< Number of CAN-FD channels, set on SYSTEM_REPORT_INFO reply.
     std::vector<bool> m_Channel_StatusCAN; ///< Per-channel enabled state, indexed identically to m_ReceiveQueue.
+
+    int m_ChanelsLIN = 0;
 };
 
 
