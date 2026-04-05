@@ -17,7 +17,6 @@ DEFINES += VERSION_STRING=\\\"$${VERSION}\\\"
 
 TRANSLATIONS = \
     translations/i18n_de_DE.ts \
-    translations/i18n_en_us.ts \
     translations/i18n_zh_cn.ts \
     translations/i18n_es_ES.ts
 RC_ICONS = cangaroo.ico

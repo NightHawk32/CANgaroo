@@ -130,8 +130,8 @@ void GrIPInterface::applyConfig(const MeasurementInterface &mi)
 
 bool GrIPInterface::updateStatus()
 {
-    // Get status from device
-    return false;
+    _status.can_state = m_GrIPHandler->CanGetState(_idx);
+    return true;
 }
 
 bool GrIPInterface::readConfig()
@@ -208,22 +208,22 @@ void GrIPInterface::resetStatistics()
 
 uint32_t GrIPInterface::getState()
 {
-    /*switch (_status.can_state)
+    switch (_status.can_state)
     {
-    case CAN_STATE_ERROR_ACTIVE:
+    case CANIL_CAN_State::CAN_Active:
         return state_ok;
-    case CAN_STATE_ERROR_WARNING:
+    case CANIL_CAN_State::CAN_ErrorWarning:
         return state_warning;
-    case CAN_STATE_ERROR_PASSIVE:
+    case CANIL_CAN_State::CAN_ErrorPassiv:
         return state_passive;
-    case CAN_STATE_BUS_OFF:
+    case CANIL_CAN_State::CAN_Off:
         return state_bus_off;
-    case CAN_STATE_STOPPED:
+    case CANIL_CAN_State::CAN_Stopped:
         return state_stopped;
     default:
         return state_unknown;
-    }*/
-   return _status.can_state;
+    }
+   return state_unknown;
 }
 
 int GrIPInterface::getNumRxFrames()
@@ -297,7 +297,7 @@ void GrIPInterface::open()
                               : _settings.bitrate();
     m_GrIPHandler->CanSetBaudrate(_idx, baud > 0 ? baud : 10000);
 
-    m_GrIPHandler->CanMode(_idx, _settings.isListenOnlyMode());
+    m_GrIPHandler->CanSetMode(_idx, _settings.isListenOnlyMode());
 
     m_GrIPHandler->SetStatus(true);
     m_GrIPHandler->SetEchoTx(true);
@@ -305,7 +305,7 @@ void GrIPInterface::open()
 
     _isOpen = true;
     _isOffline = false;
-    _status.can_state = state_ok;
+    //_status.can_state = state_ok;
     _status.rx_count = 0;
     _status.rx_errors = 0;
     _status.rx_overruns = 0;
@@ -360,7 +360,7 @@ void GrIPInterface::handleSerialError(QSerialPort::SerialPortError error)
 void GrIPInterface::close()
 {
     _isOpen = false;
-    _status.can_state = state_bus_off;
+    //_status.can_state = state_bus_off;
 
     m_GrIPHandler->CanEnableChannel(_idx, false);
     m_GrIPHandler->SetStatus(false);
@@ -378,7 +378,7 @@ void GrIPInterface::sendMessage(const CanMessage &msg)
     if (!m_GrIPHandler->CanTransmit(_idx, msg))
     {
         _status.tx_errors++;
-        _status.can_state = state_tx_fail;
+        //_status.can_state = state_tx_fail;
     }
 }
 
@@ -407,12 +407,12 @@ bool GrIPInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout
                 if (!msg.isErrorFrame())
                 {
                     _status.tx_count++;
-                    _status.can_state = state_tx_success;
+                    //_status.can_state = state_tx_success;
                 }
                 else
                 {
                     _status.tx_errors++;
-                    _status.can_state = state_tx_fail;
+                    //_status.can_state = state_tx_fail;
                 }
 
                 if (msg.isShow())
@@ -440,10 +440,10 @@ bool GrIPInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout
     }
 
     // Clear any error state after 3 seconds of stable operation.
-    if (QDateTime::currentMSecsSinceEpoch() - _lastStateMsec > 3000)
+    /*if (QDateTime::currentMSecsSinceEpoch() - _lastStateMsec > 3000)
     {
         _status.can_state = state_ok;
-    }
+    }*/
 
     return true;
 }

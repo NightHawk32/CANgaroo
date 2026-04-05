@@ -16,6 +16,11 @@
 #include <QSerialPort>
 
 
+enum CANIL_CAN_State
+{
+    CAN_Off = 0, CAN_Stopped, CAN_Active, CAN_ErrorWarning, CAN_ErrorPassiv
+};
+
 /**
  * @brief High-level interface to a GrIP-capable device over a serial port.
  *
@@ -132,7 +137,7 @@ public:
      * @param listen_only  true for listen-only (bus monitoring) mode,
      *                     false for normal read/write mode.
      */
-    void CanMode(uint8_t ch, bool listen_only);
+    void CanSetMode(uint8_t ch, bool listen_only);
 
     /**
      * @brief Configures the nominal bit rate of a CAN channel.
@@ -150,6 +155,8 @@ public:
      * @param ch  Zero-based channel index.
      */
     bool CanAvailable(uint8_t ch) const;
+
+    uint8_t CanGetState(uint8_t ch) const;
 
     /**
      * @brief Dequeues and returns the oldest received CAN frame on @p ch.
@@ -242,8 +249,12 @@ private:
     int m_ChannelsCAN = 0;                ///< Number of classic CAN channels, set on SYSTEM_REPORT_INFO reply.
     int m_ChannelsCANFD = 0;              ///< Number of CAN-FD channels, set on SYSTEM_REPORT_INFO reply.
     std::vector<bool> m_Channel_StatusCAN; ///< Per-channel enabled state, indexed identically to m_ReceiveQueue.
+    std::vector<bool> m_Channel_StatusLIN;
 
     int m_ChanelsLIN = 0;
+
+    std::vector<uint8_t> m_CanBusStatus;
+    std::vector<uint8_t> m_LinBusStatus;
 };
 
 

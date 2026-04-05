@@ -75,6 +75,7 @@ private:
 
     Backend &backend();
     QTimer *_timer;
+    QTimer *_stopTimer;
 
     struct InterfaceStats {
         uint64_t lastBits;

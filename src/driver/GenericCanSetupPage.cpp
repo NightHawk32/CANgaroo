@@ -71,7 +71,7 @@ void GenericCanSetupPage::onShowInterfacePage(SetupDialog &dlg, MeasurementInter
     _enable_ui_updates = false;
 
     ui->laDriver->setText(intf->getDriver()->getName());
-    ui->laInterface->setText(intf->getName());
+    ui->laInterface->setText(QString("%1 - [ID: %2]").arg(intf->getName()).arg(intf->getId()));
     ui->laInterfaceDetails->setText(intf->getDetailsStr());
 
     fillBitratesList(intf, _mi->bitrate());

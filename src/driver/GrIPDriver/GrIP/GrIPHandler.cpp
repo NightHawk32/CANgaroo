@@ -5,6 +5,7 @@
 #include <format>
 #include <QThread>
 #include <QSerialPort>
+#include <QtEndian>
 
 
 // ---------------------------------------------------------------------------
@@ -53,14 +54,23 @@ typedef struct __attribute__((packed))
 typedef struct __attribute__((packed))
 {
     Protocol_SystemHeader_t Header;
+
     uint8_t Channel1; // Enable state for channel 0 (0 = off, 1 = on)
     uint8_t Channel2; // Enable state for channel 1 (0 = off, 1 = on)
 } Protocol_ChannelStatus_t;
+
+typedef struct __attribute__((packed))
+{
+    Protocol_SystemHeader_t Header;
+
+    uint8_t CAN[8];
+} Protocol_BusStatus_t;
 
 // Payload for SYSTEM_CAN_MODE — sets listen-only or normal mode.
 typedef struct __attribute__((packed))
 {
     Protocol_SystemHeader_t Header;
+
     uint8_t Channel; // Zero-based channel index
     uint8_t Mode;    // 0 = normal, 1 = listen-only
 } Protocol_ChannelMode_t;
@@ -78,6 +88,30 @@ typedef struct __attribute__((packed))
     uint32_t Time;      // Device timestamp (µs, wraps around)
     uint8_t  Data[64];  // Payload bytes — valid range is Data[0..DLC-1]
 } Protocol_CanFrame_t;
+
+// Reply payload for SYSTEM_REPORT_INFO — sent by the device in response to a version request.
+typedef struct __attribute__((packed))
+{
+    uint8_t SubCommand;     // Always 0 for SYSTEM_REPORT_INFO reply
+    uint8_t Major;          // Firmware major version
+    uint8_t Minor;          // Firmware minor version
+    uint8_t HwRevision;     // Hardware revision (reserved)
+    uint8_t ChannelsCAN;    // Number of classic CAN channels
+    uint8_t ChannelsCANFD;  // Number of CAN-FD channels
+    uint8_t ChannelsLIN;    // Number of LIN channels
+    uint8_t ChannelsADC;    // Number of ADC channels (reserved)
+    uint8_t ChannelsGPIO;   // Number of GPIO channels (reserved)
+    char    BuildDate[128]; // Null-terminated build date string
+} Protocol_SystemInfoReply_t;
+
+// Payload for SYSTEM_SEND_CAN_CFG — configures the nominal bit rate of a CAN channel.
+typedef struct __attribute__((packed))
+{
+    Protocol_SystemHeader_t Header;
+
+    uint8_t  Channel;     // Zero-based channel index
+    uint32_t Baudrate;    // Bit rate in bits/s, big-endian on the wire
+} Protocol_CanBaudrateConfig_t;
 
 // Payload for incoming DATA_REPORT_LIN_MSG (253).
 typedef struct __attribute__((packed))
@@ -306,7 +340,7 @@ void GrIPHandler::CanEnableChannel(uint8_t ch, bool enable)
 }
 
 
-void GrIPHandler::CanMode(uint8_t ch, bool listen_only)
+void GrIPHandler::CanSetMode(uint8_t ch, bool listen_only)
 {
     Protocol_ChannelMode_t mode = {};
 
@@ -328,19 +362,19 @@ void GrIPHandler::CanMode(uint8_t ch, bool listen_only)
 
 void GrIPHandler::CanSetBaudrate(uint8_t ch, uint32_t baud)
 {
+    Protocol_CanBaudrateConfig_t cfg = {};
+
+    cfg.Header.Version = 1;
+    cfg.Header.Command = SYSTEM_SEND_CAN_CFG;
+    cfg.Header.Length = sizeof(Protocol_CanBaudrateConfig_t) - sizeof(Protocol_SystemHeader_t);
+    cfg.Header.Data = 0;
+
+    cfg.Channel  = ch;
+    cfg.Baudrate = (baud); // Device expects big-endian
+
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&cfg), sizeof(Protocol_CanBaudrateConfig_t)};
+
     std::unique_lock<std::mutex> lck(m_MutexSerial);
-
-    // Message layout: [cmd][channel][baud MSB .. baud LSB][reserved x3]
-    uint8_t msg[9] = {};
-    GrIP_Pdu_t p = {msg, 9};
-
-    msg[0] = SYSTEM_SEND_CAN_CFG;
-    msg[1] = ch;
-    // Baud rate encoded big-endian across bytes 2-5
-    msg[2] = static_cast<uint8_t>((baud >> 24) & 0xFF);
-    msg[3] = static_cast<uint8_t>((baud >> 16) & 0xFF);
-    msg[4] = static_cast<uint8_t>((baud >> 8) & 0xFF);
-    msg[5] = static_cast<uint8_t>((baud) & 0xFF);
 
     GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 
@@ -364,6 +398,12 @@ bool GrIPHandler::CanAvailable(uint8_t ch) const
     }
 
     return false;
+}
+
+
+uint8_t GrIPHandler::CanGetState(uint8_t ch) const
+{
+    return m_CanBusStatus[ch];
 }
 
 
@@ -445,38 +485,31 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms)
         {
         case 0: // SYSTEM_REPORT_INFO reply
         {
-            // Payload layout:
-            //   [0]  sub-command (0)
-            //   [1]  firmware major version
-            //   [2]  firmware minor version
-            //   [3]  hardware revision (unused here)
-            //   [4]  number of classic CAN channels
-            //   [5]  number of CAN-FD channels
-            //   [6]  number of LIN channels  (unused here)
-            //   [7]  number of ADC channels  (unused here)
-            //   [8]  number of GPIO channels (unused here)
-            //   [9+] null-terminated build date string
-            uint8_t major = packet.Data[1];
-            uint8_t minor = packet.Data[2];
-            uint8_t can = packet.Data[4];
-            uint8_t canfd = packet.Data[5];
+            Protocol_SystemInfoReply_t info;
+            std::memcpy(&info, packet.Data, sizeof(Protocol_SystemInfoReply_t));
+            info.BuildDate[sizeof(info.BuildDate) - 1] = '\0'; // Ensure null-termination
 
-            char date[128] = {};
-            std::strncpy(date, reinterpret_cast<char *>(&packet.Data[9]), sizeof(date) - 1);
-
-            m_Version = std::format("{}.{}-<{}>", major, minor, date);
-            m_ChannelsCAN = can;
-            m_ChannelsCANFD = canfd;
+            m_Version = std::format("{}.{}-<{}>", info.Major, info.Minor, info.BuildDate);
+            m_ChannelsCAN = info.ChannelsCAN;
+            m_ChannelsCANFD = info.ChannelsCANFD;
 
             // Rebuild per-channel queues to match the reported channel count.
             // CAN-FD channels follow classic CAN channels in the same vectors.
             m_Channel_StatusCAN.clear();
             m_ReceiveQueue.clear();
+            m_Channel_StatusLIN.clear();
 
-            for (int i = 0; i < can + canfd; i++)
+            for (int i = 0; i < info.ChannelsCAN + info.ChannelsCANFD; i++)
             {
                 m_Channel_StatusCAN.push_back(false);
                 m_ReceiveQueue.push_back({});
+                m_CanBusStatus.push_back(CANIL_CAN_State::CAN_Off);
+            }
+            for (int i = 0; i < info.ChannelsLIN; i++)
+            {
+                m_Channel_StatusLIN.push_back(false);
+                //m_ReceiveQueue.push_back({});
+                //m_LinBusStatus.push_back(CANIL_CAN_State::CAN_Off);
             }
             break;
         }
@@ -569,7 +602,21 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms)
             break;
         }
 
+        case 220u:  // CAN Status Frame
+        {
+            Protocol_BusStatus_t frame;
+            std::memcpy(&frame, packet.Data, sizeof(Protocol_BusStatus_t));
+
+            for (size_t i = 0; i < m_CanBusStatus.size(); i++)
+            {
+                m_CanBusStatus[i] = frame.CAN[i];
+            }
+            //qDebug() << "CAN Status: " << frame.Channel[0] << " - " << frame.Channel[0];
+            break;
+        }
+
         default:
+            qDebug() << "Unknown command: " << header.Command;
             break;
         }
         break;

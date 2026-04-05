@@ -36,8 +36,19 @@ CanStatusWindow::CanStatusWindow(QWidget *parent, Backend &backend) :
     ConfigurableWidget(parent),
     ui(new Ui::CanStatusWindow),
     _backend(backend),
-    _timer(new QTimer(this))
+    _timer(new QTimer(this)),
+    _stopTimer(new QTimer(this))
 {
+    _stopTimer->setSingleShot(true);
+    connect(_stopTimer, &QTimer::timeout, this, [this]()
+    {
+        for (QTreeWidgetItemIterator it(ui->treeWidget); *it; ++it)
+        {
+            (*it)->setData(0, Qt::UserRole, QVariant::fromValue(static_cast<void*>(nullptr)));
+        }
+        _timer->stop();
+    });
+
     ui->setupUi(this);
     ui->treeWidget->setHeaderLabels(QStringList()
                                     << tr("Driver") << tr("Interface") << tr("State")
@@ -111,14 +122,18 @@ void CanStatusWindow::beginMeasurement()
 
         ui->treeWidget->addTopLevelItem(item);
     }
+    _stopTimer->stop();
     update();
-    _timer->start(100);
+    if (!_timer->isActive())
+    {
+        _timer->start(100);
+    }
 }
 
 void CanStatusWindow::endMeasurement()
 {
     update();
-    _timer->stop();
+    _stopTimer->start(300);
 }
 
 void CanStatusWindow::clearStatistics()
@@ -152,7 +167,7 @@ void CanStatusWindow::update()
             item->setText(column_tx_frames, QString().number(intf->getNumTxFrames()));
             item->setText(column_tx_errors, QString().number(intf->getNumTxErrors()));
             item->setText(column_tx_dropped, QString().number(intf->getNumTxDropped()));
-            
+
             // Calculate Bus Load (%)
             qint64 now = QDateTime::currentMSecsSinceEpoch();
             uint64_t currentBits = intf->getNumBits();
