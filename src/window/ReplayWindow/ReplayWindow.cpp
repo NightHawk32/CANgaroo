@@ -22,6 +22,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDataStream>
+#include <QProgressBar>
 
 #include <core/CanTrace.h>
 #include <core/Backend.h>
@@ -82,6 +83,13 @@ ReplayWindow::ReplayWindow(QWidget *parent, Backend &backend)
     sliderLayout->addWidget(_slider);
     sliderLayout->addWidget(_posLabel);
     mainLayout->addLayout(sliderLayout);
+
+    _progressBar = new QProgressBar(this);
+    _progressBar->setRange(0, 100);
+    _progressBar->setValue(0);
+    _progressBar->setFormat("%p%");
+    _progressBar->setTextVisible(true);
+    mainLayout->addWidget(_progressBar);
 
     // Info box
     QFont mono("Monospace");
@@ -1207,6 +1215,8 @@ void ReplayWindow::onTimerTick()
 void ReplayWindow::updatePositionLabel()
 {
     _posLabel->setText(QString("%1 / %2").arg(_playbackIndex).arg(_messages.size()));
+    int pct = _messages.isEmpty() ? 0 : static_cast<int>(_playbackIndex * 100 / _messages.size());
+    _progressBar->setValue(pct);
 }
 
 bool ReplayWindow::saveXML(Backend &backend, QDomDocument &xml, QDomElement &root)

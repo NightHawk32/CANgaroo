@@ -150,6 +150,8 @@ public:
      */
     void CanSetBaudrate(uint8_t ch, uint32_t baud);
 
+    void CanSetConfig(uint8_t ch, uint32_t baud, bool listen, bool echoTx, bool abom);
+
     /**
      * @brief Returns true if at least one received CAN frame is queued for @p ch.
      * @param ch  Zero-based channel index.

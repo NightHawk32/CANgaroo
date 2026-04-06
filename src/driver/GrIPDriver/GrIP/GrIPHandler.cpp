@@ -50,6 +50,16 @@ typedef struct __attribute__((packed))
     uint8_t Data;    // First payload byte (command-specific)
 } Protocol_SystemHeader_t;
 
+typedef struct __attribute__((packed))
+{
+    Protocol_SystemHeader_t Header;
+    uint8_t Channel;
+    uint32_t Baudrate;
+    uint8_t EchoTx;
+    uint8_t ABOM;
+    uint8_t ListenMode;
+} Protocol_CanConfig_t;
+
 // Payload for SYSTEM_START_CAN — carries the enable state for both channels.
 typedef struct __attribute__((packed))
 {
@@ -72,8 +82,8 @@ typedef struct __attribute__((packed))
     Protocol_SystemHeader_t Header;
 
     uint8_t Channel; // Zero-based channel index
-    uint8_t Mode;    // 0 = normal, 1 = listen-only
-} Protocol_ChannelMode_t;
+    uint32_t Param;    // 0 = normal, 1 = listen-only
+} Protocol_ChannelParam_t;
 
 // Payload for SYSTEM_SEND_CAN_FRAME and incoming DATA_REPORT_CAN_MSG (254).
 typedef struct __attribute__((packed))
@@ -103,15 +113,6 @@ typedef struct __attribute__((packed))
     uint8_t ChannelsGPIO;   // Number of GPIO channels (reserved)
     char    BuildDate[128]; // Null-terminated build date string
 } Protocol_SystemInfoReply_t;
-
-// Payload for SYSTEM_SEND_CAN_CFG — configures the nominal bit rate of a CAN channel.
-typedef struct __attribute__((packed))
-{
-    Protocol_SystemHeader_t Header;
-
-    uint8_t  Channel;     // Zero-based channel index
-    uint32_t Baudrate;    // Bit rate in bits/s, big-endian on the wire
-} Protocol_CanBaudrateConfig_t;
 
 // Payload for incoming DATA_REPORT_LIN_MSG (253).
 typedef struct __attribute__((packed))
@@ -342,17 +343,17 @@ void GrIPHandler::CanEnableChannel(uint8_t ch, bool enable)
 
 void GrIPHandler::CanSetMode(uint8_t ch, bool listen_only)
 {
-    Protocol_ChannelMode_t mode = {};
+    Protocol_ChannelParam_t mode = {};
 
     mode.Header.Version = 1;
     mode.Header.Command = SYSTEM_CAN_MODE;
-    mode.Header.Length = 2;
+    mode.Header.Length = sizeof(Protocol_ChannelParam_t) - sizeof(Protocol_SystemHeader_t);
     mode.Header.Data = 0;
 
-    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&mode), sizeof(Protocol_ChannelMode_t)};
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&mode), sizeof(Protocol_ChannelParam_t)};
 
     mode.Channel = ch;
-    mode.Mode = static_cast<uint8_t>(listen_only);
+    mode.Param = static_cast<uint8_t>(listen_only);
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
@@ -362,17 +363,17 @@ void GrIPHandler::CanSetMode(uint8_t ch, bool listen_only)
 
 void GrIPHandler::CanSetBaudrate(uint8_t ch, uint32_t baud)
 {
-    Protocol_CanBaudrateConfig_t cfg = {};
+    Protocol_ChannelParam_t cfg = {};
 
     cfg.Header.Version = 1;
     cfg.Header.Command = SYSTEM_SEND_CAN_CFG;
-    cfg.Header.Length = sizeof(Protocol_CanBaudrateConfig_t) - sizeof(Protocol_SystemHeader_t);
+    cfg.Header.Length = sizeof(Protocol_ChannelParam_t) - sizeof(Protocol_SystemHeader_t);
     cfg.Header.Data = 0;
 
     cfg.Channel  = ch;
-    cfg.Baudrate = (baud); // Device expects big-endian
+    cfg.Param = (baud); // Device expects big-endian
 
-    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&cfg), sizeof(Protocol_CanBaudrateConfig_t)};
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&cfg), sizeof(Protocol_ChannelParam_t)};
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
@@ -381,6 +382,27 @@ void GrIPHandler::CanSetBaudrate(uint8_t ch, uint32_t baud)
     // Allow the device time to reconfigure its CAN hardware before the next
     // command arrives.
     QThread::msleep(5);
+}
+
+void GrIPHandler::CanSetConfig(uint8_t ch, uint32_t baud, bool listen, bool echoTx, bool abom)
+{
+    Protocol_CanConfig_t cfg = {};
+
+    cfg.Header.Version = 1;
+    cfg.Header.Command = SYSTEM_SEND_CAN_CFG;
+    cfg.Header.Length = sizeof(Protocol_CanConfig_t) - sizeof(Protocol_SystemHeader_t);
+    cfg.Header.Data = 0;
+    cfg.Channel = ch;
+    cfg.Baudrate = baud;
+    cfg.EchoTx = echoTx;
+    cfg.ABOM = abom;
+    cfg.ListenMode = listen;
+
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&cfg), sizeof(Protocol_CanConfig_t)};
+
+    std::unique_lock<std::mutex> lck(m_MutexSerial);
+
+    GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 }
 
 

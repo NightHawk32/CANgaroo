@@ -392,6 +392,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
     }
     else if (cmd == QMessageBox::Discard)
     {
+        backend().stopMeasurement();
         event->accept();
     }
     else if (cmd == QMessageBox::Cancel)

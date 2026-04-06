@@ -16,6 +16,7 @@ class QTreeWidget;
 class QTreeWidgetItem;
 class QCheckBox;
 class QComboBox;
+class QProgressBar;
 
 class ReplayWindow : public ConfigurableWidget
 {
@@ -54,6 +55,7 @@ private:
     QDoubleSpinBox *_speedSpin;
     QSlider *_slider;
     QLabel *_posLabel;
+    QProgressBar *_progressBar;
     QPlainTextEdit *_infoBox;
     QTreeWidget *_filterTree;
     QCheckBox *_cbAutoplay;

@@ -292,20 +292,15 @@ void GrIPInterface::open()
     QThread::msleep(2);
 
     // Apply bit rate — use custom value if set, otherwise use the selected preset.
-    const uint32_t baud = _settings.isCustomBitrate()
-                              ? _settings.customBitrate()
-                              : _settings.bitrate();
-    m_GrIPHandler->CanSetBaudrate(_idx, baud > 0 ? baud : 10000);
-
-    m_GrIPHandler->CanSetMode(_idx, _settings.isListenOnlyMode());
+    const uint32_t baud = _settings.isCustomBitrate() ? _settings.customBitrate() : _settings.bitrate();
 
     m_GrIPHandler->SetStatus(true);
-    m_GrIPHandler->SetEchoTx(true);
+
+    m_GrIPHandler->CanSetConfig(_idx, baud > 0 ? baud : 500000, _settings.isListenOnlyMode(), true, _settings.doAutoRestart());
     m_GrIPHandler->CanEnableChannel(_idx, true);
 
     _isOpen = true;
     _isOffline = false;
-    //_status.can_state = state_ok;
     _status.rx_count = 0;
     _status.rx_errors = 0;
     _status.rx_overruns = 0;
