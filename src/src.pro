@@ -4,8 +4,10 @@ QT += core gui
 QT += widgets
 QT += xml
 QT += charts
-QT += serialport
 QT += svg
+
+win32:QT += serialport
+unix:QT += serialport
 
 TARGET = cangaroo
 TEMPLATE = app
@@ -60,9 +62,38 @@ include($$PWD/window/ReplayWindow/ReplayWindow.pri)
 include($$PWD/helpers/helpers.pri)
 
 
-PKGCONFIG += python3-embed
+unix:PKGCONFIG += python3-embed
 unix:INCLUDEPATH += /usr/include/pybind11
-win32:INCLUDEPATH += $$system(python3 -c "import pybind11; print(pybind11.get_include())")
+win32 {
+    # Detect Python include path dynamically via python3-config or python3
+    PYTHON_INCLUDE = $$system(python3 -c "import sysconfig; print(sysconfig.get_path('include'))" 2>/dev/null)
+    isEmpty(PYTHON_INCLUDE) {
+        PYTHON_INCLUDE = $$system(python -c "import sysconfig; print(sysconfig.get_path('include'))" 2>/dev/null)
+    }
+    !isEmpty(PYTHON_INCLUDE) {
+        INCLUDEPATH += $$PYTHON_INCLUDE
+    }
+
+    # Detect Python library dynamically via python3-config
+    PYTHON_LDFLAGS = $$system(python3-config --ldflags --embed 2>/dev/null)
+    isEmpty(PYTHON_LDFLAGS) {
+        PYTHON_LDFLAGS = $$system(python3-config --ldflags 2>/dev/null)
+    }
+    !isEmpty(PYTHON_LDFLAGS) {
+        LIBS += $$PYTHON_LDFLAGS
+    }
+
+    # Detect pybind11 include path dynamically
+    PYBIND11_INCLUDE = $$system(python3 -c "import pybind11; print(pybind11.get_include())" 2>/dev/null)
+    !isEmpty(PYBIND11_INCLUDE) {
+        INCLUDEPATH += $$PYBIND11_INCLUDE
+    }
+    # Also add the Python prefix include dir as a fallback (covers MSYS2 system-installed pybind11)
+    PYTHON_PREFIX = $$system(python3-config --prefix 2>/dev/null)
+    !isEmpty(PYTHON_PREFIX) {
+        INCLUDEPATH += $$PYTHON_PREFIX/include
+    }
+}
 
 unix:PKGCONFIG += libnl-3.0
 unix:PKGCONFIG += libnl-route-3.0
