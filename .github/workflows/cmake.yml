@@ -277,7 +277,38 @@ jobs:
 
       - name: Configure build (Qt6 qmake)
         run: |
-          qmake6 CONFIG+=release CONFIG+=kvaser CONFIG+=peakcan
+          PYTHON_INCLUDE=$(python3 -c "import sysconfig; print(sysconfig.get_path('include'))")
+          PYTHON_LIBS=$(python3-config --libs --embed 2>/dev/null || python3-config --libs 2>/dev/null || echo "")
+          PYTHON_LDFLAGS=$(python3-config --ldflags --embed 2>/dev/null || python3-config --ldflags 2>/dev/null || echo "")
+          PYBIND11_INCLUDE=$(python3 -c "import pybind11; print(pybind11.get_include())" 2>/dev/null || echo "")
+          PYTHON_PREFIX=$(python3-config --prefix 2>/dev/null || echo "")
+
+          echo "Python include:   $PYTHON_INCLUDE"
+          echo "Python libs:      $PYTHON_LIBS"
+          echo "Python ldflags:   $PYTHON_LDFLAGS"
+          echo "pybind11 include: $PYBIND11_INCLUDE"
+          echo "Python prefix:    $PYTHON_PREFIX"
+
+          # Build qmake arguments — each INCLUDEPATH entry is a separate assignment
+          QMAKE_ARGS=(
+            CONFIG+=release
+            CONFIG+=kvaser
+            CONFIG+=peakcan
+          )
+
+          [ -n "$PYTHON_INCLUDE" ]   && QMAKE_ARGS+=("INCLUDEPATH+=$PYTHON_INCLUDE")
+          [ -n "$PYBIND11_INCLUDE" ] && QMAKE_ARGS+=("INCLUDEPATH+=$PYBIND11_INCLUDE")
+          # Fallback: add the MinGW prefix/include so system-installed pybind11 is found
+          [ -n "$PYTHON_PREFIX" ]    && QMAKE_ARGS+=("INCLUDEPATH+=$PYTHON_PREFIX/include")
+          # Pass Python link flags (prefer --ldflags which includes -L, fall back to --libs)
+          if [ -n "$PYTHON_LDFLAGS" ]; then
+            QMAKE_ARGS+=("LIBS+=$PYTHON_LDFLAGS")
+          elif [ -n "$PYTHON_LIBS" ]; then
+            QMAKE_ARGS+=("LIBS+=$PYTHON_LIBS")
+          fi
+
+          echo "qmake6 ${QMAKE_ARGS[*]}"
+          qmake6 "${QMAKE_ARGS[@]}"
 
       - name: Build
         run: |
