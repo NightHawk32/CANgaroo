@@ -6,6 +6,7 @@
 
 #include <QList>
 #include <QMutex>
+#include <QString>
 
 #include <windows.h>
 
@@ -25,6 +26,7 @@ public:
 
     QString getName() const override;
     QString getDetailsStr() const override;
+    QString getVersion();
 
     void applyConfig(const MeasurementInterface &mi) override;
 
@@ -67,9 +69,13 @@ private:
     uint64_t _numTx;
     uint64_t _numTxErr;
 
+    QString _version;
+
     QList<CandleApiTiming> _timings;
+    QList<CandleApiTiming> _fdTimings;
 
     bool setBitTiming(uint32_t bitrate, uint32_t samplePoint);
+    bool setFdBitTiming(uint32_t fdBitrate, uint32_t fdSamplePoint);
 
     QMutex _txMutex;
     QList<CanMessage> _txMsgList;

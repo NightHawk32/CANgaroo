@@ -330,8 +330,12 @@ void GenericCanSetupPage::disenableUI(bool enabled)
     ui->cbSamplePoint->setEnabled(!ui->cbCustomBitrate->isChecked());
     ui->cbConfigOS->setEnabled(caps & CanInterface::capability_config_os);
 
-    ui->cbBitrateFD->setEnabled(!ui->cbCustomFdBitrate->isChecked() && (caps & CanInterface::capability_canfd));
-    ui->cbSamplePointFD->setEnabled(!ui->cbCustomFdBitrate->isChecked() && (caps & CanInterface::capability_canfd));
+    bool hasFdCapability = (caps & CanInterface::capability_canfd);
+    bool hasFdBitrates = ui->cbBitrateFD->count() > 0;
+    bool hasFdSamplePoints = ui->cbSamplePointFD->count() > 0;
+
+    ui->cbBitrateFD->setEnabled(enabled && !ui->cbCustomFdBitrate->isChecked() && hasFdCapability && hasFdBitrates);
+    ui->cbSamplePointFD->setEnabled(enabled && !ui->cbCustomFdBitrate->isChecked() && hasFdCapability && hasFdSamplePoints);
     ui->cbListenOnly->setEnabled(enabled && (caps & CanInterface::capability_listen_only));
     ui->cbOneShot->setEnabled(enabled && (caps & CanInterface::capability_one_shot));
     ui->cbTripleSampling->setEnabled(enabled && (caps & CanInterface::capability_triple_sampling));

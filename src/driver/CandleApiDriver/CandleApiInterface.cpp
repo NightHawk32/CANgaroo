@@ -28,12 +28,14 @@ CandleApiInterface::CandleApiInterface(CandleApiDriver *driver, candle_handle ha
   : CanInterface(reinterpret_cast<CanDriver*>(driver)),
     _hostOffsetStart(0),
     _deviceTicksStart(0),
+    _isOpen(false),
     _handle(handle),
     _backend(driver->backend()),
     _numRx(0),
     _numTx(0),
     _numTxErr(0)
 {
+    _version = "UnKnown";
     _settings.setBitrate(500000);
     _settings.setSamplePoint(875);
 
@@ -52,19 +54,31 @@ CandleApiInterface::CandleApiInterface(CandleApiDriver *driver, candle_handle ha
         << CandleApiTiming(170000000,  500000, 875, 2,  147, 21)
         << CandleApiTiming(170000000, 1000000, 875, 1,  147, 21);
 
-    // Timings for 160MHz processors (CANable 2.5)
-    // total_TQ = 1(sync) + 1(prop) + phase_seg1 + phase_seg2
-    // bitrate  = 160MHz / (brp * total_TQ),  SP = (2 + phase_seg1) / total_TQ
+    // Timings for 160MHz processors (CANable 2.5 / Elmue firmware)
+    // Total TQ = 1(sync) + 1(prop) + phase_seg1 + phase_seg2
+    // For 87.5% sample point with total_TQ=16: prop=1, seg1=12, seg2=2
+    // bitrate = fclk / (brp * total_TQ) = 160000000 / (brp * 16)
     _timings
-        << CandleApiTiming(160000000,   10000, 875, 80, 173, 25)
-        << CandleApiTiming(160000000,   20000, 875, 40, 173, 25)
-        << CandleApiTiming(160000000,   50000, 875, 16, 173, 25)
-        << CandleApiTiming(160000000,   83333, 875,  8, 208, 30)
-        << CandleApiTiming(160000000,  100000, 875, 10, 138, 20)
-        << CandleApiTiming(160000000,  125000, 875,  8, 138, 20)
-        << CandleApiTiming(160000000,  250000, 875,  4, 138, 20)
-        << CandleApiTiming(160000000,  500000, 875,  2, 138, 20)
-        << CandleApiTiming(160000000, 1000000, 875,  1, 138, 20);
+        << CandleApiTiming(160000000,   10000, 875, 1000, 12, 2)
+        << CandleApiTiming(160000000,   20000, 875,  500, 12, 2)
+        << CandleApiTiming(160000000,   50000, 875,  200, 12, 2)
+        << CandleApiTiming(160000000,   83333, 875,  120, 12, 2)
+        << CandleApiTiming(160000000,  100000, 875,  100, 12, 2)
+        << CandleApiTiming(160000000,  125000, 875,   80, 12, 2)
+        << CandleApiTiming(160000000,  250000, 875,   40, 12, 2)
+        << CandleApiTiming(160000000,  500000, 875,   20, 12, 2)
+        << CandleApiTiming(160000000, 1000000, 875,   10, 12, 2);
+
+    // FD data-phase timings for 160MHz (Elmue firmware)
+    // 75% SP: SP = (1+1+seg1) / total_TQ = 75%  →  seg2 = total_TQ/4
+    // Any request for a different SP falls back to 75% via setFdBitTiming()
+    _fdTimings
+        << CandleApiTiming(160000000,  1000000, 750,  40, 13, 5)  // brp=40, TQ=20 → 1Mbit,  75%
+        << CandleApiTiming(160000000,  2000000, 750,   4, 13, 5)  // brp=4,  TQ=20 → 2Mbit,  75%
+        << CandleApiTiming(160000000,  4000000, 750,   2, 13, 5)  // brp=2,  TQ=20 → 4Mbit,  75%
+        << CandleApiTiming(160000000,  5000000, 750,   2, 10, 4)  // brp=2,  TQ=16 → 5Mbit,  75%
+        << CandleApiTiming(160000000,  8000000, 750,   1, 13, 5)  // brp=1,  TQ=20 → 8Mbit,  75%
+        << CandleApiTiming(160000000, 10000000, 750,   1, 10, 4); // brp=1,  TQ=16 → 10Mbit, 75%
 
     // Timings for 48MHz processors (CANable 0.X)
     _timings
@@ -180,6 +194,11 @@ QString CandleApiInterface::getDetailsStr() const
     return QString::fromStdWString(getPath());
 }
 
+QString CandleApiInterface::getVersion()
+{
+    return _version;
+}
+
 void CandleApiInterface::applyConfig(const MeasurementInterface &mi)
 {
     _settings = mi;
@@ -197,6 +216,10 @@ uint32_t CandleApiInterface::getCapabilities()
     if (candle_channel_get_capabilities(_handle, 0, &caps)) {
 
         uint32_t retval = 0;
+
+        if (caps.feature & CANDLE_MODE_CAN_FD) {
+            retval |= CanInterface::capability_canfd;
+        }
 
         if (caps.feature & CANDLE_MODE_LISTEN_ONLY) {
             retval |= CanInterface::capability_listen_only;
@@ -223,10 +246,18 @@ QList<CanTiming> CandleApiInterface::getAvailableBitrates()
 
     candle_capability_t caps;
     if (candle_channel_get_capabilities(_handle, 0, &caps)) {
+        /* Elmue firmware supports FD bittiming via USB request 10 even without
+         * the CANDLE_MODE_BITTIMING_FD (0x400) capability flag. */
+        bool isElmue = (caps.feature & CANDLE_MODE_PROTOCOL_ELMUE) != 0;
+        bool supportsFd = (caps.feature & CANDLE_MODE_CAN_FD) != 0 &&
+                          ((caps.feature & CANDLE_MODE_BITTIMING_FD) != 0 || isElmue);
         int i = 0;
         for (const auto &t : _timings) {
             if (t.getBaseClk() == caps.fclk_can) {
-                retval << CanTiming(i++, t.getBitrate(), 0, t.getSamplePoint());
+                /* FD data phase uses 75% sample point (recommended for high bitrates) */
+                unsigned fdSP = supportsFd ? 750u : 0u;
+                retval << CanTiming(i++, t.getBitrate(), supportsFd ? 2000000u : 0u, t.getSamplePoint(), fdSP);
+                retval << CanTiming(i++, t.getBitrate(), supportsFd ? 5000000u : 0u, t.getSamplePoint(), fdSP);
             }
         }
     }
@@ -255,9 +286,21 @@ bool CandleApiInterface::setBitTiming(uint32_t bitrate, uint32_t samplePoint)
           && (t.getSamplePoint()==samplePoint) )
         {
             candle_bittiming_t timing = t.getTiming();
+            log_info(tr("CandleApi::setBitTiming(): trying brp=%1 prop=%2 seg1=%3 seg2=%4 sjw=%5")
+                .arg(timing.brp)
+                .arg(timing.prop_seg)
+                .arg(timing.phase_seg1)
+                .arg(timing.phase_seg2)
+                .arg(timing.sjw));
             bool ok = candle_channel_set_timing(_handle, 0, &timing);
             if (!ok) {
-                log_info(tr("CandleApi::setBitTiming(): candle_channel_set_timing() failed!"));
+                log_info(tr("CandleApi::setBitTiming(): candle_channel_set_timing() failed! last_error=%1, falling back to candle_channel_set_bitrate()")
+                    .arg(static_cast<int>(candle_dev_last_error(_handle))));
+                ok = candle_channel_set_bitrate(_handle, 0, bitrate);
+                if (!ok) {
+                    log_info(tr("CandleApi::setBitTiming(): candle_channel_set_bitrate() fallback failed! last_error=%1")
+                        .arg(static_cast<int>(candle_dev_last_error(_handle))));
+                }
             }
             return ok;
         }
@@ -269,20 +312,84 @@ bool CandleApiInterface::setBitTiming(uint32_t bitrate, uint32_t samplePoint)
     return false;
 }
 
+bool CandleApiInterface::setFdBitTiming(uint32_t fdBitrate, uint32_t fdSamplePoint)
+{
+    candle_capability_t caps;
+    if (!candle_channel_get_capabilities(_handle, 0, &caps)) {
+        log_info(tr("CandleApi::setFdBitTiming(): Could not get capabilities!"));
+        return false;
+    }
+
+    log_debug(tr("CandleApi::setFdBitTiming(): looking for fdBitrate=%1, fdSamplePoint=%2, fclk_can=%3")
+        .arg(fdBitrate).arg(fdSamplePoint).arg(caps.fclk_can));
+
+    /* First pass: exact match on bitrate + sample point */
+    for (const auto &t : _fdTimings) {
+        if ( (t.getBaseClk() == caps.fclk_can)
+          && (t.getBitrate() == fdBitrate)
+          && (t.getSamplePoint() == fdSamplePoint) )
+        {
+            candle_bittiming_t timing = t.getTiming();
+            log_info(tr("CandleApi::setFdBitTiming(): trying brp=%1 prop=%2 seg1=%3 seg2=%4 sjw=%5")
+                .arg(timing.brp)
+                .arg(timing.prop_seg)
+                .arg(timing.phase_seg1)
+                .arg(timing.phase_seg2)
+                .arg(timing.sjw));
+            bool ok = candle_channel_set_timing_fd(_handle, 0, &timing);
+            if (!ok) {
+                log_info(tr("CandleApi::setFdBitTiming(): candle_channel_set_timing_fd() failed! last_error=%1")
+                    .arg(static_cast<int>(candle_dev_last_error(_handle))));
+            }
+            return ok;
+        }
+    }
+
+    /* Second pass: fall back to 75% SP for the same bitrate */
+    if (fdSamplePoint != 750u) {
+        log_info(tr("CandleApi::setFdBitTiming(): no exact match, falling back to 75%% SP for fdBitrate=%1")
+            .arg(fdBitrate));
+        return setFdBitTiming(fdBitrate, 750u);
+    }
+
+    log_info(tr("CandleApi::setFdBitTiming(): no matching FD timing entry found for fdBitrate=%1, fdSamplePoint=%2, fclk_can=%3")
+        .arg(fdBitrate).arg(fdSamplePoint).arg(caps.fclk_can));
+    return false;
+}
+
 void CandleApiInterface::open()
 {
     if (!candle_dev_open(_handle)) {
-        // TODO what?
-        log_info(tr("CandleApi::open() failed!"));
+        log_info(tr("CandleApi::open() failed! last_error=%1")
+            .arg(static_cast<int>(candle_dev_last_error(_handle))));
         _isOpen = false;
         return;
     }
 
-    if (!setBitTiming(_settings.bitrate(), _settings.samplePoint())) {
-        // TODO what?
-        log_info(tr("CandleApi::Bitrate failed!"));
-        _isOpen = false;
-        return;
+    candle_capability_t caps;
+    if (candle_channel_get_capabilities(_handle, 0, &caps)) {
+        log_info(tr("CandleApi::open(): capabilities feature=0x%1 fclk_can=%2")
+            .arg(QString::number(caps.feature, 16))
+            .arg(caps.fclk_can));
+    } else {
+        log_info(tr("CandleApi::open(): capability read failed, last_error=%1")
+            .arg(static_cast<int>(candle_dev_last_error(_handle))));
+    }
+
+    bool timingConfigured = setBitTiming(_settings.bitrate(), _settings.samplePoint());
+    if (!timingConfigured) {
+        log_info(tr("CandleApi::Bitrate failed! last_error=%1, continuing to try channel start")
+            .arg(static_cast<int>(candle_dev_last_error(_handle))));
+    }
+
+    bool fdTimingConfigured = false;
+    if (_settings.fdBitrate() > 0) {
+        uint32_t fdSP = _settings.fdSamplePoint() > 0 ? _settings.fdSamplePoint() : 750u;
+        fdTimingConfigured = setFdBitTiming(_settings.fdBitrate(), fdSP);
+        if (!fdTimingConfigured) {
+            log_info(tr("CandleApi::FD Bitrate failed! last_error=%1, continuing without FD")
+                .arg(static_cast<int>(candle_dev_last_error(_handle))));
+        }
     }
 
     uint32_t flags = 0;
@@ -295,6 +402,15 @@ void CandleApiInterface::open()
     if (_settings.isTripleSampling()) {
         flags |= CANDLE_MODE_TRIPLE_SAMPLE;
     }
+    /* Set CANDLE_MODE_CAN_FD only when FD data-phase bittiming has been
+     * successfully configured. The Elmue firmware rejects channel start with
+     * this flag if no FD bittiming was set. */
+    if (fdTimingConfigured) {
+        flags |= CANDLE_MODE_CAN_FD;
+    }
+
+    log_info(tr("CandleApi::open(): starting channel with flags=0x%1")
+        .arg(QString::number(flags, 16)));
 
     _numRx = 0;
     _numTx = 0;
@@ -306,9 +422,34 @@ void CandleApiInterface::open()
                 _backend.getUsecsAtMeasurementStart() +
                 _backend.getUsecsSinceMeasurementStart();
         _deviceTicksStart = t_dev;
+        log_info(tr("CandleApi::open(): device timestamp start=%1")
+            .arg(t_dev));
+    } else {
+        log_info(tr("CandleApi::open(): timestamp read failed, last_error=%1")
+            .arg(static_cast<int>(candle_dev_last_error(_handle))));
     }
 
-    candle_channel_start(_handle, 0, flags);
+    if (!candle_channel_start(_handle, 0, flags)) {
+        log_info(tr("CandleApi::open(): channel start failed, last_error=%1")
+            .arg(static_cast<int>(candle_dev_last_error(_handle))));
+        _isOpen = false;
+        return;
+    }
+
+    /* The Elmue firmware sends a STRING frame immediately after channel start
+     * containing the active bitrate (e.g. "Nominal: 500k "). Capture it as
+     * the version string so the UI shows something meaningful. */
+    candle_frame_any_t vframe;
+    if (candle_frame_read_any(_handle, &vframe, 200)) {
+        if (candle_frame_any_type(&vframe) == CANDLE_FRAMETYPE_STRING) {
+            const char *raw = reinterpret_cast<const char*>(candle_frame_any_data(&vframe));
+            /* data[] is not null-terminated; use strnlen with max 64 bytes */
+            int len = static_cast<int>(strnlen(raw, 64));
+            _version = QString::fromLatin1(raw, len).trimmed();
+            log_info(tr("CandleApi::open(): firmware info: \"%1\"").arg(_version));
+        }
+    }
+
     _isOpen = true;
 }
 
@@ -369,28 +510,32 @@ bool CandleApiInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
         timeout_ms = 1;
     }
 
-    candle_frame_t frame;
+    candle_frame_any_t frame;
     CanMessage msg;
 
-    if (candle_frame_read(_handle, &frame, timeout_ms)) {
+    if (candle_frame_read_any(_handle, &frame, timeout_ms)) {
 
-        if (candle_frame_type(&frame)==CANDLE_FRAMETYPE_RECEIVE) {
+        candle_frametype_t type = candle_frame_any_type(&frame);
+        if (type == CANDLE_FRAMETYPE_RECEIVE || type == CANDLE_FRAMETYPE_RXFD) {
             _numRx++;
 
             msg.setInterfaceId(getId());
             msg.setErrorFrame(false);
-            msg.setId(candle_frame_id(&frame));
-            msg.setExtended(candle_frame_is_extended_id(&frame));
-            msg.setRTR(candle_frame_is_rtr(&frame));
+            msg.setId(candle_frame_any_id(&frame));
+            msg.setExtended(candle_frame_any_is_extended_id(&frame));
+            msg.setRTR(candle_frame_any_is_rtr(&frame));
+            msg.setFD(type == CANDLE_FRAMETYPE_RXFD || candle_frame_any_is_fd(&frame));
+            msg.setBRS(candle_frame_any_is_brs(&frame));
 
-            uint8_t dlc = candle_frame_dlc(&frame);
-            uint8_t *data = candle_frame_data(&frame);
-            msg.setLength(dlc);
-            for (int i=0; i<dlc; i++) {
+            uint8_t dlc = candle_frame_any_dlc(&frame);
+            uint8_t *data = candle_frame_any_data(&frame);
+            uint8_t len = msg.isFD() ? dlc : (dlc > 8 ? 8 : dlc);
+            msg.setLength(len);
+            for (int i = 0; i < len; i++) {
                 msg.setByte(i, data[i]);
             }
 
-            uint32_t dev_ts = candle_frame_timestamp_us(&frame) - _deviceTicksStart;
+            uint32_t dev_ts = candle_frame_any_timestamp_us(&frame) - _deviceTicksStart;
             uint64_t ts_us = _hostOffsetStart + dev_ts;
 
             uint64_t us_since_start = _backend.getUsecsSinceMeasurementStart();

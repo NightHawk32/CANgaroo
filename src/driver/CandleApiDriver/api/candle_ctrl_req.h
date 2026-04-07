@@ -32,6 +32,10 @@ bool candle_ctrl_set_host_format(candle_device_t *dev);
 bool candle_ctrl_set_device_mode(candle_device_t *dev, uint8_t channel, uint32_t mode, uint32_t flags);
 bool candle_ctrl_get_config(candle_device_t *dev, candle_device_config_t *dconf);
 bool candle_ctrl_get_capability(candle_device_t *dev, uint8_t channel, candle_capability_t *data);
+bool candle_ctrl_get_capability_fd(candle_device_t *dev, uint8_t channel, candle_capability_fd_t *data);
 bool candle_ctrl_set_bittiming(candle_device_t *dev, uint8_t channel, candle_bittiming_t *data);
+bool candle_ctrl_set_bittiming_fd(candle_device_t *dev, uint8_t channel, candle_bittiming_t *data);
+bool candle_ctrl_set_termination(candle_device_t *dev, uint8_t channel, bool enabled);
+bool candle_ctrl_set_busload_report(candle_device_t *dev, uint8_t channel, uint8_t interval);
 bool candle_ctrl_get_timestamp(candle_device_t *dev, uint32_t *current_timestamp);
-
+bool candle_ctrl_get_feedback(candle_device_t *dev, uint16_t value, candle_feedback_t *feedback);

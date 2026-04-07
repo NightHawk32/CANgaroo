@@ -32,7 +32,7 @@ MeasurementInterface::MeasurementInterface()
     _samplePoint(875),
     _isCanFD(false),
     _fdBitrate(2000000),
-    _fdSamplePoint(875),
+    _fdSamplePoint(750),
 
     _isListenOnlyMode(false),
     _isOneShotMode(false),
@@ -59,7 +59,7 @@ bool MeasurementInterface::loadXML(Backend &backend, QDomElement &el)
     _samplePoint = el.attribute("sample-point", "875").toInt();
     _isCanFD = el.attribute("can-fd", "0").toInt() != 0;
     _fdBitrate = el.attribute("bitrate-fd", "500000").toInt();
-    _fdSamplePoint = el.attribute("sample-point-fd", "875").toInt();
+    _fdSamplePoint = el.attribute("sample-point-fd", "750").toInt();
 
     _isListenOnlyMode = el.attribute("listen-only", "0").toInt() != 0;
     _isOneShotMode = el.attribute("one-shot", "0").toInt() != 0;
