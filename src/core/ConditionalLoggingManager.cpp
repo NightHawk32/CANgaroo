@@ -9,10 +9,14 @@
 #include <core/CanDbMessage.h>
 #include <core/CanDbSignal.h>
 #include <QDateTime>
+#include <QTimer>
 
 ConditionalLoggingManager::ConditionalLoggingManager(Backend &backend, QObject *parent)
-    : QObject(parent), _backend(backend), _enabled(false), _conditionMet(false), _useAndLogic(true), _textStream(nullptr)
+    : QObject(parent), _backend(backend), _enabled(false), _conditionMet(false), _useAndLogic(true), _fileLoggingEnabled(false), _textStream(nullptr)
 {
+    _timeoutTimer = new QTimer(this);
+    connect(_timeoutTimer, &QTimer::timeout, this, &ConditionalLoggingManager::onTimeoutCheck);
+    _timeoutTimer->start(1000); // Poll 1s frequency
 }
 
 ConditionalLoggingManager::~ConditionalLoggingManager()
@@ -32,7 +36,25 @@ void ConditionalLoggingManager::setEnabled(bool enabled)
         delete _textStream;
         _textStream = nullptr;
         _conditionMet = false;
+        _preBuffer.clear();
         emit conditionChanged(false);
+    } else {
+        evaluate();
+    }
+}
+
+void ConditionalLoggingManager::setFileLoggingEnabled(bool enabled)
+{
+    if (_fileLoggingEnabled == enabled) return;
+    _fileLoggingEnabled = enabled;
+
+    if (!_fileLoggingEnabled) {
+        if (_logFile.isOpen()) {
+            _logFile.close();
+        }
+        delete _textStream;
+        _textStream = nullptr;
+        _preBuffer.clear();
     }
 }
 
@@ -41,6 +63,7 @@ void ConditionalLoggingManager::reset()
     setEnabled(false);
     _conditions.clear();
     _logSignals.clear();
+    _signalInterfaces.clear();
     _signalValues.clear();
     _logFilePath.clear();
 }
@@ -69,19 +92,42 @@ void ConditionalLoggingManager::processMessage(const CanMessage &msg)
     if (!dbmsg) return;
 
     bool relevantUpdate = false;
-    for (auto *signal : dbmsg->getSignals()) {
+    CanInterfaceId msgIfId = msg.getInterfaceId();
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+
+    for (CanDbSignal *signal : dbmsg->getSignals()) {
         if (signal->isPresentInMessage(msg)) {
-            double value = signal->extractPhysicalFromMessage(msg);
-            _signalValues[signal] = value;
+            if (_signalInterfaces.contains(signal) && !_signalInterfaces[signal].contains(msgIfId)) {
+                continue;
+            }
+
+            _signalValues[signal] = signal->extractPhysicalFromMessage(msg);
+            _signalUpdateTimes[signal] = now;
             relevantUpdate = true;
         }
     }
 
     if (relevantUpdate) {
-        evaluate();
-        if (_conditionMet && _textStream) {
-            writeDataRow(msg.getFloatTimestamp());
+        if (_fileLoggingEnabled && !_conditionMet) {
+            double ts = msg.getFloatTimestamp();
+            _preBuffer.append(qMakePair(ts, _signalValues));
+
+            // Prune entries older than 5 seconds
+            int removeCount = 0;
+            while (removeCount < _preBuffer.size() && (ts - _preBuffer[removeCount].first > 5.0)) {
+                ++removeCount;
+            }
+            if (removeCount > 0) {
+                _preBuffer.remove(0, removeCount);
+            }
         }
+
+        evaluate();
+
+        if (_conditionMet && _textStream) {
+            writeDataRow(msg.getFloatTimestamp(), _signalValues);
+        }
+        emit liveValuesUpdated(_signalValues, false);
     }
 }
 
@@ -133,13 +179,18 @@ void ConditionalLoggingManager::evaluate()
 
         if (_conditionMet) {
             // Start logging to file if path is provided
-            if (!_logFilePath.isEmpty()) {
+            if (_fileLoggingEnabled && !_logFilePath.isEmpty()) {
                 _logFile.setFileName(_logFilePath);
                 if (_logFile.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Append)) {
                     _textStream = new QTextStream(&_logFile);
                     if (_logFile.size() == 0) {
                         writeHeader();
                     }
+                    
+                    for (const auto &entry : _preBuffer) {
+                        writeDataRow(entry.first, entry.second);
+                    }
+                    _preBuffer.clear();
                 }
             }
         } else {
@@ -166,17 +217,40 @@ void ConditionalLoggingManager::writeHeader()
     *_textStream << "\n";
 }
 
-void ConditionalLoggingManager::writeDataRow(double timestamp)
+void ConditionalLoggingManager::writeDataRow(double timestamp, const QMap<CanDbSignal*, double> &values)
 {
     if (!_textStream) return;
     *_textStream << QString::number(timestamp, 'f', 6);
     for (CanDbSignal *sig : _logSignals) {
         *_textStream << ",";
-        if (_signalValues.contains(sig)) {
-            *_textStream << _signalValues[sig];
+        if (values.contains(sig)) {
+            *_textStream << values[sig];
         } else {
             *_textStream << "NaN";
         }
     }
     *_textStream << "\n";
+}
+
+void ConditionalLoggingManager::onTimeoutCheck()
+{
+    if (!_enabled) return;
+    
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    bool changed = false;
+    
+    for (auto it = _signalUpdateTimes.begin(); it != _signalUpdateTimes.end();) {
+        if (now - it.value() > 1500) {
+            _signalValues.remove(it.key());
+            it = _signalUpdateTimes.erase(it);
+            changed = true;
+        } else {
+            ++it;
+        }
+    }
+    
+    if (changed) {
+        evaluate();
+        emit liveValuesUpdated(_signalValues, true);
+    }
 }

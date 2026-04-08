@@ -592,13 +592,9 @@ void SocketCanInterface::open()
         return;
     }
 
-    if (supportsCanFD())
-    {
-        int enable = 1;
-        if (setsockopt(_fd, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable, sizeof(enable)) != 0)
-        {
-            log_error(QString("SocketCanInterface: Error while enabling CAN FD support for %1: %2").arg(_name, strerror(errno)));
-        }
+    int enable = 1;
+    if (setsockopt(_fd, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable, sizeof(enable)) != 0) {
+        log_warning(QString("SocketCanInterface: Error while enabling CAN FD support for %1: %2").arg(_name, strerror(errno)));
     }
 
     _isOpen = true;

@@ -11,6 +11,7 @@
 #include <QFile>
 #include <QTextStream>
 #include <QSet>
+#include <QTimer>
 #include <core/CanMessage.h>
 #include <core/CanDbSignal.h>
 
@@ -43,6 +44,8 @@ public:
     void setConditions(const QList<LoggingCondition> &conditions, bool useAndLogic);
     void setLogSignals(const QList<CanDbSignal*> &signalList);
     const QList<CanDbSignal*>& getLogSignals() const { return _logSignals; }
+    void setSignalInterfaces(const QMap<CanDbSignal*, CanInterfaceIdList> &interfaces) { _signalInterfaces = interfaces; }
+    QMap<CanDbSignal*, CanInterfaceIdList> getSignalInterfaces() const { return _signalInterfaces; }
     void setLogFilePath(const QString &path);
 
     const QList<LoggingCondition>& getConditions() const { return _conditions; }
@@ -52,10 +55,13 @@ public:
     bool isConditionMet() const { return _conditionMet; }
     void setEnabled(bool enabled);
     bool isEnabled() const { return _enabled; }
+    bool isFileLoggingEnabled() const { return _fileLoggingEnabled; }
+    void setFileLoggingEnabled(bool enabled);
     void reset();
 
 signals:
     void conditionChanged(bool met);
+    void liveValuesUpdated(const QMap<CanDbSignal*, double>& values, bool isStale);
 
 public slots:
     void processMessage(const CanMessage &msg);
@@ -63,15 +69,25 @@ public slots:
 private:
     void evaluate();
     void writeHeader();
-    void writeDataRow(double timestamp);
+    void writeDataRow(double timestamp, const QMap<CanDbSignal*, double> &values);
+    
+    QTimer* _timeoutTimer = nullptr;
+    
+private slots:
+    void onTimeoutCheck();
 
+private:
     Backend &_backend;
     bool _enabled;
     bool _conditionMet;
     bool _useAndLogic;
+    bool _fileLoggingEnabled;
     QList<LoggingCondition> _conditions;
     QList<CanDbSignal*> _logSignals;
+    QList<QPair<double, QMap<CanDbSignal*, double>>> _preBuffer;
+    QMap<CanDbSignal*, CanInterfaceIdList> _signalInterfaces;
     QMap<CanDbSignal*, double> _signalValues;
+    QMap<CanDbSignal*, qint64> _signalUpdateTimes;
 
     QString _logFilePath;
     QFile _logFile;

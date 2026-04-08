@@ -34,6 +34,8 @@
 #define CAN_FLAGS_TX            0x80 // Frame originated from the host (TX echo)
 
 
+#define GRIP_HEADER_VERSION     1
+
 // ---------------------------------------------------------------------------
 // Wire protocol structures
 //
@@ -201,7 +203,7 @@ void GrIPHandler::SetStatus(bool open)
 {
     Protocol_SystemHeader_t header;
 
-    header.Version = 1;
+    header.Version = GRIP_HEADER_VERSION;
     header.Command = SYSTEM_SET_STATUS;
     header.Length = 0;
     header.Data = open ? 2 : 1; // 1 = closed, 2 = open
@@ -218,7 +220,7 @@ void GrIPHandler::SetEchoTx(bool enable)
 {
     Protocol_SystemHeader_t header;
 
-    header.Version = 1;
+    header.Version = GRIP_HEADER_VERSION;
     header.Command = SYSTEM_CAN_TXECHO;
     header.Length = 0;
     header.Data = enable ? 1 : 0;
@@ -235,7 +237,7 @@ void GrIPHandler::RequestVersion()
 {
     Protocol_SystemHeader_t header;
 
-    header.Version = 1;
+    header.Version = GRIP_HEADER_VERSION;
     header.Command = SYSTEM_REPORT_INFO;
     header.Length = 0;
     header.Data = 0;
@@ -318,7 +320,7 @@ void GrIPHandler::CanEnableChannel(uint8_t ch, bool enable)
 {
     Protocol_ChannelStatus_t status = {};
 
-    status.Header.Version = 1;
+    status.Header.Version = GRIP_HEADER_VERSION;
     status.Header.Command = SYSTEM_START_CAN;
     status.Header.Length = 2;
     status.Header.Data = 0;
@@ -345,7 +347,7 @@ void GrIPHandler::CanSetMode(uint8_t ch, bool listen_only)
 {
     Protocol_ChannelParam_t mode = {};
 
-    mode.Header.Version = 1;
+    mode.Header.Version = GRIP_HEADER_VERSION;
     mode.Header.Command = SYSTEM_CAN_MODE;
     mode.Header.Length = sizeof(Protocol_ChannelParam_t) - sizeof(Protocol_SystemHeader_t);
     mode.Header.Data = 0;
@@ -365,7 +367,7 @@ void GrIPHandler::CanSetBaudrate(uint8_t ch, uint32_t baud)
 {
     Protocol_ChannelParam_t cfg = {};
 
-    cfg.Header.Version = 1;
+    cfg.Header.Version = GRIP_HEADER_VERSION;
     cfg.Header.Command = SYSTEM_SEND_CAN_CFG;
     cfg.Header.Length = sizeof(Protocol_ChannelParam_t) - sizeof(Protocol_SystemHeader_t);
     cfg.Header.Data = 0;
@@ -388,7 +390,7 @@ void GrIPHandler::CanSetConfig(uint8_t ch, uint32_t baud, bool listen, bool echo
 {
     Protocol_CanConfig_t cfg = {};
 
-    cfg.Header.Version = 1;
+    cfg.Header.Version = GRIP_HEADER_VERSION;
     cfg.Header.Command = SYSTEM_SEND_CAN_CFG;
     cfg.Header.Length = sizeof(Protocol_CanConfig_t) - sizeof(Protocol_SystemHeader_t);
     cfg.Header.Data = 0;
@@ -452,7 +454,7 @@ bool GrIPHandler::CanTransmit(uint8_t ch, const CanMessage &msg)
 {
     Protocol_CanFrame_t frame = {};
 
-    frame.Header.Version = 1;
+    frame.Header.Version = GRIP_HEADER_VERSION;
     frame.Header.Command = SYSTEM_SEND_CAN_FRAME;
     frame.Header.Length = sizeof(Protocol_CanFrame_t) - sizeof(Protocol_SystemHeader_t);
     frame.Header.Data = 0;

@@ -25,7 +25,7 @@
 #include <QtCharts/QChartView>
 #include <QtCharts/QScatterSeries>
 #include <QtCharts/QValueAxis>
-#include <QVector>
+#include <QMenu>
 
 #ifdef QT_CHARTS_USE_NAMESPACE
 QT_CHARTS_USE_NAMESPACE
@@ -39,8 +39,9 @@ public:
     virtual ~ScatterVisualization();
 
     virtual void addMessage(const CanMessage &msg) override;
+    virtual void addDecodedData(const QMap<CanDbSignal*, DecodedSignalData>& newPoints) override;
     virtual void clear() override;
-    virtual void addSignal(CanDbSignal *signal) override;
+    virtual void addSignal(CanDbSignal *signal, const CanInterfaceIdList &interfaces = {}) override;
     virtual void clearSignals() override;
     virtual void setSignalColor(CanDbSignal *signal, const QColor &color) override;
     virtual void zoomIn() override;
@@ -50,6 +51,7 @@ public:
 public slots:
     virtual void onActivated() override;
     virtual void applyTheme(ThemeManager::Theme theme) override;
+    virtual void setActive(bool active) override;
 
     // Exposed for GraphWindow management
     QChartView* chartView() const { return _chartView; }
@@ -58,7 +60,6 @@ public slots:
     QGraphicsRectItem* tooltipBox() const { return _tooltipBox; }
     QGraphicsTextItem* tooltipText() const { return _tooltipText; }
     QMap<CanDbSignal*, QScatterSeries*> seriesMap() const { return _seriesMap; }
-    const QMap<CanDbSignal*, QVector<QPointF>>& pointBuffers() const { return _pointBuffers; }
     QMap<CanDbSignal*, QGraphicsEllipseItem*> tracers() const { return _tracers; }
     int getBusId(CanDbSignal* sig) const { return _signalBusMap.value(sig, 0); }
 
@@ -68,9 +69,12 @@ signals:
 protected:
     virtual void wheelEvent(QWheelEvent *event) override;
     virtual bool eventFilter(QObject *watched, QEvent *event) override;
+    virtual void contextMenuEvent(QContextMenuEvent *event) override;
 
 private slots:
     void onAxisRangeChanged(qreal min, qreal max);
+    void exportToCsv();
+    void exportToImage();
 
 private:
     QChartView *_chartView;
@@ -80,14 +84,10 @@ private:
     int _windowDuration;
     bool _autoScroll;
     bool _isUpdatingRange;
-    bool _bufferDirty = false;
+    static const int MAX_POINTS = 1000;
 
-    static constexpr int MAX_POINTS = 100000;
-    static constexpr int TRIM_THRESHOLD = MAX_POINTS + 10000;
-    QMap<CanDbSignal*, QVector<QPointF>> _pointBuffers;
-
-    void flushBuffers();
     void updateAxes();
+    void handleHover(QPointF pos);
 
     QGraphicsLineItem *_cursorLine;
     QMap<CanDbSignal*, QGraphicsEllipseItem*> _tracers;

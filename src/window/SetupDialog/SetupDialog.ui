@@ -236,21 +236,30 @@
               <item>
                <widget class="QPushButton" name="btAddDatabase">
                 <property name="text">
-                 <string>Add &amp;Database...</string>
+                 <string>Add &amp;DBC...</string>
+                </property>
+                <property name="icon">
+                 <iconset theme="list-add"/>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="btRemoveDatabase">
                 <property name="text">
-                 <string>&amp;Remove Database</string>
+                 <string>&amp;Remove DBC</string>
+                </property>
+                <property name="icon">
+                 <iconset theme="list-remove"/>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="btReloadDatabases">
                 <property name="text">
-                 <string>Reload Databases</string>
+                 <string>Reload DBC</string>
+                </property>
+                <property name="icon">
+                 <iconset theme="system-reboot"/>
                 </property>
                </widget>
               </item>

@@ -195,28 +195,34 @@ void CanMessage::setByte(const uint8_t index, const uint8_t value) {
 
 uint64_t CanMessage::extractRawSignal(uint8_t start_bit, const uint8_t length, const bool isBigEndian) const
 {
-//    if ((start_bit+length) > (getLength()*8)) {
-//        return 0;
-//    }
+    if (length == 0 || start_bit >= sizeof(_u8) * 8) return 0;
 
-    // FIXME: This only gives access to data bytes 0-8. Need to rework for CANFD.
-    uint64_t data = le64toh(_u64[0]);
+    int byte_offset = start_bit / 8;
+    int bit_shift = start_bit % 8;
 
-    data >>= start_bit;
+    uint8_t temp[8] = {0};
+    int copy_len = sizeof(_u8) - byte_offset;
+    if (copy_len > 8) copy_len = 8;
+    
+    memcpy(temp, _u8 + byte_offset, static_cast<size_t>(copy_len));
 
-    uint64_t mask =  0xFFFFFFFFFFFFFFFF;
-    mask <<= length;
-    mask = ~mask;
+    uint64_t data_raw;
+    memcpy(&data_raw, temp, sizeof(data_raw));
+    data_raw = le64toh(data_raw);
+    
+    uint64_t data = data_raw >> bit_shift;
 
+    uint64_t mask = 0xFFFFFFFFFFFFFFFF;
+    if (length < 64) {
+        mask = (1ULL << length) - 1;
+    }
     data &= mask;
 
     // If the length is greater than 8, we need to byteswap to preserve endianness
     if (isBigEndian && (length > 8))
     {
-
         // Swap bytes
         data = __builtin_bswap64(data);
-
         // Shift out unused bits
         data >>= 64 - length;
     }

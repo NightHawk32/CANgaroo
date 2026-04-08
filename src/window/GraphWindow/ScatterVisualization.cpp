@@ -33,6 +33,9 @@
 #include <QBrush>
 #include <QDateTime>
 #include <QTimer>
+#include <QMenu>
+#include <QFileDialog>
+#include <QTextStream>
 #include <QtCharts/QValueAxis>
 #include <QtCharts/QScatterSeries>
 #include <QtCharts/QChartView>
@@ -43,7 +46,7 @@ ScatterVisualization::ScatterVisualization(QWidget *parent, Backend &backend)
 {
     _updateTimer = new QTimer(this);
     connect(_updateTimer, &QTimer::timeout, this, &ScatterVisualization::onActivated);
-    _updateTimer->start(100); // 10Hz sync
+    _updateTimer->start(30); // 30Hz sync
     _chart = new QChart();
     _chart->legend()->setVisible(true);
     _chart->legend()->setAlignment(Qt::AlignBottom);
@@ -105,80 +108,114 @@ ScatterVisualization::~ScatterVisualization()
 {
 }
 
+void ScatterVisualization::addDecodedData(const QMap<CanDbSignal*, DecodedSignalData>& newPoints)
+{
+    for (auto it = newPoints.begin(); it != newPoints.end(); ++it) {
+        CanDbSignal* signal = it.key();
+        if (!_signals.contains(signal)) continue;
+
+        const DecodedSignalData &data = it.value();
+        
+        _signalBuffers[signal].timestamps.append(data.timestamps);
+        _signalBuffers[signal].values.append(data.values);
+        _signalBusMap[signal] = data.interfaceId;
+
+        if (_signalBuffers[signal].timestamps.size() > MAX_POINTS + 10) {
+            _signalBuffers[signal].timestamps.remove(0, 10);
+            _signalBuffers[signal].values.remove(0, 10);
+            _syncIndices[signal] = qMax(0, _syncIndices.value(signal, 0) - 10);
+        }
+    }
+}
+
 void ScatterVisualization::addMessage(const CanMessage &msg)
 {
-    double timestamp = msg.getFloatTimestamp();
-
     if (_startTime < 0) {
-        setGlobalStartTime(timestamp);
+        setGlobalStartTime(msg.getFloatTimestamp());
     }
 
-    double t = timestamp - _startTime;
+    double t = msg.getFloatTimestamp() - _startTime;
+    CanInterfaceId msgIfId = msg.getInterfaceId();
 
     for (CanDbSignal *signal : _signals) {
         if (signal->isPresentInMessage(msg)) {
+            // Network Context Filtering
+            if (_signalInterfaces.contains(signal)) {
+                if (!_signalInterfaces[signal].contains(msgIfId)) {
+                    continue;
+                }
+            }
+
             double value = signal->extractPhysicalFromMessage(msg);
-            if (_seriesMap.contains(signal)) {
-                _pointBuffers[signal].append(QPointF(t, value));
-                _signalBusMap[signal] = msg.getInterfaceId();
-                _bufferDirty = true;
+            
+            // Populate isolated buffer (Raw data only)
+            _signalBuffers[signal].timestamps.append(t);
+            _signalBuffers[signal].values.append(value);
+            _signalBusMap[signal] = msg.getInterfaceId();
+
+            if (_signalBuffers[signal].timestamps.size() > MAX_POINTS + 10) {
+                _signalBuffers[signal].timestamps.remove(0, 10);
+                _signalBuffers[signal].values.remove(0, 10);
+                _syncIndices[signal] = qMax(0, _syncIndices.value(signal, 0) - 10);
             }
         }
     }
 }
 
-void ScatterVisualization::flushBuffers()
-{
-    if (!_bufferDirty) return;
-
-    for (auto it = _pointBuffers.begin(); it != _pointBuffers.end(); ++it) {
-        QVector<QPointF> &buf = it.value();
-        if (buf.isEmpty()) continue;
-
-        if (buf.size() > TRIM_THRESHOLD) {
-            int excess = buf.size() - MAX_POINTS;
-            buf.remove(0, excess);
-        }
-
-        QScatterSeries *series = _seriesMap.value(it.key());
-        if (series) {
-            series->replace(buf);
-        }
-    }
-    _bufferDirty = false;
-}
-
 void ScatterVisualization::onActivated()
 {
-    flushBuffers();
-
-    if (!_autoScroll || _chart->axes(Qt::Horizontal).isEmpty()) return;
-
-    double latestMsgT = 0;
-    for (auto it = _pointBuffers.constBegin(); it != _pointBuffers.constEnd(); ++it) {
-        const QVector<QPointF> &buf = it.value();
-        if (!buf.isEmpty()) {
-            latestMsgT = qMax(latestMsgT, buf.last().x());
+    // Find latest timestamp across all signal buffers for scrolling
+    double latestT = 0;
+    for (const auto &buffer : _signalBuffers.values()) {
+        if (!buffer.timestamps.isEmpty()) {
+            latestT = qMax(latestT, buffer.timestamps.last());
         }
     }
 
-    double t = latestMsgT;
+    // Synchronize series with buffers (Batch Update)
+    for (auto it = _seriesMap.begin(); it != _seriesMap.end(); ++it) {
+        CanDbSignal *sig = it.key();
+        QScatterSeries *series = it.value();
+        const auto &buffer = _signalBuffers[sig];
+        int syncIdx = _syncIndices.value(sig, 0);
+
+        if (syncIdx < buffer.timestamps.size()) {
+            QList<QPointF> points;
+            points.reserve(buffer.timestamps.size() - syncIdx);
+            for (int i = syncIdx; i < buffer.timestamps.size(); ++i) {
+                points.append(QPointF(buffer.timestamps[i], buffer.values[i]));
+            }
+            series->append(points);
+            _syncIndices[sig] = buffer.timestamps.size();
+        }
+
+        // Keep series size in sync with buffer block pruning
+        if (series->count() > MAX_POINTS) {
+            int toRemove = series->count() - MAX_POINTS + 10;
+            series->removePoints(0, toRemove);
+        }
+    }
+    
+    if (!_autoScroll || _chart->axes(Qt::Horizontal).isEmpty()) return;
+    
+    double t = latestT;
 
     _isUpdatingRange = true;
     QAbstractAxis *axisX = _chart->axes(Qt::Horizontal).first();
     if (_windowDuration > 0) {
-        double windowSize = static_cast<double>(_windowDuration);
+        double windowSize = (double)_windowDuration;
         if (t > windowSize) {
             axisX->setRange(t - windowSize, t);
         } else {
             axisX->setRange(0, windowSize);
         }
     } else {
+        // "All" Mode: Show from 0 to current timestamp
         axisX->setRange(0, qMax(10.0, t));
     }
     _isUpdatingRange = false;
-
-    updateAxes();
+    
+    updateAxes(); // Trigger Y auto-fit
 }
 
 void ScatterVisualization::setSignalColor(CanDbSignal *signal, const QColor &color)
@@ -193,56 +230,60 @@ void ScatterVisualization::setSignalColor(CanDbSignal *signal, const QColor &col
     }
 }
 
+void ScatterVisualization::setActive(bool active)
+{
+    if (active) {
+        if (!_updateTimer->isActive()) _updateTimer->start(30);
+    } else {
+        _updateTimer->stop();
+    }
+}
+
 void ScatterVisualization::updateAxes()
 {
-    if (_chart->axes(Qt::Vertical).isEmpty() || _chart->axes(Qt::Horizontal).isEmpty() || _pointBuffers.isEmpty()) return;
-
-    QValueAxis *axisX = qobject_cast<QValueAxis*>(_chart->axes(Qt::Horizontal).first());
-    if (!axisX) return;
-    double minX = axisX->min();
-    double maxX = axisX->max();
+    if (_chart->axes(Qt::Vertical).isEmpty() || _seriesMap.isEmpty()) return;
 
     double minY = DBL_MAX;
     double maxY = -DBL_MAX;
     bool hasData = false;
 
-    for (auto it = _pointBuffers.constBegin(); it != _pointBuffers.constEnd(); ++it) {
-        const QVector<QPointF> &pts = it.value();
-        if (pts.isEmpty()) continue;
+    QValueAxis *axisX = qobject_cast<QValueAxis*>(_chart->axes(Qt::Horizontal).first());
+    double minX = axisX->min();
+    double maxX = axisX->max();
 
-        // Binary search for first point with x >= minX
-        int lo = 0, hi = pts.size();
-        while (lo < hi) {
-            int mid = (lo + hi) / 2;
-            if (pts[mid].x() < minX) lo = mid + 1; else hi = mid;
-        }
-        int start = lo;
+    for (auto it = _signalBuffers.begin(); it != _signalBuffers.end(); ++it) {
+        const auto &buffer = it.value();
+        if (buffer.timestamps.isEmpty()) continue;
 
-        // Binary search for first point with x > maxX
-        lo = start; hi = pts.size();
-        while (lo < hi) {
-            int mid = (lo + hi) / 2;
-            if (pts[mid].x() <= maxX) lo = mid + 1; else hi = mid;
-        }
-        int end = lo;
+        // Binary search to find points in the visible range
+        auto startIt = std::lower_bound(buffer.timestamps.begin(), buffer.timestamps.end(), minX);
+        int startIdx = std::distance(buffer.timestamps.begin(), startIt);
 
-        for (int i = start; i < end; ++i) {
-            double y = pts[i].y();
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
+        for (int i = startIdx; i < buffer.timestamps.size(); ++i) {
+            double tx = buffer.timestamps[i];
+            if (tx > maxX) break; // Optimization
+            
+            double val = buffer.values[i];
+            minY = qMin(minY, val);
+            maxY = qMax(maxY, val);
             hasData = true;
         }
     }
 
     if (hasData) {
         double range = maxY - minY;
-        if (range < 0.1) {
+        if (range < 0.0001) {
             minY -= 0.5;
             maxY += 0.5;
         } else {
             minY -= range * 0.1;
             maxY += range * 0.1;
         }
+
+        // Stabilize axis by rounding to 4 decimal places to prevent flickering ticks
+        minY = std::floor(minY * 10000.0) / 10000.0;
+        maxY = std::ceil(maxY * 10000.0) / 10000.0;
+
         _chart->axes(Qt::Vertical).first()->setRange(minY, maxY);
     }
 }
@@ -252,11 +293,22 @@ void ScatterVisualization::clear()
     for (auto series : _seriesMap.values()) {
         series->clear();
     }
-    for (auto &buf : _pointBuffers) {
-        buf.clear();
+    for (auto it = _signalBuffers.begin(); it != _signalBuffers.end(); ++it) {
+        it.value().timestamps.clear();
+        it.value().values.clear();
     }
-    _bufferDirty = false;
+    for (auto it = _syncIndices.begin(); it != _syncIndices.end(); ++it) {
+        *it = 0;
+    }
     _startTime = -1;
+
+    if (!_chart->axes(Qt::Horizontal).isEmpty()) {
+        _chart->axes(Qt::Horizontal).first()->setRange(0, 5);
+    }
+    if (!_chart->axes(Qt::Vertical).isEmpty()) {
+        _chart->axes(Qt::Vertical).first()->setRange(-10, 10);
+    }
+    _autoScroll = true;
 }
 
 void ScatterVisualization::clearSignals()
@@ -270,11 +322,19 @@ void ScatterVisualization::clearSignals()
     }
     _tracers.clear();
     _seriesMap.clear();
-    _pointBuffers.clear();
-    _bufferDirty = false;
     _signals.clear();
     _signalBusMap.clear();
+    _signalBuffers.clear();
+    _syncIndices.clear();
     _startTime = -1;
+
+    if (!_chart->axes(Qt::Horizontal).isEmpty()) {
+        _chart->axes(Qt::Horizontal).first()->setRange(0, 5);
+    }
+    if (!_chart->axes(Qt::Vertical).isEmpty()) {
+        _chart->axes(Qt::Vertical).first()->setRange(-10, 10);
+    }
+    _autoScroll = true;
 }
 
 void ScatterVisualization::wheelEvent(QWheelEvent *event)
@@ -297,9 +357,144 @@ void ScatterVisualization::wheelEvent(QWheelEvent *event)
 bool ScatterVisualization::eventFilter(QObject *watched, QEvent *event)
 {
     if ((watched == _chartView || watched == _chartView->viewport()) && event->type() == QEvent::MouseMove) {
-        emit mouseMoved(static_cast<QMouseEvent*>(event));
+        QMouseEvent *me = static_cast<QMouseEvent*>(event);
+        handleHover(me->pos());
+        emit mouseMoved(me);
     }
     return VisualizationWidget::eventFilter(watched, event);
+}
+
+void ScatterVisualization::handleHover(QPointF pos)
+{
+    QPointF scenePos = _chartView->mapToScene(pos.toPoint());
+    QPointF chartPos = _chart->mapFromScene(scenePos);
+
+    if (!_chart->plotArea().contains(chartPos)) {
+        _cursorLine->hide();
+        _tooltipBox->hide();
+        for (auto tracer : _tracers.values()) tracer->hide();
+        return;
+    }
+
+    _cursorLine->setLine(chartPos.x(), _chart->plotArea().top(), chartPos.x(), _chart->plotArea().bottom());
+    _cursorLine->show();
+
+    QPointF valPos = _chart->mapToValue(chartPos);
+    double targetX = valPos.x();
+
+    uint64_t startUsecs = _backend.getUsecsAtMeasurementStart();
+    uint64_t currentUsecs = startUsecs + (uint64_t)(targetX * 1000000.0);
+    QDateTime dt = QDateTime::fromMSecsSinceEpoch(currentUsecs / 1000);
+    QString timeStr = dt.toString("yyyy-MM-dd HH:mm:ss.zzz t");
+
+    QString tooltipHtml = QString("<div style='font-family: Arial; font-size: 11px; padding: 5px; background: %1; color: %2;'>"
+                           "<b>%3</b><br/><br/>")
+                           .arg(ThemeManager::instance().currentTheme() == ThemeManager::Dark ? "#333333" : "#ffffff")
+                           .arg(ThemeManager::instance().currentTheme() == ThemeManager::Dark ? "#ffffff" : "#000000")
+                           .arg(timeStr);
+
+    bool hasAnyTracer = false;
+
+    for (CanDbSignal *signal : _signals) {
+        if (!_tracers.contains(signal)) continue;
+
+        if (!_signalBuffers.contains(signal) || _signalBuffers[signal].timestamps.isEmpty()) {
+            _tracers[signal]->hide();
+            continue;
+        }
+
+        const auto &timestamps = _signalBuffers[signal].timestamps;
+        const auto &values = _signalBuffers[signal].values;
+
+        auto it = std::lower_bound(timestamps.begin(), timestamps.end(), targetX);
+        int idx = static_cast<int>(std::distance(timestamps.begin(), it));
+
+        if (idx >= timestamps.size()) {
+            idx = timestamps.size() - 1;
+        } else if (idx > 0 && qAbs(timestamps[idx] - targetX) > qAbs(timestamps[idx - 1] - targetX)) {
+            idx--;
+        }
+
+        if (idx >= 0 && idx < timestamps.size() && qAbs(timestamps[idx] - targetX) < 0.5) {
+            double actualX = timestamps[idx];
+            double actualY = values[idx];
+            QPointF trPos = _chart->mapToPosition(QPointF(actualX, actualY));
+
+            _tracers[signal]->setPos(trPos);
+            _tracers[signal]->show();
+
+            if (_seriesMap.contains(signal))
+            {
+                tooltipHtml += QString("<span style='color:%1; font-size: 14px;'>●</span> (Bus %2) %3: <b>%4</b> %5<br/>")
+                                .arg(_seriesMap[signal]->color().name())
+                                .arg(getBusId(signal))
+                                .arg(signal->name())
+                                .arg(actualY, 0, 'f', 2)
+                                .arg(signal->getUnit());
+            }
+            hasAnyTracer = true;
+        } else {
+            _tracers[signal]->hide();
+        }
+    }
+
+    tooltipHtml += "</div>";
+
+    if (hasAnyTracer) {
+        _tooltipText->setHtml(tooltipHtml);
+        QRectF tr = _tooltipText->boundingRect();
+        _tooltipBox->setRect(0, 0, tr.width(), tr.height());
+
+        QPointF tpos = chartPos + QPointF(15, -tr.height() - 15);
+        if (tpos.x() + tr.width() > _chart->plotArea().right()) tpos.setX(chartPos.x() - tr.width() - 15);
+        if (tpos.y() < _chart->plotArea().top()) tpos.setY(chartPos.y() + 15);
+
+        _tooltipBox->setPos(tpos);
+        _tooltipBox->show();
+    } else {
+        _tooltipBox->hide();
+    }
+}
+
+void ScatterVisualization::contextMenuEvent(QContextMenuEvent *event)
+{
+    QMenu menu(this);
+    QAction *actCsv = menu.addAction("Export to CSV");
+    QAction *actImg = menu.addAction("Export to Image");
+    
+    QAction *selected = menu.exec(event->globalPos());
+    
+    if (selected == actCsv) exportToCsv();
+    else if (selected == actImg) exportToImage();
+}
+
+void ScatterVisualization::exportToCsv()
+{
+    QString path = QFileDialog::getSaveFileName(this, "Export Scatter CSV", "", "CSV Files (*.csv)");
+    if (path.isEmpty()) return;
+    
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) return;
+    
+    QTextStream out(&file);
+    out << "Signal,Time[s],Value\\n";
+    
+    for (CanDbSignal *signal : _signals) {
+        if (!_signalBuffers.contains(signal)) continue;
+        const auto &buffer = _signalBuffers[signal];
+        for (int i = 0; i < buffer.timestamps.size(); ++i) {
+            out << signal->name() << "," << buffer.timestamps[i] << "," << buffer.values[i] << "\\n";
+        }
+    }
+}
+
+void ScatterVisualization::exportToImage()
+{
+    QString path = QFileDialog::getSaveFileName(this, "Export Scatter Image", "", "PNG Images (*.png);;JPEG Images (*.jpeg)");
+    if (path.isEmpty()) return;
+    
+    QPixmap pixmap = _chartView->grab();
+    pixmap.save(path);
 }
 
 void ScatterVisualization::zoomIn()
@@ -343,14 +538,16 @@ void ScatterVisualization::setWindowDuration(int seconds)
     _autoScroll = true;
 }
 
-void ScatterVisualization::addSignal(CanDbSignal *signal)
+void ScatterVisualization::addSignal(CanDbSignal *signal, const CanInterfaceIdList &interfaces)
 {
     if (_seriesMap.contains(signal)) return;
 
-    VisualizationWidget::addSignal(signal);
+    VisualizationWidget::addSignal(signal, interfaces);
 
     QScatterSeries *series = new QScatterSeries();
-    series->setName(signal->name());
+    series->setUseOpenGL(true);
+    QString label = signal->name();
+    series->setName(label);
     series->setMarkerShape(QScatterSeries::MarkerShapeCircle);
     series->setMarkerSize(7.2);
     
@@ -373,7 +570,6 @@ void ScatterVisualization::addSignal(CanDbSignal *signal)
     }
 
     _seriesMap[signal] = series;
-    _pointBuffers[signal].reserve(MAX_POINTS);
 
     QGraphicsEllipseItem *tracer = new QGraphicsEllipseItem(-4, -4, 8, 8, _chart);
     tracer->setBrush(series->color());
@@ -381,6 +577,9 @@ void ScatterVisualization::addSignal(CanDbSignal *signal)
     tracer->setZValue(1500);
     tracer->hide();
     _tracers[signal] = tracer;
+
+    // Fix visibility bug: Force auto-scroll so the axis immediately tracks to the new live data point
+    _autoScroll = true;
 }
 
 void ScatterVisualization::onAxisRangeChanged(qreal min, qreal max)
