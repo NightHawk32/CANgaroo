@@ -6,6 +6,10 @@
 
 #include "PythonEngine.h"
 
+#include <QDir>
+#include <QFileInfo>
+#include <QStandardPaths>
+
 #include <core/Backend.h>
 #include <core/CanTrace.h>
 #include <core/CanDb.h>
@@ -306,19 +310,94 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
 // ---------------------------------------------------------------------------
 // PythonEngine implementation
 // ---------------------------------------------------------------------------
+
+// On Windows, Python needs PYTHONHOME to find its standard library.
+// If it isn't set, try to derive it from the python executable found in PATH.
+// Must be called before Py_Initialize.
+static void trySetPythonHome()
+{
+#ifdef Q_OS_WIN
+    if (!qEnvironmentVariableIsEmpty("PYTHONHOME"))
+        return;
+
+    for (const char *name : {"python3", "python"})
+    {
+        QString exe = QStandardPaths::findExecutable(QString::fromLatin1(name));
+        if (exe.isEmpty())
+            continue;
+
+        // If exe lives in a "bin" or "Scripts" subdirectory, the home is one level up
+        // (e.g. C:\msys64\usr\bin\python3.exe → home = C:\msys64\usr).
+        // Otherwise (e.g. C:\Python313\python3.exe) use the exe directory directly.
+        QDir dir = QFileInfo(exe).absoluteDir();
+        if (dir.dirName().compare("bin", Qt::CaseInsensitive) == 0 ||
+            dir.dirName().compare("Scripts", Qt::CaseInsensitive) == 0)
+        {
+            dir.cdUp();
+        }
+
+        // Store in a static so the pointer stays valid for the interpreter lifetime
+        static std::wstring s_home = dir.absolutePath().toStdWString();
+        Py_SetPythonHome(s_home.c_str());
+        return;
+    }
+#endif
+}
+
+// Holds the interpreter lifetime. Must be constructed on the main thread.
+// After construction the GIL is released so worker threads can use
+// PyGILState_Ensure/Release to acquire it safely on any thread (including
+// on Windows where Py_Initialize must run on the main thread).
+struct PythonEngine::PyInterpreterHolder
+{
+    // _setup is declared first so it runs before guard{} initializes the interpreter
+    static bool setup() { trySetPythonHome(); return true; }
+    bool _setup{setup()};
+
+    py::scoped_interpreter guard{};
+    PyThreadState *savedState = nullptr;
+
+    PyInterpreterHolder()
+    {
+        savedState = PyEval_SaveThread();
+    }
+
+    ~PyInterpreterHolder()
+    {
+        PyEval_RestoreThread(savedState);
+        // guard destructor calls Py_Finalize
+    }
+};
+
 PythonEngine::PythonEngine(Backend &backend, QObject *parent)
     : QObject(parent)
     , _backend(backend)
 {
+    try
+    {
+        _pyInterp = std::make_unique<PyInterpreterHolder>();
+    }
+    catch (const std::exception &e)
+    {
+        _initError = QString::fromStdString(e.what());
+    }
 }
 
 PythonEngine::~PythonEngine()
 {
-    stopScript();
+    stopScript(); // join thread before interpreter is finalized
 }
 
 void PythonEngine::runScript(const QString &code)
 {
+    if (!_pyInterp)
+    {
+        emit scriptError(_initError.isEmpty()
+            ? "Python interpreter failed to initialize."
+            : _initError);
+        return;
+    }
+
     if (_running)
     {
         return;
@@ -400,10 +479,12 @@ void PythonEngine::workerFunc(std::string code)
     // The scoped_interpreter MUST outlive any catch blocks that access
     // Python error state (e.g. py::error_already_set::what()), otherwise
     // Py_Finalize runs during stack unwinding and the catch block crashes.
+    // The interpreter was already initialized on the main thread.
+    // Acquire the GIL for this worker thread — works on all platforms including Windows.
+    PyGILState_STATE gstate = PyGILState_Ensure();
+
     try
     {
-        py::scoped_interpreter guard{};
-
         // Inject helpers into globals so they persist across all py::exec calls
         auto globals = py::globals();
 
@@ -473,6 +554,8 @@ sys.settrace(_cangaroo_trace)
     {
         emit scriptError(QString::fromStdString(e.what()) + "\n");
     }
+
+    PyGILState_Release(gstate);
 
     g_activeEngine = nullptr;
     _running = false;

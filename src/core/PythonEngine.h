@@ -41,6 +41,11 @@ signals:
 
 private:
     Backend &_backend;
+
+    struct PyInterpreterHolder;
+    std::unique_ptr<PyInterpreterHolder> _pyInterp;
+    QString _initError;
+
     std::unique_ptr<std::thread> _workerThread;
     std::atomic<bool> _running{false};
     std::atomic<bool> _stopRequested{false};
