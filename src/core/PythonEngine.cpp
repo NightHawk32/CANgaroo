@@ -6,6 +6,7 @@
 
 #include "PythonEngine.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
 #include <QStandardPaths>
@@ -106,6 +107,30 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         if (g_activeEngine)
         {
             log_info(QString::fromStdString(text));
+        }
+    });
+
+    m.def("log_info", [](const std::string &text)
+    {
+        if (g_activeEngine)
+        {
+            log_info(QString::fromStdString(text));
+        }
+    });
+
+    m.def("log_warning", [](const std::string &text)
+    {
+        if (g_activeEngine)
+        {
+            log_warning(QString::fromStdString(text));
+        }
+    });
+
+    m.def("log_error", [](const std::string &text)
+    {
+        if (g_activeEngine)
+        {
+            log_error(QString::fromStdString(text));
         }
     });
 
@@ -311,51 +336,74 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
 // PythonEngine implementation
 // ---------------------------------------------------------------------------
 
-// On Windows, Python needs PYTHONHOME to find its standard library.
-// If it isn't set, try to derive it from the python executable found in PATH.
-// Must be called before Py_Initialize.
-static void trySetPythonHome()
-{
 #ifdef Q_OS_WIN
-    if (!qEnvironmentVariableIsEmpty("PYTHONHOME"))
-        return;
+// Returns the Python home directory to use, or empty string if not found.
+// Checks for a bundled stdlib next to the exe first, then falls back to PATH.
+static QString findPythonHome()
+{
+    // 1. Bundled stdlib: <appdir>/lib/python3.x/ (our CI layout)
+    {
+        QString appDir = QCoreApplication::applicationDirPath();
+        QString pyDir = QString("%1/lib/python%2.%3")
+                            .arg(appDir)
+                            .arg(PY_MAJOR_VERSION)
+                            .arg(PY_MINOR_VERSION);
+        if (QDir(pyDir).exists())
+        {
+            return appDir;
+        }
+    }
 
+    // 2. Python executable in PATH → derive prefix from its location
     for (const char *name : {"python3", "python"})
     {
         QString exe = QStandardPaths::findExecutable(QString::fromLatin1(name));
         if (exe.isEmpty())
             continue;
 
-        // If exe lives in a "bin" or "Scripts" subdirectory, the home is one level up
-        // (e.g. C:\msys64\usr\bin\python3.exe → home = C:\msys64\usr).
-        // Otherwise (e.g. C:\Python313\python3.exe) use the exe directory directly.
         QDir dir = QFileInfo(exe).absoluteDir();
+        // MSYS2/Unix layout: …/mingw64/bin/python3.exe → home = …/mingw64
+        // Windows layout:    C:\Python313\python.exe  → home = C:\Python313
         if (dir.dirName().compare("bin", Qt::CaseInsensitive) == 0 ||
             dir.dirName().compare("Scripts", Qt::CaseInsensitive) == 0)
         {
             dir.cdUp();
         }
-
-        // Store in a static so the pointer stays valid for the interpreter lifetime
-        static std::wstring s_home = dir.absolutePath().toStdWString();
-        Py_SetPythonHome(s_home.c_str());
-        return;
+        return dir.absolutePath();
     }
-#endif
+
+    return {};
 }
+#endif // Q_OS_WIN
 
 // Holds the interpreter lifetime. Must be constructed on the main thread.
 // After construction the GIL is released so worker threads can use
 // PyGILState_Ensure/Release to acquire it safely on any thread (including
 // on Windows where Py_Initialize must run on the main thread).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
 struct PythonEngine::PyInterpreterHolder
 {
-    // _setup is declared first so it runs before guard{} initializes the interpreter
-    static bool setup() { trySetPythonHome(); return true; }
-    bool _setup{setup()};
-
+    // _env is declared before guard so it initializes first,
+    // setting PYTHONHOME before Py_Initialize is called.
+    bool _env{ prepareEnvironment() };
     py::scoped_interpreter guard{};
     PyThreadState *savedState = nullptr;
+
+    static bool prepareEnvironment()
+    {
+#ifdef Q_OS_WIN
+        if (qEnvironmentVariableIsEmpty("PYTHONHOME"))
+        {
+            QString home = findPythonHome();
+            if (!home.isEmpty())
+            {
+                qputenv("PYTHONHOME", home.toLocal8Bit());
+            }
+        }
+#endif
+        return true;
+    }
 
     PyInterpreterHolder()
     {
@@ -368,6 +416,7 @@ struct PythonEngine::PyInterpreterHolder
         // guard destructor calls Py_Finalize
     }
 };
+#pragma GCC diagnostic pop
 
 PythonEngine::PythonEngine(Backend &backend, QObject *parent)
     : QObject(parent)

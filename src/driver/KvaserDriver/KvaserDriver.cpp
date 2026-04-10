@@ -50,6 +50,9 @@ bool KvaserDriver::update()
     int numChannels = 0;
     canStatus status = canGetNumberOfChannels(&numChannels);
     if (status != canOK) {
+        if (numChannels == 0) {
+            return true;
+        }
         log_error(QString("KvaserDriver: canGetNumberOfChannels failed: %1").arg(status));
         return false;
     }
