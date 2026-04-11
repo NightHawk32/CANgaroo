@@ -22,6 +22,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <atomic>
 #include <QObject>
 #include <QList>
 #include <QMutex>
@@ -109,7 +110,7 @@ public slots:
 private:
     static Backend *_instance;
 
-    bool _measurementRunning;
+    std::atomic<bool> _measurementRunning;
     uint64_t _measurementStartTime;
     QElapsedTimer _timerSinceStart;
     QList<CanDriver*> _drivers;

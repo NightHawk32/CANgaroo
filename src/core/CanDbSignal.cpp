@@ -91,7 +91,7 @@ void CanDbSignal::setValueName(const uint64_t value, const QString &name)
     _valueTable[value] = name;
 }
 
-double CanDbSignal::convertRawValueToPhysical(const uint64_t rawValue)
+double CanDbSignal::convertRawValueToPhysical(const uint64_t rawValue) const
 {
     if (isUnsigned()) {
         uint64_t v = rawValue;
@@ -105,7 +105,7 @@ double CanDbSignal::convertRawValueToPhysical(const uint64_t rawValue)
     }
 }
 
-double CanDbSignal::extractPhysicalFromMessage(const CanMessage &msg)
+double CanDbSignal::extractPhysicalFromMessage(const CanMessage &msg) const
 {
     return convertRawValueToPhysical(extractRawDataFromMessage(msg));
 }
@@ -209,7 +209,7 @@ void CanDbSignal::setMuxValue(const uint32_t &muxValue)
     _muxValue = muxValue;
 }
 
-bool CanDbSignal::isPresentInMessage(const CanMessage &msg)
+bool CanDbSignal::isPresentInMessage(const CanMessage &msg) const
 {
     if (msg.getRawId() != _parent->getRaw_id()) {
         return false;
@@ -227,7 +227,7 @@ bool CanDbSignal::isPresentInMessage(const CanMessage &msg)
     return _muxValue == muxer->extractRawDataFromMessage(msg);
 }
 
-uint64_t CanDbSignal::extractRawDataFromMessage(const CanMessage &msg)
+uint64_t CanDbSignal::extractRawDataFromMessage(const CanMessage &msg) const
 {
     return msg.extractRawSignal(startBit(), length(), isBigEndian());
 }

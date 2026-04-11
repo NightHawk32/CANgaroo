@@ -73,6 +73,20 @@ CanMessage CanTrace::getMessage(int idx)
     }
 }
 
+QVector<CanMessage> CanTrace::getSnapshot(int maxCount)
+{
+    QMutexLocker locker(&_mutex);
+    const int total = _dataRowsUsed + _newRows;
+    const int start = (maxCount > 0 && maxCount < total) ? total - maxCount : 0;
+    QVector<CanMessage> result;
+    result.reserve(total - start);
+    for (int i = start; i < total; i++)
+    {
+        result.append(_data.at(i));
+    }
+    return result;
+}
+
 void CanTrace::enqueueMessage(const CanMessage &msg, bool more_to_follow)
 {
     QMutexLocker locker(&_mutex);

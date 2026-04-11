@@ -8,6 +8,8 @@
 
 #include <cstring>
 
+#include <core/portable_endian.h>
+
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
@@ -47,17 +49,23 @@ static void insertRawSignalIntoMsg(CanMessage &msg,
 
     if (isBigEndian && length > 8)
     {
+        // Inverse of extractRawSignal's big-endian path:
+        //   extract: result = bswap64((data_raw >> bit_shift) & mask) >> (64 - length)
+        //   insert:  A      = bswap64(raw << (64 - length))
+        // where A is the Intel-order value to place at bit_shift in data_raw.
         raw <<= (64 - length);
         raw = __builtin_bswap64(raw);
     }
 
-    const uint64_t mask = (length < 64) ? ((1ULL << length) - 1) : ~0ULL;
-    const int byte_offset = start_bit / 8;
-    const int bit_shift   = start_bit % 8;
+    const uint64_t mask       = (length < 64) ? ((1ULL << length) - 1) : ~0ULL;
+    const int      byte_offset = start_bit / 8;
+    const int      bit_shift   = start_bit % 8;
 
-    // Read 8 bytes starting at byte_offset (getByte returns 0 for out-of-range)
+    // Mirror extractRawSignal: limit copy to the actual buffer size (64 bytes for FD).
+    const int copy_len = std::min(8, 64 - byte_offset);
+
     uint8_t temp[8] = {0};
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < copy_len; i++)
     {
         temp[i] = msg.getByte(static_cast<uint8_t>(byte_offset + i));
     }
@@ -70,7 +78,7 @@ static void insertRawSignalIntoMsg(CanMessage &msg,
     data_raw = htole64(data_raw);
     memcpy(temp, &data_raw, sizeof(data_raw));
 
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < copy_len; i++)
     {
         msg.setByte(static_cast<uint8_t>(byte_offset + i), temp[i]);
     }
@@ -84,13 +92,13 @@ static CanDbMessage *findDbMessageByName(Backend &backend, const QString &name)
     MeasurementSetup &setup = backend.getSetup();
     for (MeasurementNetwork *net : setup.getNetworks())
     {
-        for (const pCanDb &db : net->_canDbs)
+        for (const pCanDb &db : std::as_const(net->_canDbs))
         {
-            for (auto it = db->getMessageList().cbegin(); it != db->getMessageList().cend(); ++it)
+            for (CanDbMessage *dbMsg : db->getMessageList())
             {
-                if (it.value()->getName() == name)
+                if (dbMsg->getName() == name)
                 {
-                    return it.value();
+                    return dbMsg;
                 }
             }
         }
@@ -203,8 +211,12 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         const unsigned long wait_ms = static_cast<unsigned long>(timeout_sec * 1000);
 
         {
+            // Destructor order is LIFO: lck destructs first (releases QMutex),
+            // then release destructs (re-acquires GIL). This ordering is required:
+            // the GIL must be released before acquiring any Qt mutex to prevent a
+            // deadlock where the CanListener thread holds _msgQueueMutex while the
+            // main thread waits for the GIL.
             py::gil_scoped_release release;
-
             QMutexLocker lck(&g_activeEngine->msgQueueMutex());
             QQueue<CanMessage> &q = g_activeEngine->msgQueue();
 
@@ -271,12 +283,17 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         py::list result;
         if (!g_activeEngine) { return result; }
 
-        CanTrace *trace = g_activeEngine->backend().getTrace();
-        const int total = static_cast<int>(trace->size());
-        const int start = (count > 0 && count < total) ? total - count : 0;
-        for (int i = start; i < total; i++)
+        // getSnapshot holds the CanTrace mutex for the entire copy, avoiding a
+        // TOCTOU race between size() and getMessage() calls.
+        QVector<CanMessage> snapshot;
         {
-            result.append(trace->getMessage(i));
+            py::gil_scoped_release release;
+            snapshot = g_activeEngine->backend().getTrace()->getSnapshot(count);
+        }
+
+        for (const CanMessage &msg : std::as_const(snapshot))
+        {
+            result.append(msg);
         }
         return result;
     }, py::arg("count") = 0);
@@ -291,6 +308,7 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
     {
         if (!g_activeEngine) { return; }
         Backend &backend = g_activeEngine->backend();
+        py::gil_scoped_release release;  // must not hold GIL while blocking on main thread
         QMetaObject::invokeMethod(&backend, [&backend]()
         {
             backend.clearTrace();
@@ -310,10 +328,13 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         if (!g_activeEngine) { return false; }
         Backend &backend = g_activeEngine->backend();
         bool result = false;
-        QMetaObject::invokeMethod(&backend, [&backend, &result]()
         {
-            result = backend.startMeasurement();
-        }, Qt::BlockingQueuedConnection);
+            py::gil_scoped_release release;  // must not hold GIL while blocking on main thread
+            QMetaObject::invokeMethod(&backend, [&backend, &result]()
+            {
+                result = backend.startMeasurement();
+            }, Qt::BlockingQueuedConnection);
+        }
         return result;
     });
 
@@ -322,10 +343,13 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         if (!g_activeEngine) { return false; }
         Backend &backend = g_activeEngine->backend();
         bool result = false;
-        QMetaObject::invokeMethod(&backend, [&backend, &result]()
         {
-            result = backend.stopMeasurement();
-        }, Qt::BlockingQueuedConnection);
+            py::gil_scoped_release release;  // must not hold GIL while blocking on main thread
+            QMetaObject::invokeMethod(&backend, [&backend, &result]()
+            {
+                result = backend.stopMeasurement();
+            }, Qt::BlockingQueuedConnection);
+        }
         return result;
     });
 
@@ -383,7 +407,7 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         MeasurementSetup &setup = g_activeEngine->backend().getSetup();
         for (MeasurementNetwork *net : setup.getNetworks())
         {
-            for (const pCanDb &db : net->_canDbs)
+            for (const pCanDb &db : std::as_const(net->_canDbs))
             {
                 py::dict dbInfo;
                 dbInfo["file"]    = db->getFileName().toStdString();
@@ -391,16 +415,15 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
                 dbInfo["network"] = net->name().toStdString();
 
                 py::list msgs;
-                for (auto it = db->getMessageList().cbegin(); it != db->getMessageList().cend(); ++it)
+                for (CanDbMessage *dbMsg : db->getMessageList())
                 {
-                    CanDbMessage *m = it.value();
                     py::dict mInfo;
-                    mInfo["name"] = m->getName().toStdString();
-                    mInfo["id"]   = m->getRaw_id();
-                    mInfo["dlc"]  = m->getDlc();
+                    mInfo["name"] = dbMsg->getName().toStdString();
+                    mInfo["id"]   = dbMsg->getRaw_id();
+                    mInfo["dlc"]  = dbMsg->getDlc();
 
                     py::list sigNames;
-                    for (CanDbSignal *sig : m->getSignals())
+                    for (CanDbSignal *sig : dbMsg->getSignals())
                     {
                         sigNames.append(sig->name().toStdString());
                     }
@@ -505,7 +528,7 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         CanDbSignal *sig = dbMsg->getSignalByName(QString::fromStdString(signal_name));
         if (!sig) { return py::none(); }
 
-        return py::cast(sig->extractPhysicalFromMessage(const_cast<CanMessage &>(msg)));
+        return py::cast(sig->extractPhysicalFromMessage(msg));
     }, py::arg("msg"), py::arg("signal_name"));
 
     // Build a CanMessage by encoding signal physical values according to the DBC.
@@ -557,8 +580,14 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
             const double offset = sig->getOffset();
 
             // Convert physical → raw
+            if (factor == 0.0)
+            {
+                throw py::value_error(
+                    std::string("signal '") + sigName.toStdString()
+                    + "' has factor=0 in DBC — cannot encode");
+            }
+
             uint64_t raw = 0;
-            if (factor != 0.0)
             {
                 const double rawD = (phys - offset) / factor;
                 if (sig->isUnsigned())
@@ -571,7 +600,12 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
                 }
                 else
                 {
-                    const int64_t s = static_cast<int64_t>(rawD < 0.0 ? rawD - 0.5 : rawD + 0.5);
+                    const uint8_t sigLen = sig->length();
+                    const int64_t minRaw = (sigLen > 0 && sigLen < 64) ? -(1LL << (sigLen - 1)) : INT64_MIN;
+                    const int64_t maxRaw = (sigLen > 0 && sigLen < 64) ? ((1LL << (sigLen - 1)) - 1) : INT64_MAX;
+                    const int64_t s = std::clamp(
+                        static_cast<int64_t>(rawD < 0.0 ? rawD - 0.5 : rawD + 0.5),
+                        minRaw, maxRaw);
                     raw = static_cast<uint64_t>(s);
                 }
             }
@@ -724,6 +758,12 @@ void PythonEngine::stopScript()
     {
         if (_running)
         {
+            // Script did not stop within the timeout — detach to avoid blocking the UI.
+            // Null g_activeEngine first so any subsequent pybind11 module API calls
+            // inside the still-running thread return early instead of touching engine state.
+            // Note: the thread still holds 'this' via member captures; PythonEngine
+            // must not be destroyed until the thread naturally exits.
+            g_activeEngine = nullptr;
             _workerThread->detach();
         }
         else
@@ -786,11 +826,13 @@ bool PythonEngine::passesRxFilter(const CanMessage &msg) const
 
 int PythonEngine::startPeriodicTask(CanMessage msg, unsigned interval_ms, uint16_t interface_id)
 {
-    QMutexLocker lck(&_periodicMutex);
-
+    // Allocate handle before taking the lock — only ever called from the Python
+    // worker thread, so no concurrent access to _nextHandle.
     const int handle = _nextHandle++;
     auto task = std::make_shared<PeriodicTask>();
 
+    // Construct the thread outside the lock so we don't hold _periodicMutex
+    // during thread creation (which may briefly block on OS resources).
     task->thread = std::thread([this, msg, interval_ms, interface_id,
                                 task_ptr = std::weak_ptr<PeriodicTask>(task)]() mutable
     {
@@ -818,6 +860,7 @@ int PythonEngine::startPeriodicTask(CanMessage msg, unsigned interval_ms, uint16
         }
     });
 
+    QMutexLocker lck(&_periodicMutex);
     _periodicTasks.emplace(handle, std::move(task));
     return handle;
 }

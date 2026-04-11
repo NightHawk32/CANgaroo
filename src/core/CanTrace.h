@@ -46,6 +46,7 @@ public:
     unsigned long size();
     void clear();
     CanMessage getMessage(int idx);
+    QVector<CanMessage> getSnapshot(int maxCount = 0);
     void enqueueMessage(const CanMessage &msg, bool more_to_follow=false);
     void setMaxSize(int maxSize);
 
