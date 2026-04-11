@@ -6,9 +6,13 @@
 
 #include "PythonEngine.h"
 
+#include <cstring>
+
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
+#include <QMetaObject>
+#include <QMutexLocker>
 #include <QStandardPaths>
 
 #include <core/Backend.h>
@@ -30,6 +34,109 @@ using namespace py::literals;
 static PythonEngine *g_activeEngine = nullptr;
 
 // ---------------------------------------------------------------------------
+// Helper: pack a raw value into a CanMessage at the given signal position.
+// This is the inverse of CanMessage::extractRawSignal.
+// ---------------------------------------------------------------------------
+static void insertRawSignalIntoMsg(CanMessage &msg,
+                                   uint8_t start_bit,
+                                   uint8_t length,
+                                   bool isBigEndian,
+                                   uint64_t raw) noexcept
+{
+    if (length == 0 || start_bit >= 64) { return; }
+
+    if (isBigEndian && length > 8)
+    {
+        raw <<= (64 - length);
+        raw = __builtin_bswap64(raw);
+    }
+
+    const uint64_t mask = (length < 64) ? ((1ULL << length) - 1) : ~0ULL;
+    const int byte_offset = start_bit / 8;
+    const int bit_shift   = start_bit % 8;
+
+    // Read 8 bytes starting at byte_offset (getByte returns 0 for out-of-range)
+    uint8_t temp[8] = {0};
+    for (int i = 0; i < 8; i++)
+    {
+        temp[i] = msg.getByte(static_cast<uint8_t>(byte_offset + i));
+    }
+
+    uint64_t data_raw;
+    memcpy(&data_raw, temp, sizeof(data_raw));
+    data_raw = le64toh(data_raw);
+    data_raw &= ~(mask << bit_shift);
+    data_raw |= (raw & mask) << bit_shift;
+    data_raw = htole64(data_raw);
+    memcpy(temp, &data_raw, sizeof(data_raw));
+
+    for (int i = 0; i < 8; i++)
+    {
+        msg.setByte(static_cast<uint8_t>(byte_offset + i), temp[i]);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Helper: find a CanDbMessage by name across all loaded DBs
+// ---------------------------------------------------------------------------
+static CanDbMessage *findDbMessageByName(Backend &backend, const QString &name)
+{
+    MeasurementSetup &setup = backend.getSetup();
+    for (MeasurementNetwork *net : setup.getNetworks())
+    {
+        for (const pCanDb &db : net->_canDbs)
+        {
+            for (auto it = db->getMessageList().cbegin(); it != db->getMessageList().cend(); ++it)
+            {
+                if (it.value()->getName() == name)
+                {
+                    return it.value();
+                }
+            }
+        }
+    }
+    return nullptr;
+}
+
+// ---------------------------------------------------------------------------
+// Helper: build the signal-definition dict used by lookup() and find_message()
+// ---------------------------------------------------------------------------
+static py::dict buildMessageDict(CanDbMessage *dbMsg)
+{
+    py::list sigList;
+    for (CanDbSignal *sig : dbMsg->getSignals())
+    {
+        py::dict s;
+        s["name"]         = sig->name().toStdString();
+        s["start_bit"]    = sig->startBit();
+        s["length"]       = sig->length();
+        s["is_big_endian"]= sig->isBigEndian();
+        s["is_unsigned"]  = sig->isUnsigned();
+        s["factor"]       = sig->getFactor();
+        s["offset"]       = sig->getOffset();
+        s["min"]          = sig->getMinimumValue();
+        s["max"]          = sig->getMaximumValue();
+        s["unit"]         = sig->getUnit().toStdString();
+        s["comment"]      = sig->comment().toStdString();
+        if (sig->isMuxed())  { s["mux_value"] = sig->getMuxValue(); }
+        if (sig->isMuxer())  { s["is_muxer"]  = true; }
+        sigList.append(s);
+    }
+
+    py::dict result;
+    result["message"] = dbMsg->getName().toStdString();
+    result["id"]      = dbMsg->getRaw_id();
+    result["dlc"]     = dbMsg->getDlc();
+    result["comment"] = dbMsg->getComment().toStdString();
+    result["signals"] = sigList;
+
+    CanDbNode *sender = dbMsg->getSender();
+    if (sender) { result["sender"] = sender->name().toStdString(); }
+
+    return result;
+}
+
+// ---------------------------------------------------------------------------
 // Embedded "cangaroo" Python module
 // ---------------------------------------------------------------------------
 PYBIND11_EMBEDDED_MODULE(cangaroo, m)
@@ -38,15 +145,15 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
     py::class_<CanMessage>(m, "Message")
         .def(py::init<>())
         .def(py::init<uint32_t>())
-        .def_property("id", &CanMessage::getId, &CanMessage::setId)
-        .def_property("dlc", &CanMessage::getLength, &CanMessage::setLength)
-        .def_property("extended", &CanMessage::isExtended, &CanMessage::setExtended)
-        .def_property("fd", &CanMessage::isFD, &CanMessage::setFD)
-        .def_property("rtr", &CanMessage::isRTR, &CanMessage::setRTR)
-        .def_property("brs", &CanMessage::isBRS, &CanMessage::setBRS)
+        .def_property("id",        &CanMessage::getId,       &CanMessage::setId)
+        .def_property("dlc",       &CanMessage::getLength,   &CanMessage::setLength)
+        .def_property("extended",  &CanMessage::isExtended,  &CanMessage::setExtended)
+        .def_property("fd",        &CanMessage::isFD,        &CanMessage::setFD)
+        .def_property("rtr",       &CanMessage::isRTR,       &CanMessage::setRTR)
+        .def_property("brs",       &CanMessage::isBRS,       &CanMessage::setBRS)
         .def_property_readonly("interface_id", &CanMessage::getInterfaceId)
-        .def_property_readonly("timestamp", &CanMessage::getFloatTimestamp)
-        .def_property_readonly("is_rx", &CanMessage::isRX)
+        .def_property_readonly("timestamp",    &CanMessage::getFloatTimestamp)
+        .def_property_readonly("is_rx",        &CanMessage::isRX)
         .def("get_byte", &CanMessage::getByte)
         .def("set_byte", &CanMessage::setByte)
         .def("get_data", [](const CanMessage &msg) -> py::bytes
@@ -75,7 +182,8 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
                    + " data=" + msg.getDataHexString().toStdString() + ">";
         });
 
-    // --- Module-level functions ---
+    // --- send / receive ---
+
     m.def("send", [](CanMessage &msg, uint16_t interface_id)
     {
         if (!g_activeEngine) { return; }
@@ -87,74 +195,19 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         }
     }, py::arg("msg"), py::arg("interface_id") = 0);
 
-    m.def("get_trace", [](int count) -> py::list
-    {
-        py::list result;
-        if (!g_activeEngine) { return result; }
-
-        CanTrace *trace = g_activeEngine->backend().getTrace();
-        int total = static_cast<int>(trace->size());
-        int start = (count > 0 && count < total) ? total - count : 0;
-        for (int i = start; i < total; i++)
-        {
-            result.append(trace->getMessage(i));
-        }
-        return result;
-    }, py::arg("count") = 0);
-
-    m.def("log", [](const std::string &text)
-    {
-        if (g_activeEngine)
-        {
-            log_info(QString::fromStdString(text));
-        }
-    });
-
-    m.def("log_info", [](const std::string &text)
-    {
-        if (g_activeEngine)
-        {
-            log_info(QString::fromStdString(text));
-        }
-    });
-
-    m.def("log_warning", [](const std::string &text)
-    {
-        if (g_activeEngine)
-        {
-            log_warning(QString::fromStdString(text));
-        }
-    });
-
-    m.def("log_error", [](const std::string &text)
-    {
-        if (g_activeEngine)
-        {
-            log_error(QString::fromStdString(text));
-        }
-    });
-
-    m.def("interface_name", [](uint16_t id) -> std::string
-    {
-        if (!g_activeEngine) { return ""; }
-        return g_activeEngine->backend().getInterfaceName(id).toStdString();
-    });
-
     m.def("receive", [](double timeout_sec) -> py::list
     {
         py::list result;
         if (!g_activeEngine) { return result; }
 
-        unsigned long wait_ms = static_cast<unsigned long>(timeout_sec * 1000);
+        const unsigned long wait_ms = static_cast<unsigned long>(timeout_sec * 1000);
 
-        // Release the GIL while waiting so other threads aren't blocked
         {
             py::gil_scoped_release release;
 
             QMutexLocker lck(&g_activeEngine->msgQueueMutex());
             QQueue<CanMessage> &q = g_activeEngine->msgQueue();
 
-            // If queue is empty, wait for the condition variable
             if (q.isEmpty() && !g_activeEngine->stopRequested())
             {
                 g_activeEngine->msgQueueCondition().wait(
@@ -162,7 +215,6 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
             }
         }
 
-        // Re-acquire GIL and drain the queue
         {
             QMutexLocker lck(&g_activeEngine->msgQueueMutex());
             QQueue<CanMessage> &q = g_activeEngine->msgQueue();
@@ -175,6 +227,110 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         return result;
     }, py::arg("timeout") = 1.0);
 
+    // --- RX filter (applied before messages enter the receive() queue) ---
+
+    m.def("set_filter", [](uint32_t id, uint32_t mask, py::object extended)
+    {
+        if (!g_activeEngine) { return; }
+        std::optional<bool> ext;
+        if (!extended.is_none())
+        {
+            ext = extended.cast<bool>();
+        }
+        g_activeEngine->setRxFilter(id, mask, ext);
+    },
+    py::arg("id"),
+    py::arg("mask")     = 0xFFFFFFFFu,
+    py::arg("extended") = py::none());
+
+    m.def("clear_filter", []()
+    {
+        if (g_activeEngine) { g_activeEngine->clearRxFilter(); }
+    });
+
+    // --- Periodic TX ---
+
+    m.def("send_periodic", [](CanMessage msg, unsigned interval_ms, uint16_t interface_id) -> int
+    {
+        if (!g_activeEngine) { return -1; }
+        return g_activeEngine->startPeriodicTask(msg, interval_ms, interface_id);
+    },
+    py::arg("msg"),
+    py::arg("interval_ms"),
+    py::arg("interface_id") = 0);
+
+    m.def("stop_periodic", [](int handle)
+    {
+        if (g_activeEngine) { g_activeEngine->stopPeriodicTask(handle); }
+    }, py::arg("handle"));
+
+    // --- Trace access ---
+
+    m.def("get_trace", [](int count) -> py::list
+    {
+        py::list result;
+        if (!g_activeEngine) { return result; }
+
+        CanTrace *trace = g_activeEngine->backend().getTrace();
+        const int total = static_cast<int>(trace->size());
+        const int start = (count > 0 && count < total) ? total - count : 0;
+        for (int i = start; i < total; i++)
+        {
+            result.append(trace->getMessage(i));
+        }
+        return result;
+    }, py::arg("count") = 0);
+
+    m.def("trace_size", []() -> int
+    {
+        if (!g_activeEngine) { return 0; }
+        return static_cast<int>(g_activeEngine->backend().getTrace()->size());
+    });
+
+    m.def("clear_trace", []()
+    {
+        if (!g_activeEngine) { return; }
+        Backend &backend = g_activeEngine->backend();
+        QMetaObject::invokeMethod(&backend, [&backend]()
+        {
+            backend.clearTrace();
+        }, Qt::BlockingQueuedConnection);
+    });
+
+    // --- Measurement control ---
+
+    m.def("measurement_running", []() -> bool
+    {
+        if (!g_activeEngine) { return false; }
+        return g_activeEngine->backend().isMeasurementRunning();
+    });
+
+    m.def("start_measurement", []() -> bool
+    {
+        if (!g_activeEngine) { return false; }
+        Backend &backend = g_activeEngine->backend();
+        bool result = false;
+        QMetaObject::invokeMethod(&backend, [&backend, &result]()
+        {
+            result = backend.startMeasurement();
+        }, Qt::BlockingQueuedConnection);
+        return result;
+    });
+
+    m.def("stop_measurement", []() -> bool
+    {
+        if (!g_activeEngine) { return false; }
+        Backend &backend = g_activeEngine->backend();
+        bool result = false;
+        QMetaObject::invokeMethod(&backend, [&backend, &result]()
+        {
+            result = backend.stopMeasurement();
+        }, Qt::BlockingQueuedConnection);
+        return result;
+    });
+
+    // --- Interface helpers ---
+
     m.def("interfaces", []() -> py::list
     {
         py::list result;
@@ -182,115 +338,43 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         for (CanInterfaceId id : g_activeEngine->backend().getInterfaceList())
         {
             py::dict d;
-            d["id"] = id;
+            d["id"]   = id;
             d["name"] = g_activeEngine->backend().getInterfaceName(id).toStdString();
             result.append(d);
         }
         return result;
     });
 
-    // --- DBC / Database access ---
-
-    // Decode all signals from a message using loaded DBCs.
-    // Returns a dict: { "message_name": str, "signals": { name: { "value": float, "raw": int, "unit": str } } }
-    // Returns None if no DBC definition is found.
-    m.def("decode", [](const CanMessage &msg) -> py::object
+    m.def("interface_name", [](uint16_t id) -> std::string
     {
-        if (!g_activeEngine) { return py::none(); }
+        if (!g_activeEngine) { return ""; }
+        return g_activeEngine->backend().getInterfaceName(id).toStdString();
+    });
 
-        CanDbMessage *dbMsg = g_activeEngine->backend().findDbMessage(msg);
-        if (!dbMsg) { return py::none(); }
+    // --- Logging ---
 
-        py::dict sigDict;
-        for (CanDbSignal *sig : dbMsg->getSignals())
-        {
-            if (!sig->isPresentInMessage(msg)) { continue; }
-
-            uint64_t raw = sig->extractRawDataFromMessage(msg);
-            double phys = sig->convertRawValueToPhysical(raw);
-
-            py::dict sigInfo;
-            sigInfo["value"] = phys;
-            sigInfo["raw"] = raw;
-            sigInfo["unit"] = sig->getUnit().toStdString();
-            sigInfo["min"] = sig->getMinimumValue();
-            sigInfo["max"] = sig->getMaximumValue();
-
-            QString valueName = sig->getValueName(raw);
-            if (!valueName.isEmpty())
-            {
-                sigInfo["value_name"] = valueName.toStdString();
-            }
-
-            sigDict[py::cast(sig->name().toStdString())] = sigInfo;
-        }
-
-        py::dict result;
-        result["message"] = dbMsg->getName().toStdString();
-        result["id"] = dbMsg->getRaw_id();
-        result["signals"] = sigDict;
-
-        CanDbNode *sender = dbMsg->getSender();
-        if (sender)
-        {
-            result["sender"] = sender->name().toStdString();
-        }
-
-        return result;
-    }, py::arg("msg"));
-
-    // Look up the DBC message definition for a CAN message.
-    // Returns a dict with message metadata and signal definitions, or None.
-    m.def("lookup", [](const CanMessage &msg) -> py::object
+    m.def("log", [](const std::string &text)
     {
-        if (!g_activeEngine) { return py::none(); }
+        if (g_activeEngine) { log_info(QString::fromStdString(text)); }
+    });
 
-        CanDbMessage *dbMsg = g_activeEngine->backend().findDbMessage(msg);
-        if (!dbMsg) { return py::none(); }
+    m.def("log_info", [](const std::string &text)
+    {
+        if (g_activeEngine) { log_info(QString::fromStdString(text)); }
+    });
 
-        py::list sigList;
-        for (CanDbSignal *sig : dbMsg->getSignals())
-        {
-            py::dict s;
-            s["name"] = sig->name().toStdString();
-            s["start_bit"] = sig->startBit();
-            s["length"] = sig->length();
-            s["is_big_endian"] = sig->isBigEndian();
-            s["is_unsigned"] = sig->isUnsigned();
-            s["factor"] = sig->getFactor();
-            s["offset"] = sig->getOffset();
-            s["min"] = sig->getMinimumValue();
-            s["max"] = sig->getMaximumValue();
-            s["unit"] = sig->getUnit().toStdString();
-            s["comment"] = sig->comment().toStdString();
-            if (sig->isMuxed())
-            {
-                s["mux_value"] = sig->getMuxValue();
-            }
-            if (sig->isMuxer())
-            {
-                s["is_muxer"] = true;
-            }
-            sigList.append(s);
-        }
+    m.def("log_warning", [](const std::string &text)
+    {
+        if (g_activeEngine) { log_warning(QString::fromStdString(text)); }
+    });
 
-        py::dict result;
-        result["message"] = dbMsg->getName().toStdString();
-        result["id"] = dbMsg->getRaw_id();
-        result["dlc"] = dbMsg->getDlc();
-        result["comment"] = dbMsg->getComment().toStdString();
-        result["signals"] = sigList;
+    m.def("log_error", [](const std::string &text)
+    {
+        if (g_activeEngine) { log_error(QString::fromStdString(text)); }
+    });
 
-        CanDbNode *sender = dbMsg->getSender();
-        if (sender)
-        {
-            result["sender"] = sender->name().toStdString();
-        }
+    // --- DBC / database access ---
 
-        return result;
-    }, py::arg("msg"));
-
-    // List all loaded databases with their messages.
     m.def("databases", []() -> py::list
     {
         py::list result;
@@ -302,18 +386,18 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
             for (const pCanDb &db : net->_canDbs)
             {
                 py::dict dbInfo;
-                dbInfo["file"] = db->getFileName().toStdString();
-                dbInfo["path"] = db->getPath().toStdString();
+                dbInfo["file"]    = db->getFileName().toStdString();
+                dbInfo["path"]    = db->getPath().toStdString();
                 dbInfo["network"] = net->name().toStdString();
 
                 py::list msgs;
-                for (auto it = db->getMessageList().begin(); it != db->getMessageList().end(); ++it)
+                for (auto it = db->getMessageList().cbegin(); it != db->getMessageList().cend(); ++it)
                 {
                     CanDbMessage *m = it.value();
                     py::dict mInfo;
                     mInfo["name"] = m->getName().toStdString();
-                    mInfo["id"] = m->getRaw_id();
-                    mInfo["dlc"] = m->getDlc();
+                    mInfo["id"]   = m->getRaw_id();
+                    mInfo["dlc"]  = m->getDlc();
 
                     py::list sigNames;
                     for (CanDbSignal *sig : m->getSignals())
@@ -329,6 +413,174 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         }
         return result;
     });
+
+    // Decode signals from a received message using loaded DBCs.
+    // Returns { "message": str, "id": int, "signals": { name: { "value", "raw", "unit", "min", "max" } } }
+    // or None if no DBC definition is found.
+    m.def("decode", [](const CanMessage &msg) -> py::object
+    {
+        if (!g_activeEngine) { return py::none(); }
+
+        CanDbMessage *dbMsg = g_activeEngine->backend().findDbMessage(msg);
+        if (!dbMsg) { return py::none(); }
+
+        py::dict sigDict;
+        for (CanDbSignal *sig : dbMsg->getSignals())
+        {
+            if (!sig->isPresentInMessage(msg)) { continue; }
+
+            const uint64_t raw  = sig->extractRawDataFromMessage(msg);
+            const double   phys = sig->convertRawValueToPhysical(raw);
+
+            py::dict sigInfo;
+            sigInfo["value"] = phys;
+            sigInfo["raw"]   = raw;
+            sigInfo["unit"]  = sig->getUnit().toStdString();
+            sigInfo["min"]   = sig->getMinimumValue();
+            sigInfo["max"]   = sig->getMaximumValue();
+
+            const QString valueName = sig->getValueName(raw);
+            if (!valueName.isEmpty())
+            {
+                sigInfo["value_name"] = valueName.toStdString();
+            }
+
+            sigDict[py::cast(sig->name().toStdString())] = sigInfo;
+        }
+
+        py::dict result;
+        result["message"] = dbMsg->getName().toStdString();
+        result["id"]      = dbMsg->getRaw_id();
+        result["signals"] = sigDict;
+
+        CanDbNode *sender = dbMsg->getSender();
+        if (sender) { result["sender"] = sender->name().toStdString(); }
+
+        return result;
+    }, py::arg("msg"));
+
+    // Look up the DBC signal layout for a message (by live CanMessage).
+    m.def("lookup", [](const CanMessage &msg) -> py::object
+    {
+        if (!g_activeEngine) { return py::none(); }
+        CanDbMessage *dbMsg = g_activeEngine->backend().findDbMessage(msg);
+        if (!dbMsg) { return py::none(); }
+        return buildMessageDict(dbMsg);
+    }, py::arg("msg"));
+
+    // Find a DBC message definition by name (str) or raw ID (int).
+    // Returns the same dict as lookup(), or None.
+    m.def("find_message", [](py::object name_or_id) -> py::object
+    {
+        if (!g_activeEngine) { return py::none(); }
+
+        CanDbMessage *dbMsg = nullptr;
+
+        if (py::isinstance<py::str>(name_or_id))
+        {
+            const QString qname = QString::fromStdString(name_or_id.cast<std::string>());
+            dbMsg = findDbMessageByName(g_activeEngine->backend(), qname);
+        }
+        else
+        {
+            // Numeric ID — build a dummy CanMessage with that raw_id
+            CanMessage dummy;
+            dummy.setRawId(name_or_id.cast<uint32_t>());
+            dbMsg = g_activeEngine->backend().findDbMessage(dummy);
+        }
+
+        if (!dbMsg) { return py::none(); }
+        return buildMessageDict(dbMsg);
+    }, py::arg("name_or_id"));
+
+    // Convenience: extract a single named signal's physical value from a message.
+    // Returns float, or None if the message or signal is not found in the DBC.
+    m.def("signal_value", [](const CanMessage &msg, const std::string &signal_name) -> py::object
+    {
+        if (!g_activeEngine) { return py::none(); }
+
+        CanDbMessage *dbMsg = g_activeEngine->backend().findDbMessage(msg);
+        if (!dbMsg) { return py::none(); }
+
+        CanDbSignal *sig = dbMsg->getSignalByName(QString::fromStdString(signal_name));
+        if (!sig) { return py::none(); }
+
+        return py::cast(sig->extractPhysicalFromMessage(const_cast<CanMessage &>(msg)));
+    }, py::arg("msg"), py::arg("signal_name"));
+
+    // Build a CanMessage by encoding signal physical values according to the DBC.
+    // name_or_id: str (message name) or int (raw CAN ID)
+    // signals:    dict mapping signal name -> physical value
+    // Returns the populated Message, or raises ValueError on error.
+    m.def("encode", [](py::object name_or_id, py::dict values) -> CanMessage
+    {
+        if (!g_activeEngine)
+        {
+            throw std::runtime_error("no active engine");
+        }
+
+        CanDbMessage *dbMsg = nullptr;
+        if (py::isinstance<py::str>(name_or_id))
+        {
+            const QString qname = QString::fromStdString(name_or_id.cast<std::string>());
+            dbMsg = findDbMessageByName(g_activeEngine->backend(), qname);
+        }
+        else
+        {
+            CanMessage dummy;
+            dummy.setRawId(name_or_id.cast<uint32_t>());
+            dbMsg = g_activeEngine->backend().findDbMessage(dummy);
+        }
+
+        if (!dbMsg)
+        {
+            throw py::value_error("message not found in loaded DBC databases");
+        }
+
+        // Create a zero-initialised message with the DBC id and DLC
+        CanMessage msg;
+        msg.setRawId(dbMsg->getRaw_id());
+        msg.setLength(dbMsg->getDlc());
+
+        for (auto item : values)
+        {
+            const QString sigName = QString::fromStdString(item.first.cast<std::string>());
+            CanDbSignal *sig = dbMsg->getSignalByName(sigName);
+            if (!sig)
+            {
+                throw py::value_error(
+                    std::string("signal not found in DBC: ") + sigName.toStdString());
+            }
+
+            const double phys   = item.second.cast<double>();
+            const double factor = sig->getFactor();
+            const double offset = sig->getOffset();
+
+            // Convert physical → raw
+            uint64_t raw = 0;
+            if (factor != 0.0)
+            {
+                const double rawD = (phys - offset) / factor;
+                if (sig->isUnsigned())
+                {
+                    raw = static_cast<uint64_t>(rawD < 0.0 ? 0.0 : rawD + 0.5);
+                    const uint64_t maxRaw = (sig->length() < 64)
+                                           ? ((1ULL << sig->length()) - 1)
+                                           : ~0ULL;
+                    if (raw > maxRaw) { raw = maxRaw; }
+                }
+                else
+                {
+                    const int64_t s = static_cast<int64_t>(rawD < 0.0 ? rawD - 0.5 : rawD + 0.5);
+                    raw = static_cast<uint64_t>(s);
+                }
+            }
+
+            insertRawSignalIntoMsg(msg, sig->startBit(), sig->length(), sig->isBigEndian(), raw);
+        }
+
+        return msg;
+    }, py::arg("name_or_id"), py::arg("values"));
 }
 
 
@@ -337,33 +589,26 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
 // ---------------------------------------------------------------------------
 
 #ifdef Q_OS_WIN
-// Returns the Python home directory to use, or empty string if not found.
-// Checks for a bundled stdlib next to the exe first, then falls back to PATH.
 static QString findPythonHome()
 {
-    // 1. Bundled stdlib: <appdir>/lib/python3.x/ (our CI layout)
     {
-        QString appDir = QCoreApplication::applicationDirPath();
-        QString pyDir = QString("%1/lib/python%2.%3")
-                            .arg(appDir)
-                            .arg(PY_MAJOR_VERSION)
-                            .arg(PY_MINOR_VERSION);
+        const QString appDir = QCoreApplication::applicationDirPath();
+        const QString pyDir = QString("%1/lib/python%2.%3")
+                                  .arg(appDir)
+                                  .arg(PY_MAJOR_VERSION)
+                                  .arg(PY_MINOR_VERSION);
         if (QDir(pyDir).exists())
         {
             return appDir;
         }
     }
 
-    // 2. Python executable in PATH → derive prefix from its location
     for (const char *name : {"python3", "python"})
     {
-        QString exe = QStandardPaths::findExecutable(QString::fromLatin1(name));
-        if (exe.isEmpty())
-            continue;
+        const QString exe = QStandardPaths::findExecutable(QString::fromLatin1(name));
+        if (exe.isEmpty()) { continue; }
 
         QDir dir = QFileInfo(exe).absoluteDir();
-        // MSYS2/Unix layout: …/mingw64/bin/python3.exe → home = …/mingw64
-        // Windows layout:    C:\Python313\python.exe  → home = C:\Python313
         if (dir.dirName().compare("bin", Qt::CaseInsensitive) == 0 ||
             dir.dirName().compare("Scripts", Qt::CaseInsensitive) == 0)
         {
@@ -376,16 +621,10 @@ static QString findPythonHome()
 }
 #endif // Q_OS_WIN
 
-// Holds the interpreter lifetime. Must be constructed on the main thread.
-// After construction the GIL is released so worker threads can use
-// PyGILState_Ensure/Release to acquire it safely on any thread (including
-// on Windows where Py_Initialize must run on the main thread).
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wattributes"
 struct PythonEngine::PyInterpreterHolder
 {
-    // _env is declared before guard so it initializes first,
-    // setting PYTHONHOME before Py_Initialize is called.
     bool _env{ prepareEnvironment() };
     py::scoped_interpreter guard{};
     PyThreadState *savedState = nullptr;
@@ -395,7 +634,7 @@ struct PythonEngine::PyInterpreterHolder
 #ifdef Q_OS_WIN
         if (qEnvironmentVariableIsEmpty("PYTHONHOME"))
         {
-            QString home = findPythonHome();
+            const QString home = findPythonHome();
             if (!home.isEmpty())
             {
                 qputenv("PYTHONHOME", home.toLocal8Bit());
@@ -413,7 +652,6 @@ struct PythonEngine::PyInterpreterHolder
     ~PyInterpreterHolder()
     {
         PyEval_RestoreThread(savedState);
-        // guard destructor calls Py_Finalize
     }
 };
 #pragma GCC diagnostic pop
@@ -434,7 +672,7 @@ PythonEngine::PythonEngine(Backend &backend, QObject *parent)
 
 PythonEngine::~PythonEngine()
 {
-    stopScript(); // join thread before interpreter is finalized
+    stopScript();
 }
 
 void PythonEngine::runScript(const QString &code)
@@ -447,10 +685,7 @@ void PythonEngine::runScript(const QString &code)
         return;
     }
 
-    if (_running)
-    {
-        return;
-    }
+    if (_running) { return; }
 
     _stopRequested = false;
     _running = true;
@@ -462,28 +697,23 @@ void PythonEngine::runScript(const QString &code)
 
     emit scriptStarted();
 
-    // Join any previous thread before launching a new one
     if (_workerThread && _workerThread->joinable())
     {
         _workerThread->join();
     }
 
-    // Launch a plain std::thread — no Qt event loop needed
     _workerThread = std::make_unique<std::thread>(&PythonEngine::workerFunc, this, code.toStdString());
 }
 
 void PythonEngine::stopScript()
 {
     _stopRequested = true;
-    // Wake receive() if it's waiting on the condition variable
     _msgQueueCondition.wakeAll();
 
-    if (!_workerThread || !_workerThread->joinable())
-    {
-        return;
-    }
+    stopAllPeriodicTasks();
 
-    // Wait up to 5 seconds for the thread to finish
+    if (!_workerThread || !_workerThread->joinable()) { return; }
+
     for (int i = 0; i < 50 && _running; i++)
     {
         _msgQueueCondition.wakeAll();
@@ -494,7 +724,6 @@ void PythonEngine::stopScript()
     {
         if (_running)
         {
-            // Thread didn't stop in time — detach to avoid blocking the UI forever
             _workerThread->detach();
         }
         else
@@ -513,6 +742,8 @@ bool PythonEngine::isRunning() const
 void PythonEngine::enqueueMessage(const CanMessage &msg)
 {
     if (!_running) { return; }
+    if (!passesRxFilter(msg)) { return; }
+
     QMutexLocker lck(&_msgQueueMutex);
     if (_msgQueue.size() < 10000)
     {
@@ -521,43 +752,134 @@ void PythonEngine::enqueueMessage(const CanMessage &msg)
     }
 }
 
+// ---------------------------------------------------------------------------
+// RX filter
+// ---------------------------------------------------------------------------
+
+void PythonEngine::setRxFilter(uint32_t id, uint32_t mask, std::optional<bool> extended)
+{
+    QMutexLocker lck(&_rxFilterMutex);
+    _rxFilter.id       = id;
+    _rxFilter.mask     = mask;
+    _rxFilter.extended = extended;
+    _rxFilter.active   = true;
+}
+
+void PythonEngine::clearRxFilter()
+{
+    QMutexLocker lck(&_rxFilterMutex);
+    _rxFilter.active = false;
+}
+
+bool PythonEngine::passesRxFilter(const CanMessage &msg) const
+{
+    QMutexLocker lck(&_rxFilterMutex);
+    if (!_rxFilter.active) { return true; }
+    if ((msg.getId() & _rxFilter.mask) != (_rxFilter.id & _rxFilter.mask)) { return false; }
+    if (_rxFilter.extended.has_value() && msg.isExtended() != *_rxFilter.extended) { return false; }
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+// Periodic TX tasks
+// ---------------------------------------------------------------------------
+
+int PythonEngine::startPeriodicTask(CanMessage msg, unsigned interval_ms, uint16_t interface_id)
+{
+    QMutexLocker lck(&_periodicMutex);
+
+    const int handle = _nextHandle++;
+    auto task = std::make_shared<PeriodicTask>();
+
+    task->thread = std::thread([this, msg, interval_ms, interface_id,
+                                task_ptr = std::weak_ptr<PeriodicTask>(task)]() mutable
+    {
+        while (true)
+        {
+            auto task = task_ptr.lock();
+            if (!task || task->stop.load() || _stopRequested.load()) { break; }
+
+            CanInterface *intf = _backend.getInterfaceById(interface_id);
+            if (intf)
+            {
+                CanMessage tx = msg;
+                tx.setInterfaceId(interface_id);
+                intf->sendMessage(tx);
+            }
+
+            const auto deadline = std::chrono::steady_clock::now()
+                                  + std::chrono::milliseconds(interval_ms);
+            while (std::chrono::steady_clock::now() < deadline)
+            {
+                auto t = task_ptr.lock();
+                if (!t || t->stop.load() || _stopRequested.load()) { return; }
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+        }
+    });
+
+    _periodicTasks.emplace(handle, std::move(task));
+    return handle;
+}
+
+void PythonEngine::stopPeriodicTask(int handle)
+{
+    std::shared_ptr<PeriodicTask> task;
+    {
+        QMutexLocker lck(&_periodicMutex);
+        auto it = _periodicTasks.find(handle);
+        if (it == _periodicTasks.end()) { return; }
+        task = it->second;
+        _periodicTasks.erase(it);
+    }
+
+    task->stop = true;
+    if (task->thread.joinable()) { task->thread.join(); }
+}
+
+void PythonEngine::stopAllPeriodicTasks()
+{
+    std::map<int, std::shared_ptr<PeriodicTask>> tasks;
+    {
+        QMutexLocker lck(&_periodicMutex);
+        tasks.swap(_periodicTasks);
+    }
+
+    for (auto &[handle, task] : tasks)
+    {
+        task->stop = true;
+    }
+    for (auto &[handle, task] : tasks)
+    {
+        if (task->thread.joinable()) { task->thread.join(); }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Script worker
+// ---------------------------------------------------------------------------
+
 void PythonEngine::workerFunc(std::string code)
 {
     g_activeEngine = this;
 
-    // The scoped_interpreter MUST outlive any catch blocks that access
-    // Python error state (e.g. py::error_already_set::what()), otherwise
-    // Py_Finalize runs during stack unwinding and the catch block crashes.
-    // The interpreter was already initialized on the main thread.
-    // Acquire the GIL for this worker thread — works on all platforms including Windows.
     PyGILState_STATE gstate = PyGILState_Ensure();
 
     try
     {
-        // Inject helpers into globals so they persist across all py::exec calls
         auto globals = py::globals();
 
         globals["_cangaroo_output"] = py::cpp_function(
             [this](const std::string &text, bool is_err)
             {
-                QString qtext = QString::fromStdString(text);
-                if (is_err)
-                {
-                    emit scriptError(qtext);
-                }
-                else
-                {
-                    emit scriptOutput(qtext);
-                }
+                const QString qtext = QString::fromStdString(text);
+                if (is_err) { emit scriptError(qtext); }
+                else        { emit scriptOutput(qtext); }
             });
 
         globals["_cangaroo_stop_check"] = py::cpp_function(
-            [this]() -> bool
-            {
-                return _stopRequested.load();
-            });
+            [this]() -> bool { return _stopRequested.load(); });
 
-        // Redirect stdout/stderr
         py::exec(R"(
 import sys
 
@@ -574,7 +896,6 @@ sys.stdout = _SignalWriter(False)
 sys.stderr = _SignalWriter(True)
 )");
 
-        // Install trace function for stoppability
         py::exec(R"(
 def _cangaroo_trace(frame, event, arg):
     if _cangaroo_stop_check():
@@ -586,13 +907,11 @@ sys.settrace(_cangaroo_trace)
 
         try
         {
-            // Run the user script
             py::exec(code);
         }
         catch (py::error_already_set &e)
         {
-            // Must format the error while the interpreter is still alive
-            QString err = QString::fromStdString(e.what());
+            const QString err = QString::fromStdString(e.what());
             if (!err.contains("KeyboardInterrupt"))
             {
                 emit scriptError(err + "\n");
