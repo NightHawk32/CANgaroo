@@ -28,6 +28,8 @@ CandleApiInterface::CandleApiInterface(CandleApiDriver *driver, candle_handle ha
   : CanInterface(reinterpret_cast<CanDriver*>(driver)),
     _hostOffsetStart(0),
     _deviceTicksStart(0),
+    _isOpen(false),
+    _isFdEnabled(false),
     _handle(handle),
     _backend(driver->backend()),
     _numRx(0),
@@ -163,6 +165,37 @@ CandleApiInterface::CandleApiInterface(CandleApiDriver *driver, candle_handle ha
         << CandleApiTiming(16000000,  500000, 875,  2, 12,  2)
         << CandleApiTiming(16000000,  800000, 900,  2,  7,  1)
         << CandleApiTiming(16000000, 1000000, 875,  1, 12,  2);
+
+    // CAN FD data-phase timings
+    // Formula (with CandleApiTiming's fixed prop_seg=1):
+    //   bitrate = fclk / (brp * (1_sync + 1_prop + phase_seg1 + phase_seg2))
+    //   SP      = (1_sync + 1_prop + phase_seg1) / total_tq  (as per-mille × 1000)
+
+    // 170 MHz (CANable 2.0 — STM32G0B1)
+    _fdTimings
+        << CandleApiTiming(170000000,  1000000, 800, 2, 66, 17)  //  170M/(2*85)  = 1M,  SP=80.0%
+        << CandleApiTiming(170000000,  2000000, 800, 1, 66, 17)  //  170M/(1*85)  = 2M,  SP=80.0%
+        << CandleApiTiming(170000000,  5000000, 794, 1, 25,  7)  //  170M/(1*34)  = 5M,  SP=79.4%
+        << CandleApiTiming(170000000, 10000000, 706, 1, 10,  5); //  170M/(1*17)  = 10M, SP=70.6%
+
+    // 160 MHz (CANable 2.5 — STM32G4)
+    _fdTimings
+        << CandleApiTiming(160000000,  1000000, 800, 2, 62, 16)  //  160M/(2*80)  = 1M,  SP=80.0%
+        << CandleApiTiming(160000000,  2000000, 800, 1, 62, 16)  //  160M/(1*80)  = 2M,  SP=80.0%
+        << CandleApiTiming(160000000,  4000000, 800, 1, 30,  8)  //  160M/(1*40)  = 4M,  SP=80.0%
+        << CandleApiTiming(160000000,  8000000, 800, 1, 14,  4); //  160M/(1*20)  = 8M,  SP=80.0%
+
+    // 48 MHz (CANable 0.x — STM32F072)
+    _fdTimings
+        << CandleApiTiming(48000000,   1000000, 792, 1, 36, 10)  //  48M/(1*48)   = 1M,  SP=79.2%
+        << CandleApiTiming(48000000,   2000000, 792, 1, 17,  5)  //  48M/(1*24)   = 2M,  SP=79.2%
+        << CandleApiTiming(48000000,   3000000, 813, 1, 11,  3)  //  48M/(1*16)   = 3M,  SP=81.3%
+        << CandleApiTiming(48000000,   4000000, 833, 1,  8,  2); //  48M/(1*12)   = 4M,  SP=83.3%
+
+    // 16 MHz
+    _fdTimings
+        << CandleApiTiming(16000000,   1000000, 750, 1, 10,  4)  //  16M/(1*16)   = 1M,  SP=75.0%
+        << CandleApiTiming(16000000,   2000000, 750, 1,  4,  2); //  16M/(1*8)    = 2M,  SP=75.0%
 }
 
 CandleApiInterface::~CandleApiInterface()
@@ -198,16 +231,20 @@ uint32_t CandleApiInterface::getCapabilities()
 
         uint32_t retval = 0;
 
-        if (caps.feature & CANDLE_MODE_LISTEN_ONLY) {
+        if (caps.feature & CANDLE_FEATURE_LISTEN_ONLY) {
             retval |= CanInterface::capability_listen_only;
         }
 
-        if (caps.feature & CANDLE_MODE_ONE_SHOT) {
+        if (caps.feature & CANDLE_FEATURE_ONE_SHOT) {
             retval |= CanInterface::capability_one_shot;
         }
 
-        if (caps.feature & CANDLE_MODE_TRIPLE_SAMPLE) {
+        if (caps.feature & CANDLE_FEATURE_TRIPLE_SAMPLE) {
             retval |= CanInterface::capability_triple_sampling;
+        }
+
+        if (caps.feature & CANDLE_FEATURE_FD) {
+            retval |= CanInterface::capability_canfd;
         }
 
         return retval;
@@ -222,17 +259,36 @@ QList<CanTiming> CandleApiInterface::getAvailableBitrates()
     QList<CanTiming> retval;
 
     candle_capability_t caps;
-    if (candle_channel_get_capabilities(_handle, 0, &caps)) {
-        int i = 0;
+    if (!candle_channel_get_capabilities(_handle, 0, &caps)) {
+        log_info(tr("CandleApi::getAvailableBitrates() failed!"));
+        return retval;
+    }
+
+    const bool isFdCapable = (caps.feature & CANDLE_FEATURE_FD) != 0;
+
+    int i = 0;
+    if (isFdCapable) {
+        // FD-capable device: expose FD timing combinations (nominal + data rate pairs)
+        for (const auto &nom : _timings) {
+            if (nom.getBaseClk() != caps.fclk_can)
+                continue;
+            // Classic-only entry (fdBitrate = 0)
+            retval << CanTiming(i++, nom.getBitrate(), 0, nom.getSamplePoint());
+            // FD entries: pair each nominal rate with each available data rate
+            for (const auto &fd : _fdTimings) {
+                if (fd.getBaseClk() == caps.fclk_can && fd.getBitrate() >= nom.getBitrate()) {
+                    retval << CanTiming(i++, nom.getBitrate(), fd.getBitrate(),
+                                        nom.getSamplePoint(), fd.getSamplePoint());
+                }
+            }
+        }
+    } else {
+        // Classic CAN device
         for (const auto &t : _timings) {
             if (t.getBaseClk() == caps.fclk_can) {
                 retval << CanTiming(i++, t.getBitrate(), 0, t.getSamplePoint());
             }
         }
-    }
-    else
-    {
-        log_info(tr("CandleApi::getAvailableBitrates() failed!"));
     }
 
     return retval;
@@ -269,17 +325,47 @@ bool CandleApiInterface::setBitTiming(uint32_t bitrate, uint32_t samplePoint)
     return false;
 }
 
+bool CandleApiInterface::setDataBitTiming(uint32_t bitrate, uint32_t samplePoint)
+{
+    candle_capability_t caps;
+    if (!candle_channel_get_capabilities(_handle, 0, &caps)) {
+        log_info(tr("CandleApi::setDataBitTiming(): Could not get capabilities!"));
+        return false;
+    }
+
+    log_debug(tr("CandleApi::setDataBitTiming(): looking for bitrate=%1, samplePoint=%2, fclk_can=%3")
+        .arg(bitrate).arg(samplePoint).arg(caps.fclk_can));
+
+    for (const auto &t : _fdTimings) {
+        if ( (t.getBaseClk() == caps.fclk_can)
+          && (t.getBitrate() == bitrate)
+          && (t.getSamplePoint() == samplePoint) )
+        {
+            candle_bittiming_t timing = t.getTiming();
+            bool ok = candle_channel_set_data_timing(_handle, 0, &timing);
+            if (!ok) {
+                log_info(tr("CandleApi::setDataBitTiming(): candle_channel_set_data_timing() failed!"));
+            }
+            return ok;
+        }
+    }
+
+    log_info(tr("CandleApi::setDataBitTiming(): no matching FD timing entry found for bitrate=%1, samplePoint=%2, fclk_can=%3")
+        .arg(bitrate).arg(samplePoint).arg(caps.fclk_can));
+    return false;
+}
+
 void CandleApiInterface::open()
 {
+    _isFdEnabled = false;
+
     if (!candle_dev_open(_handle)) {
-        // TODO what?
         log_info(tr("CandleApi::open() failed!"));
         _isOpen = false;
         return;
     }
 
     if (!setBitTiming(_settings.bitrate(), _settings.samplePoint())) {
-        // TODO what?
         log_info(tr("CandleApi::Bitrate failed!"));
         _isOpen = false;
         return;
@@ -294,6 +380,21 @@ void CandleApiInterface::open()
     }
     if (_settings.isTripleSampling()) {
         flags |= CANDLE_MODE_TRIPLE_SAMPLE;
+    }
+
+    // Enable CAN FD if the device supports it and the user has configured it
+    if (_settings.isCanFD()) {
+        candle_capability_t caps;
+        if (candle_channel_get_capabilities(_handle, 0, &caps) && (caps.feature & CANDLE_FEATURE_FD)) {
+            if (!setDataBitTiming(_settings.fdBitrate(), _settings.fdSamplePoint())) {
+                log_info(tr("CandleApi::open(): FD data bittiming failed, falling back to classic CAN"));
+            } else {
+                flags |= CANDLE_MODE_FD;
+                _isFdEnabled = true;
+            }
+        } else {
+            log_info(tr("CandleApi::open(): CAN FD requested but device does not support it"));
+        }
     }
 
     _numRx = 0;
@@ -326,22 +427,49 @@ void CandleApiInterface::close()
 
 void CandleApiInterface::sendMessage(const CanMessage &msg)
 {
-    candle_frame_t frame;
+    bool ok = false;
 
-    frame.can_id = msg.getId();
-    if (msg.isExtended()) {
-        frame.can_id |= CANDLE_ID_EXTENDED;
-    }
-    if (msg.isRTR()) {
-        frame.can_id |= CANDLE_ID_RTR;
+    if (_isFdEnabled && msg.isFD()) {
+        candle_fd_frame_t frame{};
+
+        frame.can_id = msg.getId();
+        if (msg.isExtended()) {
+            frame.can_id |= CANDLE_ID_EXTENDED;
+        }
+
+        frame.flags = CANDLE_FRAME_FLAG_FD;
+        if (msg.isBRS()) {
+            frame.flags |= CANDLE_FRAME_FLAG_BRS;
+        }
+
+        const uint8_t len = msg.getLength();
+        frame.can_dlc = candle_len_to_dlc(len);
+        for (int i = 0; i < len; i++) {
+            frame.data[i] = msg.getByte(i);
+        }
+
+        ok = candle_fd_frame_send(_handle, 0, &frame);
+    } else {
+        candle_frame_t frame{};
+
+        frame.can_id = msg.getId();
+        if (msg.isExtended()) {
+            frame.can_id |= CANDLE_ID_EXTENDED;
+        }
+        if (msg.isRTR()) {
+            frame.can_id |= CANDLE_ID_RTR;
+        }
+
+        const uint8_t len = msg.getLength();
+        frame.can_dlc = len;
+        for (int i = 0; i < len; i++) {
+            frame.data[i] = msg.getByte(i);
+        }
+
+        ok = candle_frame_send(_handle, 0, &frame);
     }
 
-    frame.can_dlc = msg.getLength();
-    for (int i=0; i<8; i++) {
-        frame.data[i] = msg.getByte(i);
-    }
-
-    if (candle_frame_send(_handle, 0, &frame)) {
+    if (ok) {
         _numTx++;
 
         CanMessage txMsg = msg;
@@ -364,48 +492,89 @@ bool CandleApiInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
         _txMsgList.clear();
     }
     bool hasTx = !msglist.isEmpty();
-    if (hasTx)
-    {
+    if (hasTx) {
         timeout_ms = 1;
     }
 
-    candle_frame_t frame;
     CanMessage msg;
 
-    if (candle_frame_read(_handle, &frame, timeout_ms)) {
-
-        if (candle_frame_type(&frame)==CANDLE_FRAMETYPE_RECEIVE) {
-            _numRx++;
-
-            msg.setInterfaceId(getId());
-            msg.setErrorFrame(false);
-            msg.setId(candle_frame_id(&frame));
-            msg.setExtended(candle_frame_is_extended_id(&frame));
-            msg.setRTR(candle_frame_is_rtr(&frame));
-
-            uint8_t dlc = candle_frame_dlc(&frame);
-            uint8_t *data = candle_frame_data(&frame);
-            msg.setLength(dlc);
-            for (int i=0; i<dlc; i++) {
-                msg.setByte(i, data[i]);
-            }
-
-            uint32_t dev_ts = candle_frame_timestamp_us(&frame) - _deviceTicksStart;
-            uint64_t ts_us = _hostOffsetStart + dev_ts;
-
-            uint64_t us_since_start = _backend.getUsecsSinceMeasurementStart();
-            if (us_since_start > 0x180000000) { // device timestamp overflow must have happend at least once
-                ts_us += us_since_start & 0xFFFFFFFF00000000;
-            }
-
-            msg.setTimestamp_us(static_cast<int64_t>(ts_us));
-            msglist.append(msg);
-            return true;
+    if (_isFdEnabled) {
+        candle_fd_frame_t frame;
+        if (!candle_fd_frame_read(_handle, &frame, timeout_ms)) {
+            return hasTx;
+        }
+        if (candle_fd_frame_type(&frame) != CANDLE_FRAMETYPE_RECEIVE) {
+            return hasTx;
         }
 
-    }
+        _numRx++;
 
-    return hasTx;
+        msg.setInterfaceId(getId());
+        msg.setErrorFrame(false);
+        msg.setId(candle_fd_frame_id(&frame));
+        msg.setExtended(candle_fd_frame_is_extended_id(&frame));
+        msg.setRTR(candle_fd_frame_is_rtr(&frame));
+
+        const bool isFd = candle_fd_frame_is_fd(&frame);
+        msg.setFD(isFd);
+        msg.setBRS(isFd && candle_fd_frame_is_brs(&frame));
+
+        const uint8_t raw_dlc = candle_fd_frame_dlc(&frame);
+        const uint8_t len = isFd ? candle_dlc_to_len(raw_dlc) : raw_dlc;
+        uint8_t *data = candle_fd_frame_data(&frame);
+        msg.setLength(len);
+        for (int i = 0; i < len; i++) {
+            msg.setByte(i, data[i]);
+        }
+
+        uint32_t dev_ts = candle_fd_frame_timestamp_us(&frame) - _deviceTicksStart;
+        uint64_t ts_us = _hostOffsetStart + dev_ts;
+
+        uint64_t us_since_start = _backend.getUsecsSinceMeasurementStart();
+        if (us_since_start > 0x180000000) {
+            ts_us += us_since_start & 0xFFFFFFFF00000000;
+        }
+
+        msg.setTimestamp_us(static_cast<int64_t>(ts_us));
+        msglist.append(msg);
+        return true;
+
+    } else {
+        candle_frame_t frame;
+        if (!candle_frame_read(_handle, &frame, timeout_ms)) {
+            return hasTx;
+        }
+        if (candle_frame_type(&frame) != CANDLE_FRAMETYPE_RECEIVE) {
+            return hasTx;
+        }
+
+        _numRx++;
+
+        msg.setInterfaceId(getId());
+        msg.setErrorFrame(false);
+        msg.setId(candle_frame_id(&frame));
+        msg.setExtended(candle_frame_is_extended_id(&frame));
+        msg.setRTR(candle_frame_is_rtr(&frame));
+
+        const uint8_t dlc = candle_frame_dlc(&frame);
+        uint8_t *data = candle_frame_data(&frame);
+        msg.setLength(dlc);
+        for (int i = 0; i < dlc; i++) {
+            msg.setByte(i, data[i]);
+        }
+
+        uint32_t dev_ts = candle_frame_timestamp_us(&frame) - _deviceTicksStart;
+        uint64_t ts_us = _hostOffsetStart + dev_ts;
+
+        uint64_t us_since_start = _backend.getUsecsSinceMeasurementStart();
+        if (us_since_start > 0x180000000) {
+            ts_us += us_since_start & 0xFFFFFFFF00000000;
+        }
+
+        msg.setTimestamp_us(static_cast<int64_t>(ts_us));
+        msglist.append(msg);
+        return true;
+    }
 }
 
 bool CandleApiInterface::updateStatistics()

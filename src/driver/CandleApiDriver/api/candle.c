@@ -587,3 +587,153 @@ uint32_t __stdcall DLL candle_frame_timestamp_us(candle_frame_t *frame)
 {
     return frame->timestamp_us;
 }
+
+/* ---- CAN FD extensions ---- */
+
+bool __stdcall DLL candle_channel_set_data_timing(candle_handle hdev, uint8_t ch, candle_bittiming_t *data)
+{
+    candle_device_t *dev = (candle_device_t*)hdev;
+    return candle_ctrl_set_data_bittiming(dev, ch, data);
+}
+
+bool __stdcall DLL candle_fd_frame_send(candle_handle hdev, uint8_t ch, candle_fd_frame_t *frame)
+{
+    candle_device_t *dev = (candle_device_t*)hdev;
+
+    unsigned long bytes_sent = 0;
+
+    frame->echo_id = 0;
+    frame->channel = ch;
+
+    bool rc = WinUsb_WritePipe(
+        dev->winUSBHandle,
+        dev->bulkOutPipe,
+        (uint8_t*)frame,
+        sizeof(*frame),
+        &bytes_sent,
+        0
+    );
+
+    dev->last_error = rc ? CANDLE_ERR_OK : CANDLE_ERR_SEND_FRAME;
+    return rc;
+}
+
+bool __stdcall DLL candle_fd_frame_read(candle_handle hdev, candle_fd_frame_t *frame, uint32_t timeout_ms)
+{
+    candle_device_t *dev = (candle_device_t*)hdev;
+
+    DWORD wait_result = WaitForMultipleObjects(CANDLE_URB_COUNT, dev->rxevents, false, timeout_ms);
+    if (wait_result == WAIT_TIMEOUT) {
+        dev->last_error = CANDLE_ERR_READ_TIMEOUT;
+        return false;
+    }
+
+    if ( (wait_result < WAIT_OBJECT_0) || (wait_result >= WAIT_OBJECT_0 + CANDLE_URB_COUNT) ) {
+        dev->last_error = CANDLE_ERR_READ_WAIT;
+        return false;
+    }
+
+    DWORD urb_num = wait_result - WAIT_OBJECT_0;
+    DWORD bytes_transfered;
+
+    if (!WinUsb_GetOverlappedResult(dev->winUSBHandle, &dev->rxurbs[urb_num].ovl, &bytes_transfered, false)) {
+        candle_prepare_read(dev, urb_num);
+        dev->last_error = CANDLE_ERR_READ_RESULT;
+        return false;
+    }
+
+    /* Minimum: classic CAN header (12 bytes) + at least 8 data bytes = 20 bytes */
+    static const DWORD classic_min = sizeof(candle_frame_t) - 4;
+    if (bytes_transfered < classic_min) {
+        candle_prepare_read(dev, urb_num);
+        dev->last_error = CANDLE_ERR_READ_SIZE;
+        return false;
+    }
+
+    memset(frame, 0, sizeof(*frame));
+
+    /*
+     * Detect frame type from the flags byte (offset 10 in both structs).
+     * Classic CAN frames carry the timestamp right after 8 data bytes (offset 20).
+     * FD frames carry 64 data bytes, then timestamp at offset 76.
+     */
+    bool is_fd_frame = (dev->rxurbs[urb_num].buf[10] & CANDLE_FRAME_FLAG_FD) != 0;
+
+    if (is_fd_frame) {
+        DWORD fd_min = sizeof(candle_fd_frame_t) - 4;
+        if (bytes_transfered < fd_min) {
+            candle_prepare_read(dev, urb_num);
+            dev->last_error = CANDLE_ERR_READ_SIZE;
+            return false;
+        }
+        DWORD copy_len = (bytes_transfered < sizeof(*frame)) ? bytes_transfered : sizeof(*frame);
+        memcpy(frame, dev->rxurbs[urb_num].buf, copy_len);
+    } else {
+        /* Classic CAN frame — copy into FD struct, fixing the timestamp position */
+        candle_frame_t classic;
+        DWORD copy_len = (bytes_transfered < sizeof(classic)) ? bytes_transfered : sizeof(classic);
+        memcpy(&classic, dev->rxurbs[urb_num].buf, copy_len);
+
+        frame->echo_id      = classic.echo_id;
+        frame->can_id       = classic.can_id;
+        frame->can_dlc      = classic.can_dlc;
+        frame->channel      = classic.channel;
+        frame->flags        = classic.flags;
+        frame->reserved     = classic.reserved;
+        memcpy(frame->data, classic.data, 8);
+        frame->timestamp_us = (bytes_transfered >= sizeof(classic)) ? classic.timestamp_us : 0;
+    }
+
+    return candle_prepare_read(dev, urb_num);
+}
+
+candle_frametype_t __stdcall DLL candle_fd_frame_type(candle_fd_frame_t *frame)
+{
+    if (frame->echo_id != 0xFFFFFFFF) {
+        return CANDLE_FRAMETYPE_ECHO;
+    }
+    if (frame->can_id & CANDLE_ID_ERR) {
+        return CANDLE_FRAMETYPE_ERROR;
+    }
+    return CANDLE_FRAMETYPE_RECEIVE;
+}
+
+uint32_t __stdcall DLL candle_fd_frame_id(candle_fd_frame_t *frame)
+{
+    return frame->can_id & 0x1FFFFFFF;
+}
+
+bool __stdcall DLL candle_fd_frame_is_extended_id(candle_fd_frame_t *frame)
+{
+    return (frame->can_id & CANDLE_ID_EXTENDED) != 0;
+}
+
+bool __stdcall DLL candle_fd_frame_is_rtr(candle_fd_frame_t *frame)
+{
+    return (frame->can_id & CANDLE_ID_RTR) != 0;
+}
+
+bool __stdcall DLL candle_fd_frame_is_fd(candle_fd_frame_t *frame)
+{
+    return (frame->flags & CANDLE_FRAME_FLAG_FD) != 0;
+}
+
+bool __stdcall DLL candle_fd_frame_is_brs(candle_fd_frame_t *frame)
+{
+    return (frame->flags & CANDLE_FRAME_FLAG_BRS) != 0;
+}
+
+uint8_t __stdcall DLL candle_fd_frame_dlc(candle_fd_frame_t *frame)
+{
+    return frame->can_dlc;
+}
+
+uint8_t __stdcall DLL *candle_fd_frame_data(candle_fd_frame_t *frame)
+{
+    return frame->data;
+}
+
+uint32_t __stdcall DLL candle_fd_frame_timestamp_us(candle_fd_frame_t *frame)
+{
+    return frame->timestamp_us;
+}
