@@ -109,12 +109,13 @@ void VectorInterface::open()
         return;
     }
 
-    _device->setConfigurationParameter(
-        QCanBusDevice::BitRateKey, _bitrate);
+    _device->setConfigurationParameter(QCanBusDevice::BitRateKey, _bitrate);
 
     if (_listenOnly) {
-        _device->setConfigurationParameter(
-            QCanBusDevice::ReceiveOwnKey, false);
+        // LoopbackKey=false prevents the device from ACKing on the bus (listen-only).
+        // ReceiveOwnKey controls echoing of own TX frames — keep it off in listen-only.
+        _device->setConfigurationParameter(QCanBusDevice::LoopbackKey, false);
+        _device->setConfigurationParameter(QCanBusDevice::ReceiveOwnKey, false);
     }
 
     if (!_device->connectDevice()) {
@@ -149,38 +150,10 @@ void VectorInterface::sendMessage(const CanMessage &msg)
         log_error(QString("VectorInterface %1: cannot send, interface not open").arg(_name));
         return;
     }
-
-    QCanBusFrame frame;
-    frame.setFrameId(msg.getId());
-    frame.setExtendedFrameFormat(msg.isExtended());
-
-    if (msg.isRTR()) {
-        frame.setFrameType(QCanBusFrame::RemoteRequestFrame);
-    } else {
-        frame.setFrameType(QCanBusFrame::DataFrame);
-        uint8_t len = (msg.getLength() > 8) ? 8 : msg.getLength();
-        QByteArray payload(len, 0);
-        for (int i = 0; i < len; i++) {
-            payload[i] = static_cast<char>(msg.getByte(i));
-        }
-        frame.setPayload(payload);
-    }
-
-    if (!_device->writeFrame(frame)) {
-        log_error(QString("VectorInterface %1: writeFrame failed: %2")
-                      .arg(_name, _device->errorString()));
-        _stats.tx_errors++;
-    } else {
-        _stats.tx_count++;
-        addFrameBits(msg);
-
-        CanMessage txMsg = msg;
-        txMsg.setRX(false);
-        auto now = std::chrono::system_clock::now().time_since_epoch();
-        txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
-        QMutexLocker lock(&_txMutex);
-        _txMsgList.append(txMsg);
-    }
+    // Queue only — actual writeFrame() happens inside readMessage(), which runs
+    // on the same thread as open() and owns the QCanBusDevice.
+    QMutexLocker lock(&_txMutex);
+    _txMsgList.append(msg);
 }
 
 bool VectorInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
@@ -189,20 +162,51 @@ bool VectorInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeo
         return false;
     }
 
-    // Enqueue tx messages
+    // Drain the TX queue. writeFrame() must be called from the thread that owns
+    // _device (the CanListener thread that also called open()).
     {
         QMutexLocker lock(&_txMutex);
-        msglist.append(_txMsgList);
+        for (const CanMessage &qMsg : std::as_const(_txMsgList)) {
+            QCanBusFrame frame;
+            frame.setFrameId(qMsg.getId());
+            frame.setExtendedFrameFormat(qMsg.isExtended());
+
+            if (qMsg.isRTR()) {
+                frame.setFrameType(QCanBusFrame::RemoteRequestFrame);
+            } else {
+                frame.setFrameType(QCanBusFrame::DataFrame);
+                uint8_t len = (qMsg.getLength() > 8) ? 8 : qMsg.getLength();
+                QByteArray payload(len, 0);
+                for (int i = 0; i < len; i++) {
+                    payload[i] = static_cast<char>(qMsg.getByte(i));
+                }
+                frame.setPayload(payload);
+            }
+
+            if (!_device->writeFrame(frame)) {
+                log_error(QString("VectorInterface %1: writeFrame failed: %2")
+                              .arg(_name, _device->errorString()));
+                _stats.tx_errors++;
+            } else {
+                _stats.tx_count++;
+                addFrameBits(qMsg);
+
+                CanMessage txMsg = qMsg;
+                txMsg.setRX(false);
+                auto now = std::chrono::system_clock::now().time_since_epoch();
+                txMsg.setTimestamp_us(
+                    std::chrono::duration_cast<std::chrono::microseconds>(now).count());
+                msglist.append(txMsg);
+            }
+        }
         _txMsgList.clear();
     }
-    bool hasTx = !msglist.isEmpty();
-    if (hasTx)
-    {
-        timeout_ms = 1;
-    }
+
+    const bool hasTx = !msglist.isEmpty();
+    const int waitMs = hasTx ? 1 : static_cast<int>(timeout_ms);
 
     if (!_device->framesAvailable()) {
-        if (!_device->waitForFramesReceived(static_cast<int>(timeout_ms))) {
+        if (!_device->waitForFramesReceived(waitMs)) {
             return hasTx;
         }
     }
@@ -221,7 +225,7 @@ bool VectorInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeo
     msg.setId(frame.frameId());
     msg.setExtended(frame.hasExtendedFrameFormat());
     msg.setRTR(frame.frameType() == QCanBusFrame::RemoteRequestFrame);
-    msg.setErrorFrame(frame.frameType() == QCanBusFrame::ErrorFrame);
+    msg.setErrorFrame(false);
     msg.setInterfaceId(getId());
 
     const QCanBusFrame::TimeStamp ts = frame.timeStamp();
@@ -262,7 +266,11 @@ uint32_t VectorInterface::getState()
         case QCanBusDevice::CanBusStatus::Warning: return state_warning;
         case QCanBusDevice::CanBusStatus::Error:   return state_passive;
         case QCanBusDevice::CanBusStatus::BusOff:  return state_bus_off;
-        default:                                   return state_unknown;
+        case QCanBusDevice::CanBusStatus::Unknown:
+        default:
+            // vectorcan plugin may not implement busStatus(); treat a connected
+            // device as good rather than showing a misleading unknown state.
+            return state_ok;
     }
 }
 

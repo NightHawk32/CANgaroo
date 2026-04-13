@@ -49,13 +49,34 @@ enum {
     CANDLE_ID_ERR      = 0x20000000
 };
 
+/* Feature flags reported in candle_capability_t.feature */
+enum {
+    CANDLE_FEATURE_LISTEN_ONLY     = 0x0001,
+    CANDLE_FEATURE_LOOP_BACK       = 0x0002,
+    CANDLE_FEATURE_TRIPLE_SAMPLE   = 0x0004,
+    CANDLE_FEATURE_ONE_SHOT        = 0x0008,
+    CANDLE_FEATURE_HW_TIMESTAMP    = 0x0010,
+    CANDLE_FEATURE_PAD_PKTS_TO_MAX = 0x0080,
+    CANDLE_FEATURE_FD              = 0x0100,
+};
+
+/* Flags in the flags byte of received/transmitted frames */
+enum {
+    CANDLE_FRAME_FLAG_OVERFLOW = 0x01,
+    CANDLE_FRAME_FLAG_FD       = 0x04,
+    CANDLE_FRAME_FLAG_BRS      = 0x08,
+    CANDLE_FRAME_FLAG_ESI      = 0x10,
+};
+
 typedef enum {
-    CANDLE_MODE_NORMAL        = 0x00,
-    CANDLE_MODE_LISTEN_ONLY   = 0x01,
-    CANDLE_MODE_LOOP_BACK     = 0x02,
-    CANDLE_MODE_TRIPLE_SAMPLE = 0x04,
-    CANDLE_MODE_ONE_SHOT      = 0x08,
-    CANDLE_MODE_HW_TIMESTAMP  = 0x10,
+    CANDLE_MODE_NORMAL           = 0x0000,
+    CANDLE_MODE_LISTEN_ONLY      = 0x0001,
+    CANDLE_MODE_LOOP_BACK        = 0x0002,
+    CANDLE_MODE_TRIPLE_SAMPLE    = 0x0004,
+    CANDLE_MODE_ONE_SHOT         = 0x0008,
+    CANDLE_MODE_HW_TIMESTAMP     = 0x0010,
+    CANDLE_MODE_PAD_PKTS_TO_MAX  = 0x0080,
+    CANDLE_MODE_FD               = 0x0100,
 } candle_mode_t;
 
 typedef enum {
@@ -104,6 +125,18 @@ typedef struct {
     uint32_t timestamp_us;
 } candle_frame_t;
 
+/* CAN FD frame: same header as candle_frame_t but with 64-byte data payload */
+typedef struct {
+    uint32_t echo_id;
+    uint32_t can_id;
+    uint8_t  can_dlc;
+    uint8_t  channel;
+    uint8_t  flags;
+    uint8_t  reserved;
+    uint8_t  data[64];
+    uint32_t timestamp_us;
+} candle_fd_frame_t;
+
 typedef struct {
     uint32_t feature;
     uint32_t fclk_can;
@@ -126,6 +159,35 @@ typedef struct {
 } candle_bittiming_t;
 
 #pragma pack(pop)
+
+/*
+ * CAN FD DLC encoding:
+ *   DLC 0-8  → 0-8 bytes  (same as classic CAN)
+ *   DLC 9    → 12 bytes
+ *   DLC 10   → 16 bytes
+ *   DLC 11   → 20 bytes
+ *   DLC 12   → 24 bytes
+ *   DLC 13   → 32 bytes
+ *   DLC 14   → 48 bytes
+ *   DLC 15   → 64 bytes
+ */
+static inline uint8_t candle_dlc_to_len(uint8_t dlc)
+{
+    static const uint8_t tbl[16] = { 0,1,2,3,4,5,6,7,8,12,16,20,24,32,48,64 };
+    return (dlc <= 15u) ? tbl[dlc] : 0u;
+}
+
+static inline uint8_t candle_len_to_dlc(uint8_t len)
+{
+    if (len <= 8u)  return len;
+    if (len <= 12u) return 9u;
+    if (len <= 16u) return 10u;
+    if (len <= 20u) return 11u;
+    if (len <= 24u) return 12u;
+    if (len <= 32u) return 13u;
+    if (len <= 48u) return 14u;
+    return 15u;
+}
 
 #define DLL
 
@@ -158,6 +220,21 @@ bool __stdcall DLL candle_frame_is_rtr(candle_frame_t *frame);
 uint8_t __stdcall DLL candle_frame_dlc(candle_frame_t *frame);
 uint8_t __stdcall DLL *candle_frame_data(candle_frame_t *frame);
 uint32_t __stdcall DLL candle_frame_timestamp_us(candle_frame_t *frame);
+
+/* CAN FD extensions */
+bool __stdcall DLL candle_channel_set_data_timing(candle_handle hdev, uint8_t ch, candle_bittiming_t *data);
+bool __stdcall DLL candle_fd_frame_send(candle_handle hdev, uint8_t ch, candle_fd_frame_t *frame);
+bool __stdcall DLL candle_fd_frame_read(candle_handle hdev, candle_fd_frame_t *frame, uint32_t timeout_ms);
+
+candle_frametype_t __stdcall DLL candle_fd_frame_type(candle_fd_frame_t *frame);
+uint32_t __stdcall DLL candle_fd_frame_id(candle_fd_frame_t *frame);
+bool __stdcall DLL candle_fd_frame_is_extended_id(candle_fd_frame_t *frame);
+bool __stdcall DLL candle_fd_frame_is_rtr(candle_fd_frame_t *frame);
+bool __stdcall DLL candle_fd_frame_is_fd(candle_fd_frame_t *frame);
+bool __stdcall DLL candle_fd_frame_is_brs(candle_fd_frame_t *frame);
+uint8_t __stdcall DLL candle_fd_frame_dlc(candle_fd_frame_t *frame);
+uint8_t __stdcall DLL *candle_fd_frame_data(candle_fd_frame_t *frame);
+uint32_t __stdcall DLL candle_fd_frame_timestamp_us(candle_fd_frame_t *frame);
 
 candle_err_t __stdcall DLL candle_dev_last_error(candle_handle hdev);
 

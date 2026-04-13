@@ -58,6 +58,7 @@ private:
     uint64_t _hostOffsetStart;
     uint32_t _deviceTicksStart;
     bool _isOpen;
+    bool _isFdEnabled;
 
     candle_handle _handle;
     MeasurementInterface _settings;
@@ -68,8 +69,10 @@ private:
     uint64_t _numTxErr;
 
     QList<CandleApiTiming> _timings;
+    QList<CandleApiTiming> _fdTimings;
 
     bool setBitTiming(uint32_t bitrate, uint32_t samplePoint);
+    bool setDataBitTiming(uint32_t bitrate, uint32_t samplePoint);
 
     QMutex _txMutex;
     QList<CanMessage> _txMsgList;
