@@ -3,6 +3,7 @@ CONFIG += c++20
 # Qt serialbus module provides the tinycan plugin backend.
 # The TinyCAN driver/library must be installed on the target machine.
 QT += serialbus
+DEFINES += TINYCAN_DRIVER
 
 SOURCES += \
     $$PWD/TinyCanInterface.cpp \

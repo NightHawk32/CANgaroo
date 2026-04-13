@@ -37,6 +37,9 @@ Makefile*
 test.dbc
 
 .vscode/
+.claude/
 
 build/
 bin/
+
+*.cangaroo

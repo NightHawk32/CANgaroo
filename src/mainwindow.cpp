@@ -22,7 +22,6 @@
 
 #include <QtWidgets>
 #include <QMdiArea>
-
 #include <QCloseEvent>
 #include <QTimer>
 #include <QLabel>
@@ -56,13 +55,19 @@
 #include <driver/SLCANDriver/SLCANDriver.h>
 #include <driver/GrIPDriver/GrIPDriver.h>
 #include <driver/CANBlastDriver/CANBlasterDriver.h>
-#include <driver/VectorDriver/VectorDriver.h>
-#include <driver/TinyCanDriver/TinyCanDriver.h>
 
 #if defined(__linux__)
 #include <driver/SocketCanDriver/SocketCanDriver.h>
 #else
 #include <driver/CandleApiDriver/CandleApiDriver.h>
+#endif
+
+#ifdef VECTOR_DRIVER
+#include <driver/VectorDriver/VectorDriver.h>
+#endif
+
+#ifdef TINYCAN_DRIVER
+#include <driver/TinyCanDriver/TinyCanDriver.h>
 #endif
 
 #ifdef PEAKCAN_DRIVER
@@ -192,10 +197,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
         Backend::instance().addCanDriver(*(new CANBlasterDriver(Backend::instance())));
     }
 
+#ifdef TINYCAN_DRIVER
     if (tinyCanEnabled)
     {
         Backend::instance().addCanDriver(*(new TinyCanDriver(Backend::instance())));
     }
+#endif
 
     setWorkspaceModified(false);
     newWorkspace();
