@@ -67,7 +67,9 @@ private:
     QString        _name;
     QCanBusDevice *_device;
     unsigned       _bitrate;
+    unsigned       _fdBitrate;
     bool           _listenOnly;
+    bool           _isCanFD;
 
     struct {
         uint64_t rx_count;

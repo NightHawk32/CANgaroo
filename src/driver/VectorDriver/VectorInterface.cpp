@@ -39,7 +39,9 @@ VectorInterface::VectorInterface(VectorDriver *driver, QString deviceName, QStri
     _name(description),
     _device(nullptr),
     _bitrate(500000),
-    _listenOnly(false)
+    _fdBitrate(2000000),
+    _listenOnly(false),
+    _isCanFD(false)
 {
     memset(&_stats, 0, sizeof(_stats));
     memset(&_offset_stats, 0, sizeof(_offset_stats));
@@ -65,11 +67,22 @@ void VectorInterface::setName(QString name)
 QList<CanTiming> VectorInterface::getAvailableBitrates()
 {
     QList<CanTiming> retval;
-    QList<unsigned> bitrates({10000, 20000, 50000, 83333, 100000, 125000,
-                               250000, 500000, 800000, 1000000});
+
+    const QList<unsigned> nominalRates({10000, 20000, 50000, 83333, 100000,
+                                         125000, 250000, 500000, 800000, 1000000});
+    const QList<unsigned> fdDataRates({500000, 1000000, 2000000, 4000000,
+                                        5000000, 8000000, 10000000});
+
     unsigned i = 0;
-    for (unsigned br : bitrates) {
+    for (unsigned br : nominalRates) {
+        // Classic CAN entry
         retval << CanTiming(i++, br, 0, 875);
+        // CAN FD entries: pair with each data rate that is >= nominal rate
+        for (unsigned fdbr : fdDataRates) {
+            if (fdbr >= br) {
+                retval << CanTiming(i++, br, fdbr, 875, 800);
+            }
+        }
     }
     return retval;
 }
@@ -83,8 +96,10 @@ void VectorInterface::applyConfig(const MeasurementInterface &mi)
     }
     _bitrate    = mi.bitrate();
     _listenOnly = mi.isListenOnlyMode();
-    log_info(QString("VectorInterface %1: configuration stored, bitrate=%2")
-                 .arg(_name).arg(_bitrate));
+    _isCanFD    = mi.isCanFD();
+    _fdBitrate  = mi.fdBitrate();
+    log_info(QString("VectorInterface %1: configuration stored, bitrate=%2, canfd=%3, fdBitrate=%4")
+                 .arg(_name).arg(_bitrate).arg(_isCanFD).arg(_fdBitrate));
 }
 
 unsigned VectorInterface::getBitrate()
@@ -94,7 +109,8 @@ unsigned VectorInterface::getBitrate()
 
 uint32_t VectorInterface::getCapabilities()
 {
-    return CanInterface::capability_listen_only;
+    return CanInterface::capability_listen_only
+         | CanInterface::capability_canfd;
 }
 
 void VectorInterface::open()
@@ -110,6 +126,11 @@ void VectorInterface::open()
     }
 
     _device->setConfigurationParameter(QCanBusDevice::BitRateKey, _bitrate);
+
+    if (_isCanFD) {
+        _device->setConfigurationParameter(QCanBusDevice::CanFdKey, true);
+        _device->setConfigurationParameter(QCanBusDevice::DataBitRateKey, _fdBitrate);
+    }
 
     if (_listenOnly) {
         // LoopbackKey=false prevents the device from ACKing on the bus (listen-only).
@@ -175,12 +196,17 @@ bool VectorInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeo
                 frame.setFrameType(QCanBusFrame::RemoteRequestFrame);
             } else {
                 frame.setFrameType(QCanBusFrame::DataFrame);
-                uint8_t len = (qMsg.getLength() > 8) ? 8 : qMsg.getLength();
+                const uint8_t maxLen = qMsg.isFD() ? 64 : 8;
+                const uint8_t len = qMin(qMsg.getLength(), maxLen);
                 QByteArray payload(len, 0);
                 for (int i = 0; i < len; i++) {
                     payload[i] = static_cast<char>(qMsg.getByte(i));
                 }
                 frame.setPayload(payload);
+                if (qMsg.isFD()) {
+                    frame.setFlexibleDataRateFormat(true);
+                    frame.setBitrateSwitch(qMsg.isBRS());
+                }
             }
 
             if (!_device->writeFrame(frame)) {
@@ -228,11 +254,16 @@ bool VectorInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeo
     msg.setErrorFrame(false);
     msg.setInterfaceId(getId());
 
+    const bool isFD = frame.hasFlexibleDataRateFormat();
+    msg.setFD(isFD);
+    msg.setBRS(isFD && frame.hasBitrateSwitch());
+
     const QCanBusFrame::TimeStamp ts = frame.timeStamp();
     msg.setTimestamp(ts.seconds(), ts.microSeconds());
 
     const QByteArray payload = frame.payload();
-    uint8_t len = static_cast<uint8_t>(qMin(payload.size(), 8));
+    const int maxLen = isFD ? 64 : 8;
+    uint8_t len = static_cast<uint8_t>(qMin(payload.size(), maxLen));
     msg.setLength(len);
     for (int i = 0; i < len; i++) {
         msg.setByte(i, static_cast<uint8_t>(payload.at(i)));
