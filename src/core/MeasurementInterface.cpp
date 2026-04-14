@@ -27,7 +27,8 @@
 
 
 MeasurementInterface::MeasurementInterface()
-  : _doConfigure(true),
+  : _busType(BusType::CAN),
+    _doConfigure(true),
     _bitrate(500000),
     _samplePoint(875),
     _isCanFD(false),
@@ -44,7 +45,14 @@ MeasurementInterface::MeasurementInterface()
     _isCustomFdBitrate(false),
 
     _CustomBitrate(0x023407),
-    _CustomFdBitrate(0x011508)
+    _CustomFdBitrate(0x011508),
+
+    _linBaudRate(19200),
+    _linProtocolVersion(LinProtocolVersion::V2_2A),
+    _linNodeMode(LinNodeMode::Master),
+    _linListenOnly(false),
+    _linChecksumClassic(false),
+    _linWakeupOnBus(false)
 {
 
 }
@@ -52,6 +60,8 @@ MeasurementInterface::MeasurementInterface()
 bool MeasurementInterface::loadXML(Backend &backend, QDomElement &el)
 {
     (void) backend;
+
+    _busType = (el.attribute("bus-type", "can") == "lin") ? BusType::LIN : BusType::CAN;
 
     _doConfigure = el.attribute("configure", "0").toInt() != 0;
 
@@ -72,6 +82,14 @@ bool MeasurementInterface::loadXML(Backend &backend, QDomElement &el)
 
     _CustomBitrate = el.attribute("custom-bitrate", "0").toInt();
     _CustomFdBitrate = el.attribute("custom-fdbitrate", "0").toInt();
+
+    _linBaudRate = el.attribute("lin-baudrate", "19200").toUInt();
+    _linProtocolVersion = static_cast<LinProtocolVersion>(el.attribute("lin-protocol", "4").toInt());
+    _linNodeMode = static_cast<LinNodeMode>(el.attribute("lin-node-mode", "0").toInt());
+    _linListenOnly = el.attribute("lin-listen-only", "0").toInt() != 0;
+    _linChecksumClassic = el.attribute("lin-checksum-classic", "0").toInt() != 0;
+    _linWakeupOnBus = el.attribute("lin-wakeup-on-bus", "0").toInt() != 0;
+
     return true;
 }
 
@@ -79,7 +97,8 @@ bool MeasurementInterface::saveXML(Backend &backend, QDomDocument &xml, QDomElem
 {
     (void) xml;
 
-    root.setAttribute("type", "can");
+    root.setAttribute("bus-type", _busType == BusType::LIN ? "lin" : "can");
+    root.setAttribute("type", _busType == BusType::LIN ? "lin" : "can");
     root.setAttribute("driver", backend.getDriverName(_canif));
     root.setAttribute("name", backend.getInterfaceName(_canif));
 
@@ -102,6 +121,14 @@ bool MeasurementInterface::saveXML(Backend &backend, QDomDocument &xml, QDomElem
 
     root.setAttribute("custom-bitrate", _CustomBitrate);
     root.setAttribute("custom-fdbitrate", _CustomFdBitrate);
+
+    root.setAttribute("lin-baudrate", _linBaudRate);
+    root.setAttribute("lin-protocol", static_cast<int>(_linProtocolVersion));
+    root.setAttribute("lin-node-mode", static_cast<int>(_linNodeMode));
+    root.setAttribute("lin-listen-only", _linListenOnly ? 1 : 0);
+    root.setAttribute("lin-checksum-classic", _linChecksumClassic ? 1 : 0);
+    root.setAttribute("lin-wakeup-on-bus", _linWakeupOnBus ? 1 : 0);
+
     return true;
 }
 
@@ -269,3 +296,24 @@ void MeasurementInterface::setCustomFdBitrate(uint32_t customFdBitrate)
 {
     _CustomFdBitrate = customFdBitrate;
 }
+
+BusType MeasurementInterface::busType() const { return _busType; }
+void    MeasurementInterface::setBusType(BusType type) { _busType = type; }
+
+unsigned MeasurementInterface::linBaudRate() const { return _linBaudRate; }
+void     MeasurementInterface::setLinBaudRate(unsigned baud) { _linBaudRate = baud; }
+
+LinProtocolVersion MeasurementInterface::linProtocolVersion() const { return _linProtocolVersion; }
+void               MeasurementInterface::setLinProtocolVersion(LinProtocolVersion ver) { _linProtocolVersion = ver; }
+
+LinNodeMode MeasurementInterface::linNodeMode() const { return _linNodeMode; }
+void        MeasurementInterface::setLinNodeMode(LinNodeMode mode) { _linNodeMode = mode; }
+
+bool MeasurementInterface::linListenOnly() const { return _linListenOnly; }
+void MeasurementInterface::setLinListenOnly(bool val) { _linListenOnly = val; }
+
+bool MeasurementInterface::linChecksumClassic() const { return _linChecksumClassic; }
+void MeasurementInterface::setLinChecksumClassic(bool val) { _linChecksumClassic = val; }
+
+bool MeasurementInterface::linWakeupOnBus() const { return _linWakeupOnBus; }
+void MeasurementInterface::setLinWakeupOnBus(bool val) { _linWakeupOnBus = val; }

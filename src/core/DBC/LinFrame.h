@@ -29,7 +29,7 @@ public:
 
     void addSignal(LinSignal *signal);
     LinSignal *findSignal(const QString &name) const;
-    const LinSignalList &signals() const;
+    const LinSignalList &signalList() const;
 
 private:
     LinDb        *_parent;

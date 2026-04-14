@@ -3,7 +3,7 @@
 #include <QVector>
 #include <QHash>
 #include <memory>
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "decoders/ProtocolTypes.h"
 
 class UnifiedTraceItem {

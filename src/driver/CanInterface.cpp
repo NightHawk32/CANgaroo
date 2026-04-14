@@ -20,7 +20,7 @@
 */
 
 #include "CanInterface.h"
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 
 #include <QList>
 

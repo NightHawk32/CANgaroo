@@ -30,7 +30,7 @@
 #include <QMutexLocker>
 
 #include "core/Backend.h"
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "core/MeasurementInterface.h"
 
 TinyCanInterface::TinyCanInterface(TinyCanDriver *driver, QString deviceName, QString description)

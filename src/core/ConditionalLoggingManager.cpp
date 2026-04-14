@@ -5,7 +5,7 @@
 
 #include "ConditionalLoggingManager.h"
 #include "core/Backend.h"
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "core/DBC/CanDbMessage.h"
 #include "core/DBC/CanDbSignal.h"
 #include <QDateTime>

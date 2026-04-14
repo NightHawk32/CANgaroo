@@ -22,7 +22,7 @@
 #pragma once
 
 #include <sys/time.h>
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include <QList>
 
 class AggregatedTraceViewItem
@@ -41,7 +41,7 @@ public:
     AggregatedTraceViewItem *lastChild() const;
     void setRow(int row) { _row = row; }
 
-    CanMessage _lastmsg, _prevmsg;
+    BusMessage _lastmsg, _prevmsg;
 
 private:
     AggregatedTraceViewItem *_parent;

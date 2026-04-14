@@ -33,6 +33,8 @@
 #include "driver/CanInterface.h"
 #include "driver/CanListener.h"
 #include "parser/dbc/DbcParser.h"
+#include "core/DBC/LinDb.h"
+#include "core/DBC/LinFrame.h"
 
 Backend *Backend::_instance = nullptr;
 
@@ -149,6 +151,9 @@ void Backend::loadDefaultSetup(MeasurementSetup &setup)
 
             MeasurementInterface *mi = new MeasurementInterface();
             mi->setCanInterface(intf);
+            CanInterface *canIntf = getInterfaceById(intf);
+            if (canIntf)
+                mi->setBusType(canIntf->busType());
             mi->setBitrate(500000);
             mi->setFdBitrate(2000000);
             network->addInterface(mi);
@@ -189,9 +194,14 @@ void Backend::clearTrace()
     emit onClearTraceRequested();
 }
 
-CanDbMessage *Backend::findDbMessage(const CanMessage &msg) const
+CanDbMessage *Backend::findDbMessage(const BusMessage &msg) const
 {
     return _setup.findDbMessage(msg);
+}
+
+LinFrame *Backend::findLinFrame(const BusMessage &msg) const
+{
+    return _setup.findLinFrame(msg);
 }
 
 CanInterfaceIdList Backend::getInterfaceList()
@@ -253,6 +263,21 @@ CanInterface *Backend::getInterfaceByDriverAndName(QString driverName, QString d
         return 0;
     }
 
+}
+
+pLinDb Backend::loadLdf(QString filename, QString *errorMsg)
+{
+    QFileInfo info(filename);
+    if (!info.exists() || !info.isReadable()) {
+        if (errorMsg) *errorMsg = tr("File not found or not readable.");
+        return pLinDb();
+    }
+    pLinDb lindb(new LinDb());
+    if (!lindb->loadFile(filename)) {
+        if (errorMsg) *errorMsg = lindb->lastError();
+        return pLinDb();
+    }
+    return lindb;
 }
 
 pCanDb Backend::loadDbc(QString filename, QString *errorMsg)

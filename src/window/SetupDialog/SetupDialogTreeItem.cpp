@@ -77,7 +77,9 @@ QVariant SetupDialogTreeItem::dataInterface(const QModelIndex &index) const
         case SetupDialogTreeModel::column_driver:
             return _backend->getDriverName(intf->canInterface());
         case SetupDialogTreeModel::column_bitrate:
-            return intf->bitrate();
+            return (intf->busType() == BusType::LIN)
+                ? intf->linBaudRate()
+                : intf->bitrate();
         default:
             return QVariant();
     }

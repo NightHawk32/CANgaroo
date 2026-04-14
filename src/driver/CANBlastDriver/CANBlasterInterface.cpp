@@ -30,7 +30,7 @@
 #include <QTimer>
 
 #include "core/Backend.h"
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "core/MeasurementInterface.h"
 
 

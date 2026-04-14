@@ -21,6 +21,8 @@
 
 #include "SetupDialogTreeModel.h"
 
+#include "driver/CanInterface.h"
+
 SetupDialogTreeModel::SetupDialogTreeModel(Backend *backend, QObject *parent)
   : QAbstractItemModel(parent),
     _backend(backend),
@@ -183,6 +185,10 @@ SetupDialogTreeItem *SetupDialogTreeModel::addInterface(const QModelIndex &paren
     if (parentItem && parentItem->network) {
         beginInsertRows(parent, parentItem->getChildCount(), parentItem->getChildCount());
         MeasurementInterface *mi = parentItem->network->addCanInterface(interface);
+        // Propagate the actual bus type (e.g. LIN) from the underlying interface
+        CanInterface *canIntf = _backend->getInterfaceById(interface);
+        if (canIntf)
+            mi->setBusType(canIntf->busType());
         item = loadMeasurementInterface(*parentItem, mi);
         endInsertRows();
     }

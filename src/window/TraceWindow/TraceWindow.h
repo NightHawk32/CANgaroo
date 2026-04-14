@@ -24,7 +24,7 @@
 #include <QSet>
 #include <QTimer>
 
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "core/ConfigurableWidget.h"
 #include "driver/CanDriver.h"
 

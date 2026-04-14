@@ -22,7 +22,7 @@
 
 
 
-#include "CanMessage.h"
+#include "BusMessage.h"
 #include "core/portable_endian.h"
 
 enum {
@@ -33,23 +33,23 @@ enum {
     id_mask_standard = 0x7FF
 };
 
-CanMessage::CanMessage()
-    : _raw_id(0), _dlc(0), _flags(0), _isFD(false), _isBRS(false), _isRX(true), _isShow(true), _interface(0), _u8()
+BusMessage::BusMessage()
+    : _raw_id(0), _dlc(0), _flags(0), _isFD(false), _isBRS(false), _isRX(true), _isShow(true), _busType(BusType::CAN), _interface(0), _u8()
 {
 }
 
-CanMessage::CanMessage(uint32_t can_id)
-    : _raw_id(0), _dlc(0), _flags(0), _isFD(false), _isBRS(false), _isRX(true), _isShow(true), _interface(0), _u8()
+BusMessage::BusMessage(uint32_t can_id)
+    : _raw_id(0), _dlc(0), _flags(0), _isFD(false), _isBRS(false), _isRX(true), _isShow(true), _busType(BusType::CAN), _interface(0), _u8()
 {
     setId(can_id);
 }
 
-CanMessage::CanMessage(const CanMessage &msg)
+BusMessage::BusMessage(const BusMessage &msg)
 {
     cloneFrom(msg);
 }
 
-void CanMessage::cloneFrom(const CanMessage &msg)
+void BusMessage::cloneFrom(const BusMessage &msg)
 {
     _raw_id = msg._raw_id;
     _dlc = msg._dlc;
@@ -58,6 +58,7 @@ void CanMessage::cloneFrom(const CanMessage &msg)
     _isBRS = msg._isBRS;
     _isRX = msg._isRX;
     _isShow = msg._isShow;
+    _busType = msg._busType;
 
     memcpy(_u8, msg._u8, sizeof(_u8));
 
@@ -65,16 +66,19 @@ void CanMessage::cloneFrom(const CanMessage &msg)
     _timestamp_us = msg._timestamp_us;
 }
 
+BusType BusMessage::busType() const { return _busType; }
+void    BusMessage::setBusType(BusType type) { _busType = type; }
 
-uint32_t CanMessage::getRawId() const {
+
+uint32_t BusMessage::getRawId() const {
     return _raw_id & id_mask_extended;
 }
 
-void CanMessage::setRawId(const uint32_t raw_id) {
+void BusMessage::setRawId(const uint32_t raw_id) {
     _raw_id = raw_id;
 }
 
-uint32_t CanMessage::getId() const {
+uint32_t BusMessage::getId() const {
     if (isExtended()) {
         return _raw_id & id_mask_extended;
     } else {
@@ -82,7 +86,7 @@ uint32_t CanMessage::getId() const {
     }
 }
 
-void CanMessage::setId(const uint32_t id) {
+void BusMessage::setId(const uint32_t id) {
     uint32_t flags = _raw_id & ~id_mask_extended;
 
     _raw_id = (id & id_mask_extended) | flags;
@@ -92,11 +96,11 @@ void CanMessage::setId(const uint32_t id) {
     }
 }
 
-bool CanMessage::isExtended() const {
+bool BusMessage::isExtended() const {
     return (_raw_id & id_flag_extended) != 0;
 }
 
-void CanMessage::setExtended(const bool isExtended) {
+void BusMessage::setExtended(const bool isExtended) {
     if (isExtended) {
         _raw_id |= id_flag_extended;
     } else {
@@ -104,11 +108,11 @@ void CanMessage::setExtended(const bool isExtended) {
     }
 }
 
-bool CanMessage::isRTR() const {
+bool BusMessage::isRTR() const {
     return (_raw_id & id_flag_rtr) != 0;
 }
 
-void CanMessage::setRTR(const bool isRTR) {
+void BusMessage::setRTR(const bool isRTR) {
     if (isRTR) {
         _raw_id |= id_flag_rtr;
     } else {
@@ -116,27 +120,27 @@ void CanMessage::setRTR(const bool isRTR) {
     }
 }
 
-bool CanMessage::isFD() const {
+bool BusMessage::isFD() const {
     return _isFD;
 }
 
-void CanMessage::setFD(const bool isFD) {
+void BusMessage::setFD(const bool isFD) {
     _isFD = isFD;
 }
 
-bool CanMessage::isBRS() const {
+bool BusMessage::isBRS() const {
     return _isBRS;
 }
 
-void CanMessage::setBRS(const bool isBRS) {
+void BusMessage::setBRS(const bool isBRS) {
     _isBRS = isBRS;
 }
 
-bool CanMessage::isErrorFrame() const {
+bool BusMessage::isErrorFrame() const {
     return (_raw_id & id_flag_error) != 0;
 }
 
-void CanMessage::setErrorFrame(const bool isErrorFrame) {
+void BusMessage::setErrorFrame(const bool isErrorFrame) {
     if (isErrorFrame) {
         _raw_id |= id_flag_error;
     } else {
@@ -144,21 +148,21 @@ void CanMessage::setErrorFrame(const bool isErrorFrame) {
     }
 }
 
-CanInterfaceId CanMessage::getInterfaceId() const
+CanInterfaceId BusMessage::getInterfaceId() const
 {
     return _interface;
 }
 
-void CanMessage::setInterfaceId(CanInterfaceId id)
+void BusMessage::setInterfaceId(CanInterfaceId id)
 {
     _interface = id;
 }
 
-uint8_t CanMessage::getLength() const {
+uint8_t BusMessage::getLength() const {
     return _dlc;
 }
 
-void CanMessage::setLength(const uint8_t dlc) {
+void BusMessage::setLength(const uint8_t dlc) {
     // Limit to CANFD max length
     if (dlc<=64) {
         _dlc = dlc;
@@ -167,31 +171,31 @@ void CanMessage::setLength(const uint8_t dlc) {
     }
 }
 
-uint8_t CanMessage::getFlags() const {
+uint8_t BusMessage::getFlags() const {
     return _flags;
 }
 
-void CanMessage::setFlags(uint8_t flags) {
+void BusMessage::setFlags(uint8_t flags) {
     _flags = flags;
 }
 
-bool CanMessage::isRX() const {
+bool BusMessage::isRX() const {
     return _isRX;
 }
 
-void CanMessage::setRX(const bool isRX) {
+void BusMessage::setRX(const bool isRX) {
     _isRX = isRX;
 }
 
-bool CanMessage::isShow() const {
+bool BusMessage::isShow() const {
     return _isShow;
 }
 
-void CanMessage::setShow(const bool enable) {
+void BusMessage::setShow(const bool enable) {
     _isShow = enable;
 }
 
-uint8_t CanMessage::getByte(const uint8_t index) const {
+uint8_t BusMessage::getByte(const uint8_t index) const {
     if (index<sizeof(_u8)) {
         return _u8[index];
     } else {
@@ -199,13 +203,18 @@ uint8_t CanMessage::getByte(const uint8_t index) const {
     }
 }
 
-void CanMessage::setByte(const uint8_t index, const uint8_t value) {
+void BusMessage::setByte(const uint8_t index, const uint8_t value) {
     if (index<sizeof(_u8)) {
         _u8[index] = value;
     }
 }
 
-uint64_t CanMessage::extractRawSignal(uint8_t start_bit, const uint8_t length, const bool isBigEndian) const
+const uint8_t *BusMessage::getData() const
+{
+    return _u8;
+}
+
+uint64_t BusMessage::extractRawSignal(uint8_t start_bit, const uint8_t length, const bool isBigEndian) const
 {
     if (length == 0 || start_bit >= sizeof(_u8) * 8) return 0;
 
@@ -242,7 +251,7 @@ uint64_t CanMessage::extractRawSignal(uint8_t start_bit, const uint8_t length, c
     return data;
 }
 
-void CanMessage::setDataAt(uint8_t position, uint8_t data)
+void BusMessage::setDataAt(uint8_t position, uint8_t data)
 {
     if(position < 64)
         _u8[position] = data;
@@ -250,25 +259,25 @@ void CanMessage::setDataAt(uint8_t position, uint8_t data)
         return;
 }
 
-void CanMessage::setData(const uint8_t d0) {
+void BusMessage::setData(const uint8_t d0) {
     _dlc = 1;
     _u8[0] = d0;
 }
 
-void CanMessage::setData(const uint8_t d0, const uint8_t d1) {
+void BusMessage::setData(const uint8_t d0, const uint8_t d1) {
     _dlc = 2;
     _u8[0] = d0;
     _u8[1] = d1;
 }
 
-void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2) {
+void BusMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2) {
     _dlc = 3;
     _u8[0] = d0;
     _u8[1] = d1;
     _u8[2] = d2;
 }
 
-void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
+void BusMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
         const uint8_t d3) {
     _dlc = 4;
     _u8[0] = d0;
@@ -277,7 +286,7 @@ void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
     _u8[3] = d3;
 }
 
-void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
+void BusMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
         const uint8_t d3, const uint8_t d4) {
     _dlc = 5;
     _u8[0] = d0;
@@ -287,7 +296,7 @@ void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
     _u8[4] = d4;
 }
 
-void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
+void BusMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
         const uint8_t d3, const uint8_t d4, const uint8_t d5) {
     _dlc = 6;
     _u8[0] = d0;
@@ -298,7 +307,7 @@ void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
     _u8[5] = d5;
 }
 
-void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
+void BusMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
         const uint8_t d3, const uint8_t d4, const uint8_t d5,
         const uint8_t d6) {
     _dlc = 7;
@@ -311,7 +320,7 @@ void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
     _u8[6] = d6;
 }
 
-void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
+void BusMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
         const uint8_t d3, const uint8_t d4, const uint8_t d5, const uint8_t d6,
         const uint8_t d7) {
     _dlc = 8;
@@ -325,48 +334,51 @@ void CanMessage::setData(const uint8_t d0, const uint8_t d1, const uint8_t d2,
     _u8[7] = d7;
 }
 
-int64_t CanMessage::getTimestamp_us() const
+int64_t BusMessage::getTimestamp_us() const
 {
     return _timestamp_us;
 }
 
-int64_t CanMessage::getTimestamp_ms() const
+int64_t BusMessage::getTimestamp_ms() const
 {
     return _timestamp_us / 1000;
 }
 
-double CanMessage::getFloatTimestamp() const
+double BusMessage::getFloatTimestamp() const
 {
     return static_cast<double>(_timestamp_us) / 1000000.0;
 }
 
-QDateTime CanMessage::getDateTime() const
+QDateTime BusMessage::getDateTime() const
 {
     return QDateTime::fromMSecsSinceEpoch(_timestamp_us / 1000);
 }
 
-void CanMessage::setTimestamp_us(int64_t us)
+void BusMessage::setTimestamp_us(int64_t us)
 {
     _timestamp_us = us;
 }
 
-void CanMessage::setTimestamp_ms(int64_t ms)
+void BusMessage::setTimestamp_ms(int64_t ms)
 {
     _timestamp_us = ms * 1000;
 }
 
-void CanMessage::setTimestamp(double seconds)
+void BusMessage::setTimestamp(double seconds)
 {
     _timestamp_us = static_cast<int64_t>(seconds * 1000000.0);
 }
 
-void CanMessage::setTimestamp(uint64_t seconds, uint32_t micro_seconds)
+void BusMessage::setTimestamp(uint64_t seconds, uint32_t micro_seconds)
 {
     _timestamp_us = static_cast<int64_t>(seconds) * 1000000 + micro_seconds;
 }
 
-QString CanMessage::getIdString() const
+QString BusMessage::getIdString() const
 {
+    if (_busType == BusType::LIN)
+        return QStringLiteral("0x%1").arg(getId() & 0x3F, 2, 16, QLatin1Char('0')).toUpper();
+
     if (isExtended()) {
         return QStringLiteral("0x%1").arg(getId(), 8, 16, QLatin1Char('0')).toUpper();
     } else {
@@ -374,7 +386,7 @@ QString CanMessage::getIdString() const
     }
 }
 
-QString CanMessage::getDataHexString() const
+QString BusMessage::getDataHexString() const
 {
     if(getLength() == 0)
         return QString();

@@ -28,6 +28,7 @@
 #include "driver/CanDriver.h"
 #include "driver/CanInterface.h"
 #include "core/DBC/CanDb.h"
+#include "core/DBC/LinDb.h"
 
 class Backend;
 class MeasurementInterface;
@@ -46,8 +47,12 @@ public:
     CanInterfaceIdList getReferencedCanInterfaces();
 
     void addCanDb(pCanDb candb);
-    bool reloadCanDbs(Backend *backend, QStringList *errors = 0);
+    bool reloadCanDbs(Backend *backend, QStringList *errors = nullptr);
     QList<pCanDb> _canDbs;
+
+    void addLinDb(pLinDb lindb);
+    bool reloadLinDbs(Backend *backend, QStringList *errors = nullptr);
+    QList<pLinDb> _linDbs;
 
     QString name() const;
     void setName(const QString &name);

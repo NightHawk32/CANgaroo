@@ -29,8 +29,8 @@
 
 #include "CanDriver.h"
 #include "CanTiming.h"
+#include "core/BusMessage.h"
 
-class CanMessage;
 class MeasurementInterface;
 
 class CanInterface: public QObject  {
@@ -48,14 +48,19 @@ public:
     };
 
     enum {
-        capability_canfd           = 0x01,
-        capability_listen_only     = 0x02,
-        capability_triple_sampling = 0x04,
-        capability_one_shot        = 0x08,
-        capability_auto_restart    = 0x10,
-        capability_config_os       = 0x20,
-        capability_custom_bitrate  = 0x40,
-        capability_custom_canfd_bitrate = 0x80
+        // CAN capabilities
+        capability_canfd                = 0x001,
+        capability_listen_only          = 0x002,
+        capability_triple_sampling      = 0x004,
+        capability_one_shot             = 0x008,
+        capability_auto_restart         = 0x010,
+        capability_config_os            = 0x020,
+        capability_custom_bitrate       = 0x040,
+        capability_custom_canfd_bitrate = 0x080,
+        // LIN capabilities
+        capability_lin_master           = 0x100,
+        capability_lin_slave            = 0x200,
+        capability_lin_monitor          = 0x400,
     };
 
 public:
@@ -64,6 +69,7 @@ public:
     virtual CanDriver *getDriver();
     virtual QString getName() const = 0;
     virtual QString getDetailsStr() const;
+    virtual BusType busType() const { return BusType::CAN; }
 
     virtual void applyConfig(const MeasurementInterface &mi) = 0;
 

@@ -23,10 +23,10 @@
 
 #include <QAbstractItemModel>
 #include "TraceViewTypes.h"
+#include "core/BusMessage.h"
 
 class Backend;
 class CanTrace;
-class CanMessage;
 class CanDbSignal;
 
 class BaseTraceViewModel : public QAbstractItemModel
@@ -55,7 +55,7 @@ public:
     virtual QVariant headerData(int section, Qt::Orientation orientation, int role) const;
     virtual QVariant data(const QModelIndex &index, int role) const;
 
-    virtual CanMessage getMessage(const QModelIndex &index) const = 0;
+    virtual BusMessage getMessage(const QModelIndex &index) const = 0;
 
     Backend *backend() const;
     CanTrace *trace() const;
@@ -65,13 +65,13 @@ public:
 
 protected:
     virtual QVariant data_DisplayRole(const QModelIndex &index, int role) const;
-    virtual QVariant data_DisplayRole_Message(const QModelIndex &index, int role, const CanMessage &currentMsg, const CanMessage &lastMsg) const;
-    virtual QVariant data_DisplayRole_Signal(const QModelIndex &index, int role, const CanMessage &msg) const;
+    virtual QVariant data_DisplayRole_Message(const QModelIndex &index, int role, const BusMessage &currentMsg, const BusMessage &lastMsg) const;
+    virtual QVariant data_DisplayRole_Signal(const QModelIndex &index, int role, const BusMessage &msg) const;
     virtual QVariant data_TextAlignmentRole(const QModelIndex &index, int role) const;
     virtual QVariant data_TextColorRole(const QModelIndex &index, int role) const;
-    virtual QVariant data_TextColorRole_Signal(const QModelIndex &index, int role, const CanMessage &msg) const;
+    virtual QVariant data_TextColorRole_Signal(const QModelIndex &index, int role, const BusMessage &msg) const;
 
-    QVariant formatTimestamp(timestamp_mode_t mode, const CanMessage &currentMsg, const CanMessage &lastMsg) const;
+    QVariant formatTimestamp(timestamp_mode_t mode, const BusMessage &currentMsg, const BusMessage &lastMsg) const;
 
 private:
     Backend *_backend;

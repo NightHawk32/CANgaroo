@@ -295,7 +295,7 @@ int GrIPHandler::Channels_CANFD() const
 int GrIPHandler::Channels_LIN() const
 {
     std::unique_lock<std::mutex> lck(m_MutexData);
-    return m_ChanelsLIN;
+    return m_ChannelsLIN;
 }
 
 
@@ -550,6 +550,7 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms)
             m_Version = std::format("{}.{}-<{}>", info.Major, info.Minor, info.BuildDate);
             m_ChannelsCAN = info.ChannelsCAN;
             m_ChannelsCANFD = info.ChannelsCANFD;
+            m_ChannelsLIN = info.ChannelsLIN;
 
             // Rebuild per-channel queues to match the reported channel count.
             // CAN-FD channels follow classic CAN channels in the same vectors.

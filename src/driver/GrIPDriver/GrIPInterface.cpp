@@ -28,7 +28,7 @@
 #include <QThread>
 
 #include "core/Backend.h"
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "core/MeasurementInterface.h"
 
 #include "GrIP/GrIPHandler.h"
@@ -39,6 +39,7 @@ GrIPInterface::GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QS
       _idx(index),
       _isOpen(false),
       _isOffline(false),
+      _isLin(manufacturer == CANIL_LIN),
       _name(name),
       m_GrIPHandler(hdl)
 {
@@ -48,7 +49,12 @@ GrIPInterface::GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QS
     _config.supports_canfd = fd_support;
     _config.supports_timing = false;
 
-    if (fd_support)
+    if (_isLin)
+    {
+        _settings.setBusType(BusType::LIN);
+        _settings.setLinBaudRate(19200);
+    }
+    else if (fd_support)
     {
         _settings.setFdBitrate(2000000);
         _settings.setFdSamplePoint(750);
@@ -72,7 +78,11 @@ GrIPInterface::~GrIPInterface()
 
 QString GrIPInterface::getDetailsStr() const
 {
-    if (_manufacturer == CANIL)
+    if (_manufacturer == CANIL_LIN)
+    {
+        return tr("CANIL with LIN support");
+    }
+    if (_manufacturer == CANIL_CAN)
     {
         return _config.supports_canfd
                    ? tr("CANIL with CANFD support")
@@ -95,7 +105,7 @@ QList<CanTiming> GrIPInterface::getAvailableBitrates()
 {
     QList<CanTiming> retval;
 
-    if (_manufacturer != GrIPInterface::CANIL)
+    if (_manufacturer != GrIPInterface::CANIL_CAN)
     {
         return retval;
     }
@@ -165,11 +175,19 @@ unsigned GrIPInterface::getBitrate()
     return _settings.bitrate();
 }
 
+BusType GrIPInterface::busType() const
+{
+    return _isLin ? BusType::LIN : BusType::CAN;
+}
+
 uint32_t GrIPInterface::getCapabilities()
 {
     uint32_t retval = 0;
 
-    if (_manufacturer == GrIPInterface::CANIL)
+    if (_isLin)
+        return 0;
+
+    if (_manufacturer == GrIPInterface::CANIL_CAN)
     {
         retval =
             CanInterface::capability_auto_restart |

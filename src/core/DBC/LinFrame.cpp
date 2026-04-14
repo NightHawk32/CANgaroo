@@ -38,7 +38,7 @@ LinSignal *LinFrame::findSignal(const QString &name) const
     return nullptr;
 }
 
-const LinSignalList &LinFrame::signals() const
+const LinSignalList &LinFrame::signalList() const
 {
     return _signals;
 }

@@ -2,7 +2,7 @@ INCLUDEPATH += $$PWD
 
 SOURCES += \
     $$PWD/Backend.cpp \
-    $$PWD/CanMessage.cpp \
+    $$PWD/BusMessage.cpp \
     $$PWD/CanTrace.cpp \
     $$PWD/DBC/CanDbMessage.cpp \
     $$PWD/DBC/CanDb.cpp \
@@ -24,7 +24,7 @@ SOURCES += \
 HEADERS += \
     $$PWD/portable_endian.h \
     $$PWD/Backend.h \
-    $$PWD/CanMessage.h \
+    $$PWD/BusMessage.h \
     $$PWD/CanTrace.h \
     $$PWD/DBC/CanDbMessage.h \
     $$PWD/DBC/CanDb.h \

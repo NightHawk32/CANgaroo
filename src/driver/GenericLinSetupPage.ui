@@ -277,13 +277,6 @@
    </property>
    <layout class="QVBoxLayout" name="vbOptions">
     <item>
-     <widget class="QCheckBox" name="cbListenOnly">
-      <property name="text">
-       <string>Bus Monitoring Mode (Listen Only)</string>
-      </property>
-     </widget>
-    </item>
-    <item>
      <widget class="QCheckBox" name="cbChecksumClassic">
       <property name="text">
        <string>Use Classic Checksum (LIN 1.x)</string>

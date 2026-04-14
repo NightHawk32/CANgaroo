@@ -64,7 +64,8 @@ class GrIPInterface : public CanInterface
 public:
     enum
     {
-        CANIL
+        CANIL_CAN,
+        CANIL_LIN
     };
 
     GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer);
@@ -85,6 +86,7 @@ public:
     bool supportsTripleSampling();
 
     unsigned getBitrate() override;
+    BusType busType() const override;
     uint32_t getCapabilities() override;
 
     void open() override;
@@ -116,6 +118,7 @@ private:
     int _idx;
     bool _isOpen;
     bool _isOffline;
+    bool _isLin;
     QMutex _serport_mutex;
     QString _name;
 

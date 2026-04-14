@@ -13,7 +13,7 @@
 #include <memory>
 #include <cstdint>
 #include <string>
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include <QSerialPort>
 
 
@@ -263,7 +263,7 @@ private:
     std::vector<bool> m_Channel_StatusCAN; ///< Per-channel enabled state, indexed identically to m_ReceiveQueue.
     std::vector<bool> m_Channel_StatusLIN;
 
-    int m_ChanelsLIN = 0;
+    int m_ChannelsLIN = 0;
 
     std::vector<uint8_t> m_CanBusStatus;
     std::vector<uint8_t> m_LinBusStatus;

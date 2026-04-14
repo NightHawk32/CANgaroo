@@ -65,6 +65,9 @@ void GenericCanSetupPage::onSetupDialogCreated(SetupDialog &dlg)
 
 void GenericCanSetupPage::onShowInterfacePage(SetupDialog &dlg, MeasurementInterface *mi)
 {
+    if (mi->busType() != BusType::CAN)
+        return;
+
     _mi = mi;
     CanInterface *intf = backend().getInterfaceById(_mi->canInterface());
 

@@ -24,16 +24,42 @@
 #include <QDomDocument>
 #include "driver/CanDriver.h"
 #include "driver/CanInterface.h"
+#include "core/BusMessage.h"
 
 class Backend;
+
+enum class LinProtocolVersion { V1_3, V2_0, V2_1, V2_2, V2_2A };
+enum class LinNodeMode       { Monitor, Master, Slave };
 
 class MeasurementInterface
 {
 public:
     MeasurementInterface();
 
+    BusType busType() const;
+    void setBusType(BusType type);
+
     CanInterfaceId canInterface() const;
     void setCanInterface(CanInterfaceId canif);
+
+    // LIN-specific configuration
+    unsigned linBaudRate() const;
+    void setLinBaudRate(unsigned baud);
+
+    LinProtocolVersion linProtocolVersion() const;
+    void setLinProtocolVersion(LinProtocolVersion ver);
+
+    LinNodeMode linNodeMode() const;
+    void setLinNodeMode(LinNodeMode mode);
+
+    bool linListenOnly() const;
+    void setLinListenOnly(bool val);
+
+    bool linChecksumClassic() const;
+    void setLinChecksumClassic(bool val);
+
+    bool linWakeupOnBus() const;
+    void setLinWakeupOnBus(bool val);
 
     void cloneFrom(MeasurementInterface &origin);
     bool loadXML(Backend &backend, QDomElement &el);
@@ -84,6 +110,7 @@ public:
     uint32_t customFdBitrate() const;
     void setCustomFdBitrate(uint32_t customFdBitrate);
 private:
+    BusType        _busType;
     CanInterfaceId _canif;
 
     bool _doConfigure;
@@ -106,4 +133,12 @@ private:
 
     uint32_t _CustomBitrate;
     uint32_t _CustomFdBitrate;
+
+    // LIN
+    unsigned           _linBaudRate;
+    LinProtocolVersion _linProtocolVersion;
+    LinNodeMode        _linNodeMode;
+    bool               _linListenOnly;
+    bool               _linChecksumClassic;
+    bool               _linWakeupOnBus;
 };

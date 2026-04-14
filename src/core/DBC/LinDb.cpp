@@ -2,12 +2,18 @@
 #include "LinFrame.h"
 #include "LinSignal.h"
 
-#include "parser/ldf/ldf_parser.h"
-
 #include <QFileInfo>
 
 #include <type_traits>
 #include <unordered_map>
+
+// Qt defines 'signals' as 'public', which clashes with the 'signals' field
+// name used in ldf_parser.h structs. This TU uses no Qt signals/slots, so
+// it is safe to suppress the macro before including the parser header.
+#ifdef signals
+#  undef signals
+#endif
+#include "parser/ldf/ldf_parser.h"
 
 LinDb::LinDb() = default;
 

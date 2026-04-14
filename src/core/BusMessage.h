@@ -28,16 +28,24 @@
 #include <QDateTime>
 #include "driver/CanDriver.h"
 
+enum class BusType : uint8_t
+{
+    CAN = 0,
+    LIN = 1,
+};
 
-class CanMessage
+class BusMessage
 {
 public:
-    CanMessage();
-    CanMessage(uint32_t can_id);
-    CanMessage(const CanMessage &msg);
-    CanMessage& operator=(const CanMessage&) = default;
+    BusMessage();
+    BusMessage(uint32_t can_id);
+    BusMessage(const BusMessage &msg);
+    BusMessage& operator=(const BusMessage&) = default;
 
-    void cloneFrom(const CanMessage &msg);
+    BusType busType() const;
+    void setBusType(BusType type);
+
+    void cloneFrom(const BusMessage &msg);
 
     uint32_t getRawId() const;
     void setRawId(const uint32_t raw_id);
@@ -78,6 +86,8 @@ public:
     uint8_t getByte(const uint8_t index) const;
     void setByte(const uint8_t index, const uint8_t value);
 
+    const uint8_t *getData() const;
+
     uint64_t extractRawSignal(uint8_t start_bit, const uint8_t length, const bool isBigEndian) const;
 
     void setDataAt(uint8_t position, uint8_t data);
@@ -111,6 +121,7 @@ private:
     bool _isBRS;
     bool _isRX;
     bool _isShow;
+    BusType _busType;
     CanInterfaceId _interface;
     union {
         uint8_t _u8[8*8];
@@ -122,3 +133,6 @@ private:
     int64_t _timestamp_us = 0;
 
 };
+
+// Backward-compat alias so all existing driver code compiles unchanged.
+using CanMessage = BusMessage;

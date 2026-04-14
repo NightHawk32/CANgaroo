@@ -27,7 +27,7 @@
 #include <QtEndian>
 
 #include "core/Backend.h"
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "core/DBC/CanDbMessage.h"
 #include "core/DBC/CanDbSignal.h"
 #include "driver/CanInterface.h"
@@ -63,17 +63,17 @@ void CanTrace::clear()
     emit afterClear();
 }
 
-CanMessage CanTrace::getMessage(int idx)
+BusMessage CanTrace::getMessage(int idx)
 {
     QMutexLocker locker(&_mutex);
     if (idx >= (_dataRowsUsed + _newRows)) {
-        return CanMessage();
+        return BusMessage();
     } else {
         return _data[idx];
     }
 }
 
-QVector<CanMessage> CanTrace::getSnapshot(int maxCount)
+QVector<BusMessage> CanTrace::getSnapshot(int maxCount)
 {
     QMutexLocker locker(&_mutex);
     const int total = _dataRowsUsed + _newRows;
@@ -87,7 +87,7 @@ QVector<CanMessage> CanTrace::getSnapshot(int maxCount)
     return result;
 }
 
-void CanTrace::enqueueMessage(const CanMessage &msg, bool more_to_follow)
+void CanTrace::enqueueMessage(const BusMessage &msg, bool more_to_follow)
 {
     QMutexLocker locker(&_mutex);
 

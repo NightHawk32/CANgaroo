@@ -12,7 +12,7 @@
 #include <QTextStream>
 #include <QSet>
 #include <QTimer>
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "core/DBC/CanDbSignal.h"
 
 class Backend;

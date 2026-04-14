@@ -30,6 +30,7 @@
 class GrIPInterface;
 class SetupDialogInterfacePage;
 class GenericCanSetupPage;
+class GenericLinSetupPage;
 
 
 class GrIPDriver: public CanDriver
@@ -44,7 +45,7 @@ public:
 private:
     GrIPInterface *createOrUpdateInterface(int index, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer);
     GenericCanSetupPage *setupPage;
-    uint32_t _manufacturer;
+    GenericLinSetupPage *linSetupPage;
 
     GrIPHandler *m_GrIPHandler;
 };

@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "CanMessage.h"
+#include "BusMessage.h"
 #include "CanDbMessage.h"
 #include <QString>
 #include <QMap>

@@ -28,7 +28,7 @@
 #include "driver/CanInterface.h"
 
 //class QThread;
-class CanMessage;
+#include "core/BusMessage.h"
 class Backend;
 
 class CanListener : public QObject
