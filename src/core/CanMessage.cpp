@@ -1,6 +1,7 @@
 /*
 
   Copyright (c) 2015, 2016 Hubert Denkmair <hubert@denkmair.de>
+  Copyright (c) 2026 Schildkroet
 
   This file is part of cangaroo.
 
@@ -33,12 +34,12 @@ enum {
 };
 
 CanMessage::CanMessage()
-    : _raw_id(0), _dlc(0), _isFD(false), _isBRS(false), _isRX(true), _isShow(true), _interface(0), _u8()
+    : _raw_id(0), _dlc(0), _flags(0), _isFD(false), _isBRS(false), _isRX(true), _isShow(true), _interface(0), _u8()
 {
 }
 
 CanMessage::CanMessage(uint32_t can_id)
-    : _raw_id(0), _dlc(0), _isFD(false), _isBRS(false), _isRX(true), _isShow(true), _interface(0), _u8()
+    : _raw_id(0), _dlc(0), _flags(0), _isFD(false), _isBRS(false), _isRX(true), _isShow(true), _interface(0), _u8()
 {
     setId(can_id);
 }
@@ -52,6 +53,7 @@ void CanMessage::cloneFrom(const CanMessage &msg)
 {
     _raw_id = msg._raw_id;
     _dlc = msg._dlc;
+    _flags = msg._flags;
     _isFD = msg._isFD;
     _isBRS = msg._isBRS;
     _isRX = msg._isRX;
@@ -82,8 +84,10 @@ uint32_t CanMessage::getId() const {
 
 void CanMessage::setId(const uint32_t id) {
     uint32_t flags = _raw_id & ~id_mask_extended;
+
     _raw_id = (id & id_mask_extended) | flags;
-    if (id>0x7FF) {
+    if (id > 0x7FF)
+    {
         setExtended(true);
     }
 }
@@ -163,6 +167,14 @@ void CanMessage::setLength(const uint8_t dlc) {
     }
 }
 
+uint8_t CanMessage::getFlags() const {
+    return _flags;
+}
+
+void CanMessage::setFlags(uint8_t flags) {
+    _flags = flags;
+}
+
 bool CanMessage::isRX() const {
     return _isRX;
 }
@@ -203,13 +215,13 @@ uint64_t CanMessage::extractRawSignal(uint8_t start_bit, const uint8_t length, c
     uint8_t temp[8] = {0};
     int copy_len = sizeof(_u8) - byte_offset;
     if (copy_len > 8) copy_len = 8;
-    
+
     memcpy(temp, _u8 + byte_offset, static_cast<size_t>(copy_len));
 
     uint64_t data_raw;
     memcpy(&data_raw, temp, sizeof(data_raw));
     data_raw = le64toh(data_raw);
-    
+
     uint64_t data = data_raw >> bit_shift;
 
     uint64_t mask = 0xFFFFFFFFFFFFFFFF;

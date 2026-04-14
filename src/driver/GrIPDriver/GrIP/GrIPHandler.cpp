@@ -101,6 +101,13 @@ typedef struct __attribute__((packed))
     uint8_t  Data[64];  // Payload bytes — valid range is Data[0..DLC-1]
 } Protocol_CanFrame_t;
 
+typedef struct __attribute__((packed))
+{
+    Protocol_SystemHeader_t Header;
+
+    uint32_t Hash;
+} Protocol_CanTxEcho_t;
+
 // Reply payload for SYSTEM_REPORT_INFO — sent by the device in response to a version request.
 typedef struct __attribute__((packed))
 {
@@ -465,7 +472,6 @@ bool GrIPHandler::CanTransmit(uint8_t ch, const CanMessage &msg)
     frame.ID = msg.getId();
     frame.DLC = msg.getLength();
     frame.ErrFlags = 0;
-    frame.Time = 0; // Device ignores timestamp on TX frames
 
     // Build flags from the CanMessage properties
     frame.Flags = 0;
@@ -485,6 +491,34 @@ bool GrIPHandler::CanTransmit(uint8_t ch, const CanMessage &msg)
     for (int i = 0; i < msg.getLength(); i++)
     {
         frame.Data[i] = msg.getByte(i);
+    }
+
+    // Compute a 32-bit FNV-1a hash over the frame's key fields and the current
+    // monotonic time as a correlation token. The device echoes this value back
+    // in the Time field, allowing TX echoes to be matched to their originating
+    // send call.
+    {
+        constexpr uint32_t basis = 2166136261u;
+        constexpr uint32_t prime = 16777619u;
+        uint32_t hash = basis;
+        const auto mix = [&](const uint8_t *data, size_t len) noexcept
+        {
+            for (size_t i = 0; i < len; i++) { hash ^= data[i]; hash *= prime; }
+        };
+        const uint64_t now = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count());
+        mix(&frame.Channel, 1);
+        mix(reinterpret_cast<const uint8_t *>(&frame.ID), sizeof(frame.ID));
+        mix(&frame.DLC, 1);
+        mix(&frame.Flags, 1);
+        mix(reinterpret_cast<const uint8_t *>(&now), sizeof(now));
+        frame.Time = hash;
+
+        std::unique_lock<std::mutex> dataLck(m_MutexData);
+        CanMessage pendingMsg = msg;
+        pendingMsg.setTimestamp_ms(QDateTime::currentMSecsSinceEpoch());
+        m_TxPending.insert_or_assign(hash, std::pair<uint8_t, CanMessage>{ch, pendingMsg});
     }
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
@@ -587,16 +621,12 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms)
             {
                 msg.setBRS(true);
             }
-            if (frame.Flags & CAN_FLAGS_TX)
-            {
-                // TX echo from the device — frame was sent by the host
-                msg.setRX(false);
-            }
 
             if (frame.ErrFlags)
             {
                 qDebug() << "CAN error flags:" << frame.ErrFlags;
                 msg.setErrorFrame(true);
+                msg.setFlags(frame.ErrFlags);
             }
 
             for (int i = 0; i < frame.DLC; i++)
@@ -636,6 +666,32 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms)
                 m_CanBusStatus[i] = frame.CAN[i];
             }
             //qDebug() << "CAN Status: " << frame.Channel[0] << " - " << frame.Channel[0];
+            break;
+        }
+
+        case 219u:
+        {
+            Protocol_CanTxEcho_t frame;
+            std::memcpy(&frame, packet.Data, sizeof(Protocol_CanTxEcho_t));
+
+            auto it = m_TxPending.find(frame.Hash);
+            if (it != m_TxPending.end())
+            {
+                auto &[ch, msg] = it->second;
+
+                msg.setRX(false);
+                if(frame.Header.Data != 0)
+                {
+                    msg.setErrorFrame(true);
+                    msg.setFlags(frame.Header.Data);
+                }
+
+                if (ch < m_ReceiveQueue.size())
+                {
+                    m_ReceiveQueue[ch].push(msg);
+                }
+                m_TxPending.erase(it);
+            }
             break;
         }
 

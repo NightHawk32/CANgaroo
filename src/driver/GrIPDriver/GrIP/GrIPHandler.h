@@ -8,6 +8,7 @@
 #include <condition_variable>
 #include <vector>
 #include <queue>
+#include <unordered_map>
 #include <atomic>
 #include <memory>
 #include <cstdint>
@@ -243,8 +244,9 @@ private:
     bool m_WorkerReady = false;        ///< Predicate for m_CvReady.
 
     // --- Received frame queues (one per channel) ---
-    mutable std::mutex m_MutexData;                    ///< Guards m_ReceiveQueue, m_Version, and channel counts.
+    mutable std::mutex m_MutexData;                    ///< Guards m_ReceiveQueue, m_TxPending, m_Version, and channel counts.
     std::vector<std::queue<CanMessage>> m_ReceiveQueue; ///< Per-channel inbound frame queues, populated by ProcessData().
+    std::unordered_map<uint32_t, std::pair<uint8_t, CanMessage>> m_TxPending; ///< Frames awaiting TX echo, keyed by correlation token; value is {channel, msg}.
 
     // --- Device state ---
     std::string m_Version;                ///< Firmware version string, set on SYSTEM_REPORT_INFO reply.

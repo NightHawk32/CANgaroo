@@ -1,6 +1,7 @@
 /*
 
   Copyright (c) 2015, 2016 Hubert Denkmair <hubert@denkmair.de>
+  Copyright (c) 2026 Schildkroet
 
   This file is part of cangaroo.
 
@@ -71,6 +72,9 @@ public:
     bool isShow() const;
     void setShow(const bool enable);
 
+    uint8_t getFlags() const;
+    void setFlags(uint8_t flags);
+
     uint8_t getByte(const uint8_t index) const;
     void setByte(const uint8_t index, const uint8_t value);
 
@@ -99,10 +103,10 @@ public:
     QString getIdString() const;
     QString getDataHexString() const;
 
-
 private:
     uint32_t _raw_id;
     uint8_t _dlc;
+    uint8_t _flags;
     bool _isFD;
     bool _isBRS;
     bool _isRX;
