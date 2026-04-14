@@ -228,6 +228,14 @@ private:
     /** @brief Qt slot invoked when the serial port reports an error. */
     void handleSerialError(QSerialPort::SerialPortError error);
 
+    /**
+     * @brief Expires entries in m_TxPending that have not been echoed within
+     *        the given timeout. Expired frames are marked as error frames and
+     *        pushed onto the appropriate receive queue so they appear in the trace.
+     * @param timeout_ms  Maximum age in milliseconds before an entry is expired.
+     */
+    void PurgeStaleTxPending(qint64 timeout_ms);
+
     // --- Serial port (owned by the worker thread) ---
     QSerialPort *m_SerialPort = nullptr; ///< Created in WorkerThread(), deleted in destructor.
     QString m_PortName;                  ///< Port name passed to the constructor.

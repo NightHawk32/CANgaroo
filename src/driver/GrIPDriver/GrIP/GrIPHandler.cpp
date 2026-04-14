@@ -463,7 +463,7 @@ bool GrIPHandler::CanTransmit(uint8_t ch, const CanMessage &msg)
 
     frame.Header.Version = GRIP_HEADER_VERSION;
     frame.Header.Command = SYSTEM_SEND_CAN_FRAME;
-    frame.Header.Length = sizeof(Protocol_CanFrame_t) - sizeof(Protocol_SystemHeader_t);
+    frame.Header.Length = sizeof(Protocol_CanFrame_t) - sizeof(Protocol_SystemHeader_t) - 64 + msg.getLength();
     frame.Header.Data = 0;
 
     GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&frame), sizeof(Protocol_CanFrame_t)};
@@ -819,11 +819,49 @@ void GrIPHandler::WorkerThread()
             }
         }
 
+        // --- Expire TX frames that never received an echo (rate-limited to 100 ms) ---
+        static qint64 lastPurgeMs = 0;
+        if (rxTimestamp_ms - lastPurgeMs >= 100)
+        {
+            PurgeStaleTxPending(1000);
+            lastPurgeMs = rxTimestamp_ms;
+        }
+
         // Only sleep when idle — skip the delay when data is flowing
         // to minimise timestamp jitter on back-to-back frames.
         if (!hadData)
         {
             QThread::usleep(500);
+        }
+    }
+}
+
+
+// ---------------------------------------------------------------------------
+// TX pending timeout
+// ---------------------------------------------------------------------------
+
+void GrIPHandler::PurgeStaleTxPending(qint64 timeout_ms)
+{
+    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    std::unique_lock<std::mutex> lck(m_MutexData);
+
+    for (auto it = m_TxPending.begin(); it != m_TxPending.end(); )
+    {
+        auto &[ch, msg] = it->second;
+        if (now - msg.getTimestamp_ms() >= timeout_ms)
+        {
+            msg.setRX(false);
+            msg.setErrorFrame(true);
+            if (ch < m_ReceiveQueue.size())
+            {
+                m_ReceiveQueue[ch].push(msg);
+            }
+            it = m_TxPending.erase(it);
+        }
+        else
+        {
+            ++it;
         }
     }
 }

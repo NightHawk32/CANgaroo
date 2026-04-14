@@ -402,15 +402,14 @@ bool GrIPInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout
                 if (!msg.isErrorFrame())
                 {
                     _status.tx_count++;
-                    //_status.can_state = state_tx_success;
+                    addFrameBits(msg);
                 }
                 else
                 {
                     _status.tx_errors++;
-                    //_status.can_state = state_tx_fail;
                 }
 
-                if (msg.isShow())
+                //if (msg.isShow())
                 {
                     msglist.append(msg);
                 }
@@ -419,6 +418,7 @@ bool GrIPInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout
             {
                 msglist.append(msg);
                 _status.rx_count++;
+                addFrameBits(msg);
             }
         }
     }
@@ -433,12 +433,6 @@ bool GrIPInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout
         }
         return false;
     }
-
-    // Clear any error state after 3 seconds of stable operation.
-    /*if (QDateTime::currentMSecsSinceEpoch() - _lastStateMsec > 3000)
-    {
-        _status.can_state = state_ok;
-    }*/
 
     return true;
 }

@@ -9,7 +9,7 @@
 #define GRIP_VERSION        4u
 
 // Transmit/Receive buffer size - Do not exceed (GRIP_BUFFER_SIZE - 10)
-#define GRIP_BUFFER_SIZE    128u
+#define GRIP_BUFFER_SIZE    256u
 
 enum GrIP_ProtocolType_e {
     PROT_GrIP = 0, PROT_BoOTA
