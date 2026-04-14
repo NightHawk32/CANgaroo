@@ -26,8 +26,8 @@
 #include <QFileDialog>
 #include <QTextStream>
 #include <QFile>
-#include <core/Backend.h>
-#include <core/LogModel.h>
+#include "core/Backend.h"
+#include "core/LogModel.h"
 
 LogWindow::LogWindow(QWidget *parent, Backend &backend) :
     ConfigurableWidget(parent),

@@ -4,7 +4,7 @@
 #include <QRegularExpression>
 #include <QSortFilterProxyModel>
 
-#include <core/CanMessage.h>
+#include "core/CanMessage.h"
 
 TraceFilterModel::TraceFilterModel(QObject *parent)
     : QSortFilterProxyModel{parent},

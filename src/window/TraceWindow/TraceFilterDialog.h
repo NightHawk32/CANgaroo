@@ -3,7 +3,7 @@
 #include <QDialog>
 #include <QSet>
 
-#include <driver/CanDriver.h>
+#include "driver/CanDriver.h"
 
 class QCheckBox;
 class QListWidget;

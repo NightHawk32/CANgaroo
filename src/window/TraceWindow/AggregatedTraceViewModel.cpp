@@ -23,11 +23,11 @@
 #include <QColor>
 #include <QDateTime>
 #include <QSet>
-#include <core/ThemeManager.h>
+#include "core/ThemeManager.h"
 
-#include <core/Backend.h>
-#include <core/CanTrace.h>
-#include <core/CanDbMessage.h>
+#include "core/Backend.h"
+#include "core/CanTrace.h"
+#include "core/DBC/CanDbMessage.h"
 
 AggregatedTraceViewModel::AggregatedTraceViewModel(Backend &backend)
     : BaseTraceViewModel(backend)

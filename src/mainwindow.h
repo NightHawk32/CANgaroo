@@ -29,7 +29,7 @@
 
 #include <QMainWindow>
 #include <QList>
-#include <core/Backend.h>
+#include "core/Backend.h"
 #include <QTranslator>
 #include <QSettings>
 

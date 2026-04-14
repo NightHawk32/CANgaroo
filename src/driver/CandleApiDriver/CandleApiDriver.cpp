@@ -23,7 +23,7 @@
 #include "api/candle.h"
 
 #include "CandleApiInterface.h"
-#include <driver/GenericCanSetupPage.h>
+#include "driver/GenericCanSetupPage.h"
 
 CandleApiDriver::CandleApiDriver(Backend &backend)
   : CanDriver(backend),

@@ -31,9 +31,9 @@
 #include <QtSerialPort/QSerialPort>
 #include <QtSerialPort/QSerialPortInfo>
 
-#include <core/Backend.h>
-#include <core/CanMessage.h>
-#include <core/MeasurementInterface.h>
+#include "core/Backend.h"
+#include "core/CanMessage.h"
+#include "core/MeasurementInterface.h"
 #include <QThread>
 
 

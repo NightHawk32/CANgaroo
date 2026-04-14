@@ -27,10 +27,10 @@
 #include <QTreeWidget>
 #include <QMessageBox>
 
-#include <core/Backend.h>
-#include <core/MeasurementSetup.h>
-#include <driver/CanInterface.h>
-#include <driver/CanDriver.h>
+#include "core/Backend.h"
+#include "core/MeasurementSetup.h"
+#include "driver/CanInterface.h"
+#include "driver/CanDriver.h"
 
 #include "SetupDialogTreeModel.h"
 #include "SetupDialogTreeItem.h"

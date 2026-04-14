@@ -28,8 +28,8 @@
 #include <QScrollBar>
 #include <QSortFilterProxyModel>
 
-#include <core/Backend.h>
-#include <window/ConditionalLoggingDialog.h>
+#include "core/Backend.h"
+#include "window/ConditionalLoggingDialog.h"
 
 #include "AggregatedTraceViewModel.h"
 #include "LinearTraceViewModel.h"

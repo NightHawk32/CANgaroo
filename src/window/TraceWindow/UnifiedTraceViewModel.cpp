@@ -1,10 +1,10 @@
 #include "UnifiedTraceViewModel.h"
-#include <core/CanTrace.h>
-#include <core/Backend.h>
+#include "core/CanTrace.h"
+#include "core/Backend.h"
 #include <QColor>
 #include <QSet>
 #include <QDateTime>
-#include <core/ThemeManager.h>
+#include "core/ThemeManager.h"
 
 UnifiedTraceViewModel::UnifiedTraceViewModel(Backend &backend, Category category)
     : BaseTraceViewModel(backend), m_category(category)

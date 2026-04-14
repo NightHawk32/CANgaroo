@@ -19,10 +19,10 @@
 
 #include "GenericCanSetupPage.h"
 #include "ui_GenericCanSetupPage.h"
-#include <core/Backend.h>
-#include <driver/CanInterface.h>
-#include <core/MeasurementInterface.h>
-#include <window/SetupDialog/SetupDialog.h>
+#include "core/Backend.h"
+#include "driver/CanInterface.h"
+#include "core/MeasurementInterface.h"
+#include "window/SetupDialog/SetupDialog.h"
 #include <QList>
 #include <QtAlgorithms>
 #include <algorithm>

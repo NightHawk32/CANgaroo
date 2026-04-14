@@ -30,10 +30,10 @@
 #include <QString>
 #include <QStringList>
 
-#include <core/Backend.h>
-#include <core/CanMessage.h>
-#include <core/MeasurementInterface.h>
-#include <core/MeasurementNetwork.h>
+#include "core/Backend.h"
+#include "core/CanMessage.h"
+#include "core/MeasurementInterface.h"
+#include "core/MeasurementNetwork.h"
 
 #include <unistd.h>
 #include <sys/utsname.h>

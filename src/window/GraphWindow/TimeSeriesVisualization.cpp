@@ -37,7 +37,7 @@
 #include <QtCharts/QValueAxis>
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QChartView>
-#include <core/ThemeManager.h>
+#include "core/ThemeManager.h"
 
 TimeSeriesVisualization::TimeSeriesVisualization(QWidget *parent, Backend &backend)
     : VisualizationWidget(parent, backend), _windowDuration(0), _autoScroll(true), _isUpdatingRange(false)

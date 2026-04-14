@@ -26,7 +26,7 @@
 #include <QMutex>
 #include <QtSerialPort/QSerialPort>
 
-#include <core/MeasurementInterface.h>
+#include "core/MeasurementInterface.h"
 
 #include "GrIP/GrIPHandler.h"
 

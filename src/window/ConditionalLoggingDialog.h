@@ -11,8 +11,8 @@
 #include <QLineEdit>
 #include <QComboBox>
 #include <QCheckBox>
-#include <core/ConditionalLoggingManager.h>
-#include <core/ThemeManager.h>
+#include "core/ConditionalLoggingManager.h"
+#include "core/ThemeManager.h"
 
 class Backend;
 

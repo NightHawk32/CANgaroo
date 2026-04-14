@@ -34,13 +34,13 @@
 #include <QDomDocument>
 #include <QFont>
 
-#include <core/Backend.h>
-#include <core/CanDbMessage.h>
-#include <core/CanDbSignal.h>
-#include <core/MeasurementSetup.h>
-#include <core/MeasurementNetwork.h>
-#include <core/MeasurementInterface.h>
-#include <driver/CanInterface.h>
+#include "core/Backend.h"
+#include "core/DBC/CanDbMessage.h"
+#include "core/DBC/CanDbSignal.h"
+#include "core/MeasurementSetup.h"
+#include "core/MeasurementNetwork.h"
+#include "core/MeasurementInterface.h"
+#include "driver/CanInterface.h"
 
 RawTxWindow::RawTxWindow(QWidget *parent, Backend &backend)
     : ConfigurableWidget(parent)

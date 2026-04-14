@@ -22,10 +22,10 @@
 #pragma once
 
 #include <QWidget>
-#include <core/CanMessage.h>
-#include <core/CanDbSignal.h>
-#include <core/Backend.h>
-#include <core/ThemeManager.h>
+#include "core/CanMessage.h"
+#include "core/DBC/CanDbSignal.h"
+#include "core/Backend.h"
+#include "core/ThemeManager.h"
 #include <QMetaType>
 
 class ThemeManager;

@@ -20,8 +20,8 @@
 */
 
 #include "CanDriver.h"
-#include <core/Backend.h>
-#include <driver/CanInterface.h>
+#include "core/Backend.h"
+#include "driver/CanInterface.h"
 
 CanDriver::CanDriver(Backend &backend)
   : _backend(backend)

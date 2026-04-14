@@ -21,8 +21,8 @@
 
 #include "TinyCanDriver.h"
 #include "TinyCanInterface.h"
-#include <core/Backend.h>
-#include <driver/GenericCanSetupPage.h>
+#include "core/Backend.h"
+#include "driver/GenericCanSetupPage.h"
 
 #include <QCanBus>
 

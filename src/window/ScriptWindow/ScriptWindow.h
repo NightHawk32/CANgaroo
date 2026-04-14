@@ -18,8 +18,8 @@
 */
 #pragma once
 
-#include <core/ConfigurableWidget.h>
-#include <core/Backend.h>
+#include "core/ConfigurableWidget.h"
+#include "core/Backend.h"
 #include <QDateTime>
 
 class PythonEngine;

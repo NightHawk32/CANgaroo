@@ -26,9 +26,9 @@
 
 #include <QMutexLocker>
 
-#include <core/Backend.h>
-#include <core/CanMessage.h>
-#include <core/MeasurementInterface.h>
+#include "core/Backend.h"
+#include "core/CanMessage.h"
+#include "core/MeasurementInterface.h"
 
 // canlib.h is the same header name on Linux and Windows.
 // The SDK include path is set via INCLUDEPATH in KvaserDriver.pri.

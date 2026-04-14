@@ -26,13 +26,13 @@
 #include <QVBoxLayout>
 #include <QDialogButtonBox>
 #include <QComboBox>
-#include <core/Backend.h>
-#include <core/MeasurementNetwork.h>
-#include <core/MeasurementSetup.h>
-#include <core/MeasurementInterface.h>
-#include <driver/CanInterface.h>
-#include <driver/CanDriver.h>
-#include <window/RawTxWindow/RawTxWindow.h>
+#include "core/Backend.h"
+#include "core/MeasurementNetwork.h"
+#include "core/MeasurementSetup.h"
+#include "core/MeasurementInterface.h"
+#include "driver/CanInterface.h"
+#include "driver/CanDriver.h"
+#include "window/RawTxWindow/RawTxWindow.h"
 #include <chrono>
 
 TxGeneratorWindow::TxGeneratorWindow(QWidget *parent, Backend &backend) :

@@ -27,9 +27,9 @@
 #include <QStringList>
 #include <QThread>
 
-#include <core/Backend.h>
-#include <core/CanMessage.h>
-#include <core/MeasurementInterface.h>
+#include "core/Backend.h"
+#include "core/CanMessage.h"
+#include "core/MeasurementInterface.h"
 
 #include "GrIP/GrIPHandler.h"
 

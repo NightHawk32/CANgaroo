@@ -24,9 +24,9 @@
 #include <QSet>
 #include <QTimer>
 
-#include <core/CanMessage.h>
-#include <core/ConfigurableWidget.h>
-#include <driver/CanDriver.h>
+#include "core/CanMessage.h"
+#include "core/ConfigurableWidget.h"
+#include "driver/CanDriver.h"
 
 #include "TraceFilterModel.h"
 #include "TraceViewTypes.h"

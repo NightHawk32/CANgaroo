@@ -26,11 +26,11 @@
 #include <QDataStream>
 #include <QtEndian>
 
-#include <core/Backend.h>
-#include <core/CanMessage.h>
-#include <core/CanDbMessage.h>
-#include <core/CanDbSignal.h>
-#include <driver/CanInterface.h>
+#include "core/Backend.h"
+#include "core/CanMessage.h"
+#include "core/DBC/CanDbMessage.h"
+#include "core/DBC/CanDbSignal.h"
+#include "driver/CanInterface.h"
 
 CanTrace::CanTrace(Backend &backend, QObject *parent, int flushInterval)
   : QObject(parent),

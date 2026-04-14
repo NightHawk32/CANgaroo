@@ -22,8 +22,8 @@
 
 #include "CANBlasterDriver.h"
 #include "CANBlasterInterface.h"
-#include <core/Backend.h>
-#include <driver/GenericCanSetupPage.h>
+#include "core/Backend.h"
+#include "driver/GenericCanSetupPage.h"
 
 #include <errno.h>
 #include <cstring>

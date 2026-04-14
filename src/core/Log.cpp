@@ -20,7 +20,7 @@
 */
 
 #include "Log.h"
-#include <core/Backend.h>
+#include "core/Backend.h"
 
 void log_msg(const QDateTime dt, const log_level_t level, const QString msg)
 {

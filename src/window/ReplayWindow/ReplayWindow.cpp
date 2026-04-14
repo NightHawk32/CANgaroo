@@ -42,10 +42,10 @@
 #include <QDataStream>
 #include <QProgressBar>
 
-#include <core/CanTrace.h>
-#include <core/Backend.h>
-#include <core/CanDbMessage.h>
-#include <driver/CanInterface.h>
+#include "core/CanTrace.h"
+#include "core/Backend.h"
+#include "core/DBC/CanDbMessage.h"
+#include "driver/CanInterface.h"
 
 
 ReplayWindow::ReplayWindow(QWidget *parent, Backend &backend)

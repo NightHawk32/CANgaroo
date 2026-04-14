@@ -39,7 +39,7 @@
 #include <QtCharts/QValueAxis>
 #include <QtCharts/QScatterSeries>
 #include <QtCharts/QChartView>
-#include <core/ThemeManager.h>
+#include "core/ThemeManager.h"
 
 ScatterVisualization::ScatterVisualization(QWidget *parent, Backend &backend)
     : VisualizationWidget(parent, backend), _windowDuration(0), _autoScroll(true), _isUpdatingRange(false)

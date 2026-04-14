@@ -1,11 +1,13 @@
+INCLUDEPATH += $$PWD
+
 SOURCES += \
     $$PWD/Backend.cpp \
     $$PWD/CanMessage.cpp \
     $$PWD/CanTrace.cpp \
-    $$PWD/CanDbMessage.cpp \
-    $$PWD/CanDb.cpp \
-    $$PWD/CanDbNode.cpp \
-    $$PWD/CanDbSignal.cpp \
+    $$PWD/DBC/CanDbMessage.cpp \
+    $$PWD/DBC/CanDb.cpp \
+    $$PWD/DBC/CanDbNode.cpp \
+    $$PWD/DBC/CanDbSignal.cpp \
     $$PWD/MeasurementSetup.cpp \
     $$PWD/MeasurementNetwork.cpp \
     $$PWD/MeasurementInterface.cpp \
@@ -21,10 +23,10 @@ HEADERS += \
     $$PWD/Backend.h \
     $$PWD/CanMessage.h \
     $$PWD/CanTrace.h \
-    $$PWD/CanDbMessage.h \
-    $$PWD/CanDb.h \
-    $$PWD/CanDbNode.h \
-    $$PWD/CanDbSignal.h \
+    $$PWD/DBC/CanDbMessage.h \
+    $$PWD/DBC/CanDb.h \
+    $$PWD/DBC/CanDbNode.h \
+    $$PWD/DBC/CanDbSignal.h \
     $$PWD/MeasurementSetup.h \
     $$PWD/MeasurementNetwork.h \
     $$PWD/MeasurementInterface.h \

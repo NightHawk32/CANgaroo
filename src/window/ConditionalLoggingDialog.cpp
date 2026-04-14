@@ -4,13 +4,13 @@
 */
 
 #include "ConditionalLoggingDialog.h"
-#include <core/Backend.h>
-#include <core/MeasurementSetup.h>
-#include <core/MeasurementNetwork.h>
-#include <core/MeasurementInterface.h>
-#include <core/CanDb.h>
-#include <core/CanDbMessage.h>
-#include <core/CanDbSignal.h>
+#include "core/Backend.h"
+#include "core/MeasurementSetup.h"
+#include "core/MeasurementNetwork.h"
+#include "core/MeasurementInterface.h"
+#include "core/DBC/CanDb.h"
+#include "core/DBC/CanDbMessage.h"
+#include "core/DBC/CanDbSignal.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>

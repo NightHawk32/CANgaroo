@@ -3,8 +3,8 @@
 #include <QVector>
 #include <QHash>
 #include <memory>
-#include <core/CanMessage.h>
-#include <decoders/ProtocolTypes.h>
+#include "core/CanMessage.h"
+#include "decoders/ProtocolTypes.h"
 
 class UnifiedTraceItem {
 public:

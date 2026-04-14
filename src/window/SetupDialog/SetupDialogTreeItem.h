@@ -26,11 +26,11 @@
 
 #include <QObject>
 
-#include <core/Backend.h>
-#include <core/MeasurementSetup.h>
-#include <core/MeasurementNetwork.h>
-#include <core/MeasurementInterface.h>
-#include <core/CanDb.h>
+#include "core/Backend.h"
+#include "core/MeasurementSetup.h"
+#include "core/MeasurementNetwork.h"
+#include "core/MeasurementInterface.h"
+#include "core/DBC/CanDb.h"
 
 class SetupDialogTreeItem
 {

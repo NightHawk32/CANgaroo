@@ -1,8 +1,8 @@
 #ifndef CANDLEAPIINTERFACE_H
 #define CANDLEAPIINTERFACE_H
 
-#include <driver/CanInterface.h>
-#include <core/MeasurementInterface.h>
+#include "driver/CanInterface.h"
+#include "core/MeasurementInterface.h"
 
 #include <QList>
 #include <QMutex>

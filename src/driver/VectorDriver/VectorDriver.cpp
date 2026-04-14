@@ -21,8 +21,8 @@
 
 #include "VectorDriver.h"
 #include "VectorInterface.h"
-#include <core/Backend.h>
-#include <driver/GenericCanSetupPage.h>
+#include "core/Backend.h"
+#include "driver/GenericCanSetupPage.h"
 
 #include <QCanBus>
 

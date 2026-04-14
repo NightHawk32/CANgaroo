@@ -29,9 +29,9 @@
 #include <QThread>
 #include <QTimer>
 
-#include <core/Backend.h>
-#include <core/CanMessage.h>
-#include <core/MeasurementInterface.h>
+#include "core/Backend.h"
+#include "core/CanMessage.h"
+#include "core/MeasurementInterface.h"
 
 
 CANBlasterInterface::CANBlasterInterface(CANBlasterDriver *driver, int index, QString name, bool fd_support)

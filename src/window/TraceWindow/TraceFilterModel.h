@@ -5,7 +5,7 @@
 #include <QSortFilterProxyModel>
 #include <QRegularExpression>
 
-#include <driver/CanDriver.h>
+#include "driver/CanDriver.h"
 
 class TraceFilterModel : public QSortFilterProxyModel
 {

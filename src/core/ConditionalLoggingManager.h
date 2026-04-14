@@ -12,8 +12,8 @@
 #include <QTextStream>
 #include <QSet>
 #include <QTimer>
-#include <core/CanMessage.h>
-#include <core/CanDbSignal.h>
+#include "core/CanMessage.h"
+#include "core/DBC/CanDbSignal.h"
 
 class Backend;
 class CanDbMessage;

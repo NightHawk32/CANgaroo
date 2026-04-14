@@ -21,8 +21,8 @@
 
 #include "KvaserDriver.h"
 #include "KvaserInterface.h"
-#include <core/Backend.h>
-#include <driver/GenericCanSetupPage.h>
+#include "core/Backend.h"
+#include "driver/GenericCanSetupPage.h"
 
 #include <canlib.h>
 

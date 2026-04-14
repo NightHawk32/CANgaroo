@@ -26,7 +26,7 @@
 
 #include <QString>
 #include <QDateTime>
-#include <driver/CanDriver.h>
+#include "driver/CanDriver.h"
 
 
 class CanMessage

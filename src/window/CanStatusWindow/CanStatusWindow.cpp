@@ -26,11 +26,11 @@
 #include <QStringList>
 #include <QTimer>
 #include <QDateTime>
-#include <core/Backend.h>
-#include <core/MeasurementSetup.h>
-#include <core/MeasurementNetwork.h>
-#include <core/MeasurementInterface.h>
-#include <driver/CanInterface.h>
+#include "core/Backend.h"
+#include "core/MeasurementSetup.h"
+#include "core/MeasurementNetwork.h"
+#include "core/MeasurementInterface.h"
+#include "driver/CanInterface.h"
 
 CanStatusWindow::CanStatusWindow(QWidget *parent, Backend &backend) :
     ConfigurableWidget(parent),

@@ -25,9 +25,9 @@
 #include <QLabel>
 #include <QDialogButtonBox>
 #include <QTreeWidgetItemIterator>
-#include <core/MeasurementSetup.h>
-#include <core/MeasurementNetwork.h>
-#include <core/CanDbMessage.h>
+#include "core/MeasurementSetup.h"
+#include "core/MeasurementNetwork.h"
+#include "core/DBC/CanDbMessage.h"
 
 SignalSelectorDialog::SignalSelectorDialog(QWidget *parent, Backend &backend)
     : QDialog(parent), _backend(backend)

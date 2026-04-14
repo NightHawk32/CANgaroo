@@ -21,7 +21,7 @@
 
 #include "ConfigurableWidget.h"
 #include <QDomDocument>
-#include <core/Backend.h>
+#include "core/Backend.h"
 
 ConfigurableWidget::ConfigurableWidget(QWidget *parent) : QWidget(parent)
 {

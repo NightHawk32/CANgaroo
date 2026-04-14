@@ -21,6 +21,8 @@ TRANSLATIONS = \
     translations/i18n_es_ES.ts
 RC_ICONS = cangaroo.ico
 
+INCLUDEPATH += $$PWD
+
 DESTDIR = ../bin
 MOC_DIR = ../build/moc
 RCC_DIR = ../build/rcc

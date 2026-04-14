@@ -3,7 +3,7 @@
 #include <QString>
 #include <QByteArray>
 #include <QVector>
-#include <core/CanMessage.h>
+#include "core/CanMessage.h"
 
 #include <QVariantMap>
 

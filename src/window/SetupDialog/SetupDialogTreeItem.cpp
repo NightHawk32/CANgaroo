@@ -21,7 +21,7 @@
 
 #include "SetupDialogTreeItem.h"
 #include <QModelIndex>
-#include <driver/CanDriver.h>
+#include "driver/CanDriver.h"
 #include "SetupDialogTreeModel.h"
 
 SetupDialogTreeItem::SetupDialogTreeItem(item_type type, Backend *backend, SetupDialogTreeItem *parent)

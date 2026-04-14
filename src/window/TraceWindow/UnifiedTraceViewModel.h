@@ -2,7 +2,7 @@
 
 #include "BaseTraceViewModel.h"
 #include "UnifiedTraceItem.h"
-#include <decoders/ProtocolManager.h>
+#include "decoders/ProtocolManager.h"
 #include <memory>
 #include <map>
 #include <QHash>

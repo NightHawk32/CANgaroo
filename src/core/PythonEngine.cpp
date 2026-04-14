@@ -8,7 +8,7 @@
 
 #include <cstring>
 
-#include <core/portable_endian.h>
+#include "core/portable_endian.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -17,15 +17,15 @@
 #include <QMutexLocker>
 #include <QStandardPaths>
 
-#include <core/Backend.h>
-#include <core/CanTrace.h>
-#include <core/CanDb.h>
-#include <core/CanDbMessage.h>
-#include <core/CanDbSignal.h>
-#include <core/MeasurementSetup.h>
-#include <core/MeasurementNetwork.h>
-#include <core/Log.h>
-#include <driver/CanInterface.h>
+#include "core/Backend.h"
+#include "core/CanTrace.h"
+#include "core/DBC/CanDb.h"
+#include "core/DBC/CanDbMessage.h"
+#include "core/DBC/CanDbSignal.h"
+#include "core/MeasurementSetup.h"
+#include "core/MeasurementNetwork.h"
+#include "core/Log.h"
+#include "driver/CanInterface.h"
 
 namespace py = pybind11;
 using namespace py::literals;

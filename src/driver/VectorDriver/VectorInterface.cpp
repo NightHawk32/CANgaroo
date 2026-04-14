@@ -29,9 +29,9 @@
 #include <QCanBusFrame>
 #include <QMutexLocker>
 
-#include <core/Backend.h>
-#include <core/CanMessage.h>
-#include <core/MeasurementInterface.h>
+#include "core/Backend.h"
+#include "core/CanMessage.h"
+#include "core/MeasurementInterface.h"
 
 VectorInterface::VectorInterface(VectorDriver *driver, QString deviceName, QString description)
   : CanInterface(reinterpret_cast<CanDriver*>(driver)),

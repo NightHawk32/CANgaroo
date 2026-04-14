@@ -11,7 +11,7 @@
 #include <optional>
 #include <thread>
 
-#include <core/CanMessage.h>
+#include "core/CanMessage.h"
 
 class Backend;
 

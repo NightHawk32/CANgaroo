@@ -22,8 +22,8 @@
 #pragma once
 
 #include <QString>
-#include <core/Backend.h>
-#include <driver/CanDriver.h>
+#include "core/Backend.h"
+#include "driver/CanDriver.h"
 
 class CANBlasterInterface;
 class SetupDialogInterfacePage;

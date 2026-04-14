@@ -21,9 +21,9 @@
 
 #pragma once
 
-#include <core/Backend.h>
-#include <core/ConfigurableWidget.h>
-#include <core/MeasurementSetup.h>
+#include "core/Backend.h"
+#include "core/ConfigurableWidget.h"
+#include "core/MeasurementSetup.h"
 #include "VisualizationWidget.h"
 
 class QComboBox;
@@ -43,7 +43,7 @@ class GraphWindow;
 class QDomDocument;
 class QDomElement;
 
-#include <core/CanDbSignal.h>
+#include "core/DBC/CanDbSignal.h"
 
 struct DecodedSignalData;
 

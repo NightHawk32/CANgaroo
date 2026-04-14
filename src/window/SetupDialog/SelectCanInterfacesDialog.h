@@ -23,8 +23,8 @@
 
 #include <QDialog>
 #include <QList>
-#include <driver/CanDriver.h>
-#include <driver/CanInterface.h>
+#include "driver/CanDriver.h"
+#include "driver/CanInterface.h"
 
 class Backend;
 

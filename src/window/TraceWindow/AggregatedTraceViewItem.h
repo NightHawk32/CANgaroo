@@ -22,7 +22,7 @@
 #pragma once
 
 #include <sys/time.h>
-#include <core/CanMessage.h>
+#include "core/CanMessage.h"
 #include <QList>
 
 class AggregatedTraceViewItem

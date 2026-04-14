@@ -35,47 +35,47 @@
 #include <QFileInfo>
 
 #include "core/MeasurementSetup.h"
-#include <core/MeasurementNetwork.h>
-#include <core/MeasurementInterface.h>
+#include "core/MeasurementNetwork.h"
+#include "core/MeasurementInterface.h"
 #include <unistd.h>
 #include "core/Backend.h"
 #include "core/CanTrace.h"
 #include "core/ThemeManager.h"
-#include <window/TraceWindow/TraceWindow.h>
-#include <window/SetupDialog/SetupDialog.h>
-#include <window/LogWindow/LogWindow.h>
-#include <window/GraphWindow/GraphWindow.h>
-#include <window/CanStatusWindow/CanStatusWindow.h>
-#include <window/RawTxWindow/RawTxWindow.h>
-#include <window/TxGeneratorWindow/TxGeneratorWindow.h>
-#include <window/ScriptWindow/ScriptWindow.h>
-#include <window/ReplayWindow/ReplayWindow.h>
-#include <window/SettingsDialog.h>
+#include "window/TraceWindow/TraceWindow.h"
+#include "window/SetupDialog/SetupDialog.h"
+#include "window/LogWindow/LogWindow.h"
+#include "window/GraphWindow/GraphWindow.h"
+#include "window/CanStatusWindow/CanStatusWindow.h"
+#include "window/RawTxWindow/RawTxWindow.h"
+#include "window/TxGeneratorWindow/TxGeneratorWindow.h"
+#include "window/ScriptWindow/ScriptWindow.h"
+#include "window/ReplayWindow/ReplayWindow.h"
+#include "window/SettingsDialog.h"
 
-#include <driver/SLCANDriver/SLCANDriver.h>
-#include <driver/GrIPDriver/GrIPDriver.h>
-#include <driver/CANBlastDriver/CANBlasterDriver.h>
+#include "driver/SLCANDriver/SLCANDriver.h"
+#include "driver/GrIPDriver/GrIPDriver.h"
+#include "driver/CANBlastDriver/CANBlasterDriver.h"
 
 #if defined(__linux__)
-#include <driver/SocketCanDriver/SocketCanDriver.h>
+#include "driver/SocketCanDriver/SocketCanDriver.h"
 #else
-#include <driver/CandleApiDriver/CandleApiDriver.h>
+#include "driver/CandleApiDriver/CandleApiDriver.h"
 #endif
 
 #ifdef VECTOR_DRIVER
-#include <driver/VectorDriver/VectorDriver.h>
+#include "driver/VectorDriver/VectorDriver.h"
 #endif
 
 #ifdef TINYCAN_DRIVER
-#include <driver/TinyCanDriver/TinyCanDriver.h>
+#include "driver/TinyCanDriver/TinyCanDriver.h"
 #endif
 
 #ifdef PEAKCAN_DRIVER
-#include <driver/PeakCanDriver/PeakCanDriver.h>
+#include "driver/PeakCanDriver/PeakCanDriver.h"
 #endif
 
 #ifdef KVASER_DRIVER
-#include <driver/KvaserDriver/KvaserDriver.h>
+#include "driver/KvaserDriver/KvaserDriver.h"
 #endif
 
 

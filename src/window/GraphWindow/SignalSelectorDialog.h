@@ -25,9 +25,9 @@
 #include <QTreeWidget>
 #include <QLineEdit>
 #include <QCheckBox>
-#include <core/ThemeManager.h>
-#include <core/Backend.h>
-#include <core/CanDbSignal.h>
+#include "core/ThemeManager.h"
+#include "core/Backend.h"
+#include "core/DBC/CanDbSignal.h"
 
 class SignalSelectorDialog : public QDialog {
     Q_OBJECT

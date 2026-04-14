@@ -31,9 +31,9 @@
 #include <QFileInfo>
 #include <QFont>
 
-#include <core/PythonEngine.h>
-#include <core/Backend.h>
-#include <core/CanTrace.h>
+#include "core/PythonEngine.h"
+#include "core/Backend.h"
+#include "core/CanTrace.h"
 
 
 ScriptWindow::ScriptWindow(QWidget *parent, Backend &backend)

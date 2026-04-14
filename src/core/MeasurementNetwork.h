@@ -25,9 +25,9 @@
 #include <QList>
 #include <QDomDocument>
 
-#include <driver/CanDriver.h>
-#include <driver/CanInterface.h>
-#include <core/CanDb.h>
+#include "driver/CanDriver.h"
+#include "driver/CanInterface.h"
+#include "core/DBC/CanDb.h"
 
 class Backend;
 class MeasurementInterface;

@@ -22,8 +22,8 @@
 #pragma once
 
 #include <QAbstractItemModel>
-#include <core/CanDb.h>
-#include <core/CanTrace.h>
+#include "core/DBC/CanDb.h"
+#include "core/CanTrace.h"
 #include "BaseTraceViewModel.h"
 
 class Backend;

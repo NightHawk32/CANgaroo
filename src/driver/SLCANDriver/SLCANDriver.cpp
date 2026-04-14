@@ -22,8 +22,8 @@
 
 #include "SLCANDriver.h"
 #include "SLCANInterface.h"
-#include <core/Backend.h>
-#include <driver/GenericCanSetupPage.h>
+#include "core/Backend.h"
+#include "driver/GenericCanSetupPage.h"
 
 #include <unistd.h>
 #include <iostream>

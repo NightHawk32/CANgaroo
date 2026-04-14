@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <core/ConfigurableWidget.h>
+#include "core/ConfigurableWidget.h"
 #include <QEvent>
 #include <QMap>
 

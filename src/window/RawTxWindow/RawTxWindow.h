@@ -19,9 +19,9 @@
 
 #pragma once
 
-#include <core/Backend.h>
-#include <core/ConfigurableWidget.h>
-#include <core/MeasurementSetup.h>
+#include "core/Backend.h"
+#include "core/ConfigurableWidget.h"
+#include "core/MeasurementSetup.h"
 
 class QLineEdit;
 class QComboBox;

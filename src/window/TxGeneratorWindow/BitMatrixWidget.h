@@ -8,8 +8,8 @@
 #include <QPainter>
 #include <QList>
 #include <QColor>
-#include "core/CanDbMessage.h"
-#include "core/CanDbSignal.h"
+#include "core/DBC/CanDbMessage.h"
+#include "core/DBC/CanDbSignal.h"
 
 class BitMatrixWidget : public QWidget
 {

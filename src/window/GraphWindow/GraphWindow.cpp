@@ -35,13 +35,13 @@
 #include <QCloseEvent>
 #include <QtCharts/QLegendMarker>
 
-#include <core/Backend.h>
-#include <core/CanTrace.h>
-#include <core/MeasurementSetup.h>
-#include <core/MeasurementNetwork.h>
+#include "core/Backend.h"
+#include "core/CanTrace.h"
+#include "core/MeasurementSetup.h"
+#include "core/MeasurementNetwork.h"
 
 #include "TimeSeriesVisualization.h"
-#include <window/ConditionalLoggingDialog.h>
+#include "window/ConditionalLoggingDialog.h"
 #include "ScatterVisualization.h"
 #include "TextVisualization.h"
 #include "GaugeVisualization.h"

@@ -25,11 +25,11 @@
 #include <QDateTime>
 #include <QColor>
 
-#include <core/Backend.h>
-#include <core/CanTrace.h>
-#include <core/CanMessage.h>
-#include <core/CanDbMessage.h>
-#include <core/ThemeManager.h>
+#include "core/Backend.h"
+#include "core/CanTrace.h"
+#include "core/CanMessage.h"
+#include "core/DBC/CanDbMessage.h"
+#include "core/ThemeManager.h"
 #include <iostream>
 
 BaseTraceViewModel::BaseTraceViewModel(Backend &backend)

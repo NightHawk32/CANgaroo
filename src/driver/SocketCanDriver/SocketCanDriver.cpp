@@ -22,8 +22,8 @@
 
 #include "SocketCanDriver.h"
 #include "SocketCanInterface.h"
-#include <core/Backend.h>
-#include <driver/GenericCanSetupPage.h>
+#include "core/Backend.h"
+#include "driver/GenericCanSetupPage.h"
 
 #include <sys/socket.h>
 #include <linux/if.h>

@@ -9,10 +9,10 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
-#include <core/Backend.h>
-#include <core/CanDb.h>
-#include <core/MeasurementNetwork.h>
-#include <core/MeasurementSetup.h>
+#include "core/Backend.h"
+#include "core/DBC/CanDb.h"
+#include "core/MeasurementNetwork.h"
+#include "core/MeasurementSetup.h"
 
 TraceFilterDialog::TraceFilterDialog(Backend &backend, QWidget *parent)
     : QDialog(parent)

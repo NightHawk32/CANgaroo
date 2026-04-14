@@ -25,14 +25,14 @@
 #include <QDateTime>
 #include <QFileInfo>
 
-#include <core/CanTrace.h>
-#include <core/MeasurementSetup.h>
-#include <core/MeasurementNetwork.h>
-#include <core/MeasurementInterface.h>
-#include <driver/CanDriver.h>
-#include <driver/CanInterface.h>
-#include <driver/CanListener.h>
-#include <parser/dbc/DbcParser.h>
+#include "core/CanTrace.h"
+#include "core/MeasurementSetup.h"
+#include "core/MeasurementNetwork.h"
+#include "core/MeasurementInterface.h"
+#include "driver/CanDriver.h"
+#include "driver/CanInterface.h"
+#include "driver/CanListener.h"
+#include "parser/dbc/DbcParser.h"
 
 Backend *Backend::_instance = nullptr;
 
