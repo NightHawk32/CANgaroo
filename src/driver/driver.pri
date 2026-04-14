@@ -13,4 +13,5 @@ HEADERS  += \
     $$PWD/GenericCanSetupPage.h
 
 FORMS += \
-    $$PWD/GenericCanSetupPage.ui
+    $$PWD/GenericCanSetupPage.ui \
+    $$PWD/GenericLinSetupPage.ui
