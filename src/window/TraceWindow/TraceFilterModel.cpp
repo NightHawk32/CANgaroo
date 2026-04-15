@@ -48,7 +48,7 @@ void TraceFilterModel::setHiddenInterfaces(const QSet<CanInterfaceId> &ids)
 
 bool TraceFilterModel::filterAcceptsRow(int source_row, const QModelIndex &source_parent) const
 {
-    // Get the underlying BaseTraceViewModel to access the CanMessage directly
+    // Get the underlying BaseTraceViewModel to access the BusMessage directly
     auto *baseModel = qobject_cast<BaseTraceViewModel *>(sourceModel());
     QSortFilterProxyModel *proxySource = nullptr;
     if (!baseModel)
@@ -72,7 +72,7 @@ bool TraceFilterModel::filterAcceptsRow(int source_row, const QModelIndex &sourc
         {
             baseIdx = sourceModel()->index(source_row, 0, source_parent);
         }
-        CanMessage msg = baseModel->getMessage(baseIdx);
+        BusMessage msg = baseModel->getMessage(baseIdx);
 
         if (!_showTx && !msg.isRX())
         {

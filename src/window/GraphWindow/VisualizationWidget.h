@@ -47,7 +47,7 @@ public:
 
     virtual void applyTheme(ThemeManager::Theme theme) { Q_UNUSED(theme); }
 
-    virtual void addMessage(const CanMessage &msg) = 0;
+    virtual void addMessage(const BusMessage &msg) = 0;
     virtual void addDecodedData(const QMap<CanDbSignal*, DecodedSignalData>& newPoints) = 0;
     virtual void clear() = 0;
     

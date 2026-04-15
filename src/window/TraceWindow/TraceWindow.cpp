@@ -282,7 +282,7 @@ bool TraceWindow::loadXML(Backend &backend, QDomElement &el)
     return true;
 }
 
-void TraceWindow::addMessage(const CanMessage &msg)
+void TraceWindow::addMessage(const BusMessage &msg)
 {
     _backend->getTrace()->enqueueMessage(msg);
 }

@@ -38,7 +38,7 @@
 
 
 SLCANInterface::SLCANInterface(SLCANDriver *driver, int index, QString name, bool fd_support, uint32_t manufacturer)
-  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
+  : BusInterface(reinterpret_cast<CanDriver*>(driver)),
     _manufacturer(manufacturer),
     _idx(index),
     _isOpen(false),
@@ -215,28 +215,28 @@ uint32_t SLCANInterface::getCapabilities()
     if(_manufacturer == CANable)
     {
         retval =
-            CanInterface::capability_config_os |
-            CanInterface::capability_auto_restart |
-            CanInterface::capability_listen_only;
+            BusInterface::capability_config_os |
+            BusInterface::capability_auto_restart |
+            BusInterface::capability_listen_only;
     }
     else if(_manufacturer == WeActStudio)
     {
         retval =
-            // CanInterface::capability_config_os |
-            // CanInterface::capability_auto_restart |
-            CanInterface::capability_listen_only |
-            CanInterface::capability_custom_bitrate |
-            CanInterface::capability_custom_canfd_bitrate;
+            // BusInterface::capability_config_os |
+            // BusInterface::capability_auto_restart |
+            BusInterface::capability_listen_only |
+            BusInterface::capability_custom_bitrate |
+            BusInterface::capability_custom_canfd_bitrate;
     }
 
     if (supportsCanFD())
     {
-        retval |= CanInterface::capability_canfd;
+        retval |= BusInterface::capability_canfd;
     }
 
     if (supportsTripleSampling())
     {
-        retval |= CanInterface::capability_triple_sampling;
+        retval |= BusInterface::capability_triple_sampling;
     }
 
     return retval;
@@ -626,7 +626,7 @@ bool SLCANInterface::isOpen()
     return _isOpen;
 }
 
-void SLCANInterface::sendMessage(const CanMessage &msg)
+void SLCANInterface::sendMessage(const BusMessage &msg)
 {
     _serport_mutex.lock();
     // SLCAN_MTU plus null terminator
@@ -756,9 +756,9 @@ void SLCANInterface::sendMessage(const CanMessage &msg)
     _serport_mutex.unlock();
 }
 
-bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
+bool SLCANInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms)
 {
-    CanMessage msgtx;
+    BusMessage msgtx;
     QDateTime datetime;
 
     Q_UNUSED(timeout_ms);
@@ -891,7 +891,7 @@ bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeou
             {
                 if(_rx_linbuf_ctr > 1)
                 {
-                    CanMessage msg;
+                    BusMessage msg;
                     ret = parseMessage(msg);
                     if(ret == true)
                     {
@@ -961,7 +961,7 @@ bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeou
     return ret;
 }
 
-bool SLCANInterface::parseMessage(CanMessage &msg)
+bool SLCANInterface::parseMessage(BusMessage &msg)
 {
     // Set timestamp to current time
     msg.setTimestamp_ms(QDateTime::currentMSecsSinceEpoch());

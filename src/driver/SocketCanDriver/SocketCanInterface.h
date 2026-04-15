@@ -21,7 +21,7 @@
 */
 #pragma once
 
-#include "../CanInterface.h"
+#include "../BusInterface.h"
 
 #include <string>
 
@@ -57,7 +57,7 @@ struct can_status_t
     uint64_t tx_dropped;
 };
 
-class SocketCanInterface : public CanInterface
+class SocketCanInterface : public BusInterface
 {
 public:
     SocketCanInterface(SocketCanDriver *driver, int index, QString name);
@@ -84,8 +84,8 @@ public:
     bool isOpen() override;
     void close() override;
 
-    void sendMessage(const CanMessage &msg) override;
-    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
+    void sendMessage(const BusMessage &msg) override;
+    bool readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms) override;
 
     bool updateStatistics() override;
     void resetStatistics() override;
@@ -123,7 +123,7 @@ private:
     bool updateStatus();
 
     QMutex _txMutex;
-    QList<CanMessage> txMsgList;
+    QList<BusMessage> txMsgList;
 
     QString buildIpRouteCmd(const MeasurementInterface &mi);
 };

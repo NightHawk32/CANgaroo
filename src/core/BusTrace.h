@@ -30,19 +30,19 @@
 
 #include "BusMessage.h"
 
-class CanInterface;
+class BusInterface;
 class CanDbMessage;
 class CanDbSignal;
 class LinSignal;
 class MeasurementSetup;
 class Backend;
 
-class CanTrace : public QObject
+class BusTrace : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit CanTrace(Backend &backend, QObject *parent, int flushInterval);
+    explicit BusTrace(Backend &backend, QObject *parent, int flushInterval);
 
     unsigned long size();
     void clear();

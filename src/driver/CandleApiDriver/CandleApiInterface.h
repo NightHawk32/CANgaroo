@@ -1,7 +1,7 @@
 #ifndef CANDLEAPIINTERFACE_H
 #define CANDLEAPIINTERFACE_H
 
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 #include "core/MeasurementInterface.h"
 
 #include <QList>
@@ -16,7 +16,7 @@ class CandleApiDriver;
 
 using namespace std;
 
-class CandleApiInterface : public CanInterface
+class CandleApiInterface : public BusInterface
 {
     Q_OBJECT
 public:
@@ -37,8 +37,8 @@ public:
     bool isOpen() override;
     void close() override;
 
-    void sendMessage(const CanMessage &msg) override;
-    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
+    void sendMessage(const BusMessage &msg) override;
+    bool readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms) override;
 
     bool updateStatistics() override;
     uint32_t getState() override;
@@ -75,7 +75,7 @@ private:
     bool setDataBitTiming(uint32_t bitrate, uint32_t samplePoint);
 
     QMutex _txMutex;
-    QList<CanMessage> _txMsgList;
+    QList<BusMessage> _txMsgList;
 };
 
 #endif // CANDLEAPIINTERFACE_H

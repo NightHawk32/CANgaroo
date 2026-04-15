@@ -19,7 +19,7 @@
 
 */
 
-#include "CanTrace.h"
+#include "BusTrace.h"
 #include <QMutexLocker>
 #include <QFile>
 #include <QTextStream>
@@ -30,9 +30,9 @@
 #include "core/BusMessage.h"
 #include "core/DBC/CanDbMessage.h"
 #include "core/DBC/CanDbSignal.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 
-CanTrace::CanTrace(Backend &backend, QObject *parent, int flushInterval)
+BusTrace::BusTrace(Backend &backend, QObject *parent, int flushInterval)
   : QObject(parent),
     _backend(backend),
     _maxSize(50000),
@@ -44,16 +44,16 @@ CanTrace::CanTrace(Backend &backend, QObject *parent, int flushInterval)
     clear();
     _flushTimer.setSingleShot(true);
     _flushTimer.setInterval(flushInterval);
-    connect(&_flushTimer, &QTimer::timeout, this, &CanTrace::flushQueue);
+    connect(&_flushTimer, &QTimer::timeout, this, &BusTrace::flushQueue);
 }
 
-unsigned long CanTrace::size()
+unsigned long BusTrace::size()
 {
     QMutexLocker locker(&_mutex);
     return _dataRowsUsed;
 }
 
-void CanTrace::clear()
+void BusTrace::clear()
 {
     QMutexLocker locker(&_mutex);
     emit beforeClear();
@@ -63,7 +63,7 @@ void CanTrace::clear()
     emit afterClear();
 }
 
-BusMessage CanTrace::getMessage(int idx)
+BusMessage BusTrace::getMessage(int idx)
 {
     QMutexLocker locker(&_mutex);
     if (idx >= (_dataRowsUsed + _newRows)) {
@@ -73,12 +73,12 @@ BusMessage CanTrace::getMessage(int idx)
     }
 }
 
-QVector<BusMessage> CanTrace::getSnapshot(int maxCount)
+QVector<BusMessage> BusTrace::getSnapshot(int maxCount)
 {
     QMutexLocker locker(&_mutex);
     const int total = _dataRowsUsed + _newRows;
     const int start = (maxCount > 0 && maxCount < total) ? total - maxCount : 0;
-    QVector<CanMessage> result;
+    QVector<BusMessage> result;
     result.reserve(total - start);
     for (int i = start; i < total; i++)
     {
@@ -87,7 +87,7 @@ QVector<BusMessage> CanTrace::getSnapshot(int maxCount)
     return result;
 }
 
-void CanTrace::enqueueMessage(const BusMessage &msg, bool more_to_follow)
+void BusTrace::enqueueMessage(const BusMessage &msg, bool more_to_follow)
 {
     QMutexLocker locker(&_mutex);
 
@@ -106,7 +106,7 @@ void CanTrace::enqueueMessage(const BusMessage &msg, bool more_to_follow)
     emit messageEnqueued(idx);
 }
 
-void CanTrace::flushQueue()
+void BusTrace::flushQueue()
 {
     {
         QMutexLocker locker(&_timerMutex);
@@ -120,7 +120,7 @@ void CanTrace::flushQueue()
         // see if we have muxed messages. cache muxed values, if any.
         MeasurementSetup &setup = _backend.getSetup();
         for (int i=_dataRowsUsed; i<_dataRowsUsed + _newRows; i++) {
-            CanMessage &msg = _data[i];
+            BusMessage &msg = _data[i];
             CanDbMessage *dbmsg = setup.findDbMessage(msg);
             if (dbmsg && dbmsg->getMuxer()) {
                 for (auto *signal : dbmsg->getSignals()) {
@@ -148,13 +148,13 @@ void CanTrace::flushQueue()
     }
 }
 
-void CanTrace::setMaxSize(int maxSize)
+void BusTrace::setMaxSize(int maxSize)
 {
     QMutexLocker locker(&_mutex);
     _maxSize = maxSize;
 }
 
-void CanTrace::startTimer()
+void BusTrace::startTimer()
 {
     QMutexLocker locker(&_timerMutex);
     if (!_isTimerRunning) {
@@ -163,12 +163,12 @@ void CanTrace::startTimer()
     }
 }
 
-void CanTrace::saveCanDump(QFile &file)
+void BusTrace::saveCanDump(QFile &file)
 {
     QMutexLocker locker(&_mutex);
     QTextStream stream(&file);
     for (unsigned int i=0; i<size(); i++) {
-        CanMessage *msg = &_data[i];
+        BusMessage *msg = &_data[i];
         QString line;
         line.append(QStringLiteral("(%1) ").arg(msg->getFloatTimestamp(), 0, 'f', 6));
         line.append(_backend.getInterfaceName(msg->getInterfaceId()));
@@ -200,7 +200,7 @@ void CanTrace::saveCanDump(QFile &file)
     }
 }
 
-void CanTrace::saveVectorAsc(QFile &file)
+void BusTrace::saveVectorAsc(QFile &file)
 {
     QMutexLocker locker(&_mutex);
     QTextStream stream(&file);
@@ -234,7 +234,7 @@ void CanTrace::saveVectorAsc(QFile &file)
     }
 
     for (unsigned int i=0; i<size(); i++) {
-        CanMessage &msg = _data[i];
+        BusMessage &msg = _data[i];
 
         double t_current = msg.getFloatTimestamp();
         int channel = channelMap.value(msg.getInterfaceId(), 1);
@@ -292,7 +292,7 @@ void CanTrace::saveVectorAsc(QFile &file)
     stream << "End TriggerBlock" << Qt::endl;
 }
 
-void CanTrace::saveVectorMdf(QFile &file)
+void BusTrace::saveVectorMdf(QFile &file)
 {
     QMutexLocker locker(&_mutex);
     if (_dataRowsUsed == 0) return;
@@ -494,7 +494,7 @@ void CanTrace::saveVectorMdf(QFile &file)
 
     double t_start = _data[0].getFloatTimestamp();
     for (int i = 0; i < _dataRowsUsed; i++) {
-        CanMessage &msg = _data[i];
+        BusMessage &msg = _data[i];
         ds << (msg.getFloatTimestamp() - t_start); // 8 bytes
         ds << msg.getRawId();                       // 4 bytes
         ds << msg.getLength();                      // 1 byte
@@ -505,7 +505,7 @@ void CanTrace::saveVectorMdf(QFile &file)
     }
 }
 
-void CanTrace::savePcap(QFile &file)
+void BusTrace::savePcap(QFile &file)
 {
     // PCAP file format with LINKTYPE_CAN_SOCKETCAN (227).
     // Standard CAN frames are stored as a 16-byte SocketCAN can_frame.
@@ -549,7 +549,7 @@ void CanTrace::savePcap(QFile &file)
 
     for (unsigned int i = 0; i < size(); i++)
     {
-        CanMessage &msg = _data[i];
+        BusMessage &msg = _data[i];
 
         int64_t ts_us  = msg.getTimestamp_us();
         quint32 ts_sec  = static_cast<quint32>(ts_us / 1000000);
@@ -629,7 +629,7 @@ static void pcapngWriteEndOfOpt(QDataStream &ds)
     ds << quint16(0) << quint16(0);
 }
 
-void CanTrace::savePcapNg(QFile &file)
+void BusTrace::savePcapNg(QFile &file)
 {
     // pcapng (IETF draft-tuexen-opsawg-pcapng) with LINKTYPE_CAN_SOCKETCAN.
     //
@@ -716,7 +716,7 @@ void CanTrace::savePcapNg(QFile &file)
 
     // --- Enhanced Packet Blocks (EPB) ---
     for (unsigned int i = 0; i < size(); i++) {
-        CanMessage &msg = _data[i];
+        BusMessage &msg = _data[i];
 
         int64_t ts_us = msg.getTimestamp_us();
         // pcapng timestamp: 64-bit value in units of the interface's ts_resol (default: microseconds)
@@ -781,7 +781,7 @@ void CanTrace::savePcapNg(QFile &file)
     }
 }
 
-bool CanTrace::getMuxedSignalFromCache(const CanDbSignal *signal, uint64_t *raw_value)
+bool BusTrace::getMuxedSignalFromCache(const CanDbSignal *signal, uint64_t *raw_value)
 {
     auto it = _muxCache.constFind(signal);
     if (it != _muxCache.constEnd()) {

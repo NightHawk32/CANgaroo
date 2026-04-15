@@ -26,7 +26,7 @@
 #include "core/ThemeManager.h"
 
 #include "core/Backend.h"
-#include "core/CanTrace.h"
+#include "core/BusTrace.h"
 #include "core/DBC/CanDbMessage.h"
 #include "core/DBC/LinFrame.h"
 
@@ -34,9 +34,9 @@ AggregatedTraceViewModel::AggregatedTraceViewModel(Backend &backend)
     : BaseTraceViewModel(backend)
 {
     _rootItem = new AggregatedTraceViewItem(0);
-    connect(backend.getTrace(), &CanTrace::beforeAppend, this, &AggregatedTraceViewModel::beforeAppend);
-    connect(backend.getTrace(), &CanTrace::beforeClear, this, &AggregatedTraceViewModel::beforeClear);
-    connect(backend.getTrace(), &CanTrace::afterClear, this, &AggregatedTraceViewModel::afterClear);
+    connect(backend.getTrace(), &BusTrace::beforeAppend, this, &AggregatedTraceViewModel::beforeAppend);
+    connect(backend.getTrace(), &BusTrace::beforeClear, this, &AggregatedTraceViewModel::beforeClear);
+    connect(backend.getTrace(), &BusTrace::afterClear, this, &AggregatedTraceViewModel::afterClear);
 
     connect(&backend, &Backend::onSetupChanged, this, &AggregatedTraceViewModel::onSetupChanged);
 
@@ -155,7 +155,7 @@ void AggregatedTraceViewModel::onSetupChanged()
 
 void AggregatedTraceViewModel::beforeAppend(int num_messages)
 {
-    CanTrace *trace = backend()->getTrace();
+    BusTrace *trace = backend()->getTrace();
     int start_id = trace->size();
 
     for (int i=start_id; i<start_id + num_messages; i++) {
@@ -257,7 +257,7 @@ QVariant AggregatedTraceViewModel::data_DisplayRole(const QModelIndex &index, in
         return (item->parent() == _rootItem) ? QVariant(static_cast<uint32_t>(index.row() + 1)) : QVariant();
     }
 
-    if (item->parent() == _rootItem) { // CanMessage row
+    if (item->parent() == _rootItem) { // BusMessage row
         return data_DisplayRole_Message(index, role, item->_lastmsg, item->_prevmsg);
     } else { // CanSignal Row
         return data_DisplayRole_Signal(index, role, item->parent()->_lastmsg);

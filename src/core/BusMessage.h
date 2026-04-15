@@ -133,6 +133,3 @@ private:
     int64_t _timestamp_us = 0;
 
 };
-
-// Backward-compat alias so all existing driver code compiles unchanged.
-using CanMessage = BusMessage;

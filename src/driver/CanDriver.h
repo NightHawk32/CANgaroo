@@ -26,7 +26,7 @@
 #include <QString>
 
 class Backend;
-class CanInterface;
+class BusInterface;
 
 using CanInterfaceId = uint16_t;
 using CanInterfaceIdList = QList<uint16_t>;
@@ -46,18 +46,18 @@ public:
     virtual bool update() = 0;
 
     CanInterfaceIdList getInterfaceIds() const;
-    QList<CanInterface*> getInterfaces() const;
-    CanInterface *getInterfaceById(CanInterfaceId id);
-    CanInterfaceId addInterface(CanInterface *intf);
-    void deleteInterface(CanInterface *intf);
+    QList<BusInterface*> getInterfaces() const;
+    BusInterface *getInterfaceById(CanInterfaceId id);
+    CanInterfaceId addInterface(BusInterface *intf);
+    void deleteInterface(BusInterface *intf);
     void deleteAllInterfaces();
 
-    CanInterface *getInterfaceByName(QString ifName);
+    BusInterface *getInterfaceByName(QString ifName);
 
 private:
     Backend &_backend;
     int _id;
-    QList<CanInterface*> _interfaces;
+    QList<BusInterface*> _interfaces;
 
     void setId(int id);
 };

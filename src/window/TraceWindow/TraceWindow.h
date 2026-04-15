@@ -66,7 +66,7 @@ protected:
     void retranslateUi() override;
 
 public slots:
-    void addMessage(const CanMessage &msg);
+    void addMessage(const BusMessage &msg);
 
 private slots:
     void onRowsInserted(const QModelIndex & parent, int first, int last);

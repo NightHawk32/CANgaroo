@@ -24,7 +24,7 @@
 #include <QThread>
 #include <QMetaType>
 
-#include "core/CanTrace.h"
+#include "core/BusTrace.h"
 #include "core/BusMessage.h"
 #include "core/MeasurementNetwork.h"
 #include "core/DBC/LinDb.h"
@@ -140,7 +140,7 @@ LinFrame *MeasurementSetup::findLinFrame(const BusMessage &msg) const
     return _linFrameCache.value(static_cast<uint8_t>(msg.getId() & 0x3F), nullptr);
 }
 
-QString MeasurementSetup::getInterfaceName(const CanInterface &id) const
+QString MeasurementSetup::getInterfaceName(const BusInterface &id) const
 {
     return id.getName();
 }

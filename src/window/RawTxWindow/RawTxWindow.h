@@ -45,10 +45,10 @@ protected:
     void retranslateUi() override;
 
 public slots:
-    void setMessage(const CanMessage &msg, const QString &name, CanInterfaceId interfaceId, CanDbMessage *dbMsg = nullptr);
+    void setMessage(const BusMessage &msg, const QString &name, CanInterfaceId interfaceId, CanDbMessage *dbMsg = nullptr);
 
 signals:
-    void messageUpdated(const CanMessage &msg);
+    void messageUpdated(const BusMessage &msg);
     void interfaceSelected(CanInterfaceId interfaceId);
 
 private slots:
@@ -56,7 +56,7 @@ private slots:
 
 private:
     Backend &_backend;
-    CanMessage _can_msg;
+    BusMessage _can_msg;
     CanDbMessage *_currentDbMsg;
     CanInterfaceId _slavedInterfaceId;
     bool _settingMessage;

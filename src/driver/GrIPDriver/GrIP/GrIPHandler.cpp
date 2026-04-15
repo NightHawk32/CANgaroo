@@ -438,7 +438,7 @@ uint8_t GrIPHandler::CanGetState(uint8_t ch) const
 }
 
 
-CanMessage GrIPHandler::CanReceive(uint8_t ch)
+BusMessage GrIPHandler::CanReceive(uint8_t ch)
 {
     std::unique_lock<std::mutex> lck(m_MutexData);
 
@@ -449,7 +449,7 @@ CanMessage GrIPHandler::CanReceive(uint8_t ch)
         return front;
     }
 
-    return CanMessage();
+    return BusMessage();
 }
 
 
@@ -457,7 +457,7 @@ CanMessage GrIPHandler::CanReceive(uint8_t ch)
 // CAN transmit
 // ---------------------------------------------------------------------------
 
-bool GrIPHandler::CanTransmit(uint8_t ch, const CanMessage &msg)
+bool GrIPHandler::CanTransmit(uint8_t ch, const BusMessage &msg)
 {
     Protocol_CanFrame_t frame = {};
 
@@ -473,7 +473,7 @@ bool GrIPHandler::CanTransmit(uint8_t ch, const CanMessage &msg)
     frame.DLC = msg.getLength();
     frame.ErrFlags = 0;
 
-    // Build flags from the CanMessage properties
+    // Build flags from the BusMessage properties
     frame.Flags = 0;
     if (msg.isExtended())
     {
@@ -516,9 +516,9 @@ bool GrIPHandler::CanTransmit(uint8_t ch, const CanMessage &msg)
         frame.Time = hash;
 
         std::unique_lock<std::mutex> dataLck(m_MutexData);
-        CanMessage pendingMsg = msg;
+        BusMessage pendingMsg = msg;
         pendingMsg.setTimestamp_ms(QDateTime::currentMSecsSinceEpoch());
-        m_TxPending.insert_or_assign(hash, std::pair<uint8_t, CanMessage>{ch, pendingMsg});
+        m_TxPending.insert_or_assign(hash, std::pair<uint8_t, BusMessage>{ch, pendingMsg});
     }
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
@@ -595,7 +595,7 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms)
             Protocol_CanFrame_t frame;
             std::memcpy(&frame, packet.Data, sizeof(Protocol_CanFrame_t));
 
-            CanMessage msg(frame.ID);
+            BusMessage msg(frame.ID);
 
             // Initialise all flags to false; set individually from frame.Flags below.
             msg.setErrorFrame(false);

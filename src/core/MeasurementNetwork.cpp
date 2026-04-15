@@ -176,7 +176,7 @@ bool MeasurementNetwork::loadXML(Backend &backend, QDomElement el)
         QDomElement elIntf = ifList.item(i).toElement();
         QString driverName = elIntf.attribute("driver");
         QString deviceName = elIntf.attribute("name");
-        CanInterface *intf = backend.getInterfaceByDriverAndName(driverName, deviceName);
+        BusInterface *intf = backend.getInterfaceByDriverAndName(driverName, deviceName);
         if (intf) {
             MeasurementInterface *mi = addCanInterface(intf->getId());
             mi->loadXML(backend, elIntf);

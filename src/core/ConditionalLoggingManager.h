@@ -64,7 +64,7 @@ signals:
     void liveValuesUpdated(const QMap<CanDbSignal*, double>& values, bool isStale);
 
 public slots:
-    void processMessage(const CanMessage &msg);
+    void processMessage(const BusMessage &msg);
 
 private:
     void evaluate();

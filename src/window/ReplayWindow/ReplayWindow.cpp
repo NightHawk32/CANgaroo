@@ -42,10 +42,10 @@
 #include <QDataStream>
 #include <QProgressBar>
 
-#include "core/CanTrace.h"
+#include "core/BusTrace.h"
 #include "core/Backend.h"
 #include "core/DBC/CanDbMessage.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 
 
 ReplayWindow::ReplayWindow(QWidget *parent, Backend &backend)
@@ -276,7 +276,7 @@ bool ReplayWindow::parseCanDump(QFile &file)
         QString separator = match.captured(4);
         QString payload = match.captured(5);
 
-        CanMessage msg;
+        BusMessage msg;
         msg.setTimestamp(timestamp);
 
         // Error frame: error flag bit set in ID
@@ -375,7 +375,7 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
         // Error frame: "timestamp channel ErrorFrame"
         if (parts[2].compare("ErrorFrame", Qt::CaseInsensitive) == 0)
         {
-            CanMessage msg;
+            BusMessage msg;
             msg.setTimestamp(timestamp);
             msg.setErrorFrame(true);
             msg.setLength(0);
@@ -432,7 +432,7 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
                 dataLength = dlc;
             }
 
-            CanMessage msg;
+            BusMessage msg;
             msg.setTimestamp(timestamp);
             msg.setFD(true);
             msg.setBRS((flags & 0x1) != 0);
@@ -476,7 +476,7 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
             continue;
         }
 
-        CanMessage msg;
+        BusMessage msg;
         msg.setTimestamp(timestamp);
         msg.setExtended(extended);
         msg.setId(canId);
@@ -499,7 +499,7 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
 
 // Helper: parse a SocketCAN frame from a PCAP/PCAPng packet payload
 static bool parseSocketCanFrame(QDataStream &ds, quint32 capturedLen,
-                                CanMessage &msg, bool &valid)
+                                BusMessage &msg, bool &valid)
 {
     static const quint32 CAN_EFF_FLAG = 0x80000000;
     static const quint32 CAN_RTR_FLAG = 0x40000000;
@@ -620,7 +620,7 @@ bool ReplayWindow::parsePcap(QFile &file)
             ts_us = static_cast<int64_t>(ts_sec) * 1000000 + static_cast<int64_t>(ts_frac);
         }
 
-        CanMessage msg;
+        BusMessage msg;
         bool valid;
         parseSocketCanFrame(ds, capturedLen, msg, valid);
 
@@ -784,7 +784,7 @@ bool ReplayWindow::parsePcapNg(QFile &file)
                 ts_us = static_cast<int64_t>(tsRaw * scale);
             }
 
-            CanMessage msg;
+            BusMessage msg;
             bool valid;
             parseSocketCanFrame(ds, capturedLen, msg, valid);
 
@@ -878,7 +878,7 @@ void ReplayWindow::buildFilterTree()
                 idItem->setText(0, QString("0x%1").arg(id, 0, 16, QChar('0')).toUpper());
 
                 // Look up DBC message name
-                CanMessage tmp;
+                BusMessage tmp;
                 tmp.setId(id);
                 tmp.setExtended(id > 0x7FF);
                 CanDbMessage *dbMsg = _backend->findDbMessage(tmp);
@@ -1151,7 +1151,7 @@ void ReplayWindow::onTimerTick()
         return;
     }
 
-    CanTrace *trace = _backend->getTrace();
+    BusTrace *trace = _backend->getTrace();
     double speed = _speedSpin->value();
 
     // How far into the trace we should be, based on wall-clock time and speed
@@ -1169,12 +1169,12 @@ void ReplayWindow::onTimerTick()
 
         if (isMessageEnabled(_playbackIndex))
         {
-            CanMessage msg = _messages[_playbackIndex];
+            BusMessage msg = _messages[_playbackIndex];
             msg.setTimestamp(_backend->currentTimeStamp());
 
             const QString &channel = _messageInterfaces[_playbackIndex];
             int mappedInt = _channelCombos.contains(channel) ? _channelCombos[channel]->currentData().toInt() : -1;
-            CanInterface *intf = (mappedInt >= 0) ? _backend->getInterfaceById(static_cast<CanInterfaceId>(mappedInt)) : nullptr;
+            BusInterface *intf = (mappedInt >= 0) ? _backend->getInterfaceById(static_cast<CanInterfaceId>(mappedInt)) : nullptr;
 
             bool sentOnInterface = false;
             if (intf && intf->isOpen() && !msg.isErrorFrame())

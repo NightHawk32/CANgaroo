@@ -25,7 +25,7 @@
 #include <QMutexLocker>
 
 CandleApiInterface::CandleApiInterface(CandleApiDriver *driver, candle_handle handle)
-  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
+  : BusInterface(reinterpret_cast<CanDriver*>(driver)),
     _hostOffsetStart(0),
     _deviceTicksStart(0),
     _isOpen(false),
@@ -232,19 +232,19 @@ uint32_t CandleApiInterface::getCapabilities()
         uint32_t retval = 0;
 
         if (caps.feature & CANDLE_FEATURE_LISTEN_ONLY) {
-            retval |= CanInterface::capability_listen_only;
+            retval |= BusInterface::capability_listen_only;
         }
 
         if (caps.feature & CANDLE_FEATURE_ONE_SHOT) {
-            retval |= CanInterface::capability_one_shot;
+            retval |= BusInterface::capability_one_shot;
         }
 
         if (caps.feature & CANDLE_FEATURE_TRIPLE_SAMPLE) {
-            retval |= CanInterface::capability_triple_sampling;
+            retval |= BusInterface::capability_triple_sampling;
         }
 
         if (caps.feature & CANDLE_FEATURE_FD) {
-            retval |= CanInterface::capability_canfd;
+            retval |= BusInterface::capability_canfd;
         }
 
         return retval;
@@ -425,7 +425,7 @@ void CandleApiInterface::close()
     _isOpen = false;
 }
 
-void CandleApiInterface::sendMessage(const CanMessage &msg)
+void CandleApiInterface::sendMessage(const BusMessage &msg)
 {
     bool ok = false;
 
@@ -472,7 +472,7 @@ void CandleApiInterface::sendMessage(const CanMessage &msg)
     if (ok) {
         _numTx++;
 
-        CanMessage txMsg = msg;
+        BusMessage txMsg = msg;
         txMsg.setRX(false);
         auto now = std::chrono::system_clock::now().time_since_epoch();
         txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
@@ -483,7 +483,7 @@ void CandleApiInterface::sendMessage(const CanMessage &msg)
     }
 }
 
-bool CandleApiInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
+bool CandleApiInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms)
 {
     // Enqueue tx messages
     {
@@ -496,7 +496,7 @@ bool CandleApiInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
         timeout_ms = 1;
     }
 
-    CanMessage msg;
+    BusMessage msg;
 
     if (_isFdEnabled) {
         candle_fd_frame_t frame;
@@ -584,7 +584,7 @@ bool CandleApiInterface::updateStatistics()
 
 uint32_t CandleApiInterface::getState()
 {
-    return CanInterface::state_ok;
+    return BusInterface::state_ok;
 }
 
 int CandleApiInterface::getNumRxFrames()

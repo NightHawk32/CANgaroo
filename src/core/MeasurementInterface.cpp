@@ -23,7 +23,7 @@
 
 #include "core/Backend.h"
 #include "driver/CanDriver.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 
 
 MeasurementInterface::MeasurementInterface()

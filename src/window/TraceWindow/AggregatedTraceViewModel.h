@@ -29,12 +29,12 @@
 
 #include "BaseTraceViewModel.h"
 #include "core/BusMessage.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 
 #include "AggregatedTraceViewItem.h"
 
 
-class CanTrace;
+class BusTrace;
 
 class AggregatedTraceViewModel : public BaseTraceViewModel
 {

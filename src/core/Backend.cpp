@@ -25,13 +25,13 @@
 #include <QDateTime>
 #include <QFileInfo>
 
-#include "core/CanTrace.h"
+#include "core/BusTrace.h"
 #include "core/MeasurementSetup.h"
 #include "core/MeasurementNetwork.h"
 #include "core/MeasurementInterface.h"
 #include "driver/CanDriver.h"
-#include "driver/CanInterface.h"
-#include "driver/CanListener.h"
+#include "driver/BusInterface.h"
+#include "driver/BusListener.h"
 #include "parser/dbc/DbcParser.h"
 #include "core/DBC/LinDb.h"
 #include "core/DBC/LinFrame.h"
@@ -47,10 +47,10 @@ Backend::Backend()
     _logModel = new LogModel(*this);
 
     setDefaultSetup();
-    _trace = new CanTrace(*this, this, 50);
+    _trace = new BusTrace(*this, this, 50);
     _conditionalLoggingManager = new ConditionalLoggingManager(*this, this);
 
-    connect(_trace, &CanTrace::messageEnqueued, this, &Backend::onMessageEnqueued);
+    connect(_trace, &BusTrace::messageEnqueued, this, &Backend::onMessageEnqueued);
     connect(&_setup, &MeasurementSetup::onSetupChanged, this, &Backend::onSetupChanged);
 }
 
@@ -92,12 +92,12 @@ bool Backend::startMeasurement()
     for (auto *network : _setup.getNetworks()) {
         for (auto *mi : network->interfaces()) {
 
-            CanInterface *intf = getInterfaceById(mi->canInterface());
+            BusInterface *intf = getInterfaceById(mi->canInterface());
             if (intf) {
                 intf->applyConfig(*mi);
 
                 log_info(QString(tr("Listening on interface: %1")).arg(intf->getName()));
-                CanListener *listener = new CanListener(0, *this, *intf);
+                BusListener *listener = new BusListener(0, *this, *intf);
                 listener->startThread();
                 _listeners.append(listener);
             }
@@ -151,7 +151,7 @@ void Backend::loadDefaultSetup(MeasurementSetup &setup)
 
             MeasurementInterface *mi = new MeasurementInterface();
             mi->setCanInterface(intf);
-            CanInterface *canIntf = getInterfaceById(intf);
+            BusInterface *canIntf = getInterfaceById(intf);
             if (canIntf)
                 mi->setBusType(canIntf->busType());
             mi->setBitrate(500000);
@@ -183,7 +183,7 @@ double Backend::currentTimeStamp() const
     return static_cast<double>(QDateTime::currentMSecsSinceEpoch()) / 1000;
 }
 
-CanTrace *Backend::getTrace()
+BusTrace *Backend::getTrace()
 {
     return _trace;
 }
@@ -226,7 +226,7 @@ CanDriver *Backend::getDriverById(CanInterfaceId id)
     return _drivers.value(driverIdx);
 }
 
-CanInterface *Backend::getInterfaceById(CanInterfaceId id)
+BusInterface *Backend::getInterfaceById(CanInterfaceId id)
 {
     CanDriver *driver = getDriverById(id);
     return driver ? driver->getInterfaceById(id) : nullptr;
@@ -234,7 +234,7 @@ CanInterface *Backend::getInterfaceById(CanInterfaceId id)
 
 QString Backend::getInterfaceName(CanInterfaceId id)
 {
-    CanInterface *intf = getInterfaceById(id);
+    BusInterface *intf = getInterfaceById(id);
     return intf ? intf->getName() : QString::number(id);
 }
 
@@ -254,7 +254,7 @@ CanDriver *Backend::getDriverByName(QString driverName)
     return 0;
 }
 
-CanInterface *Backend::getInterfaceByDriverAndName(QString driverName, QString deviceName)
+BusInterface *Backend::getInterfaceByDriverAndName(QString driverName, QString deviceName)
 {
     CanDriver *driver = getDriverByName(driverName);
     if (driver) {

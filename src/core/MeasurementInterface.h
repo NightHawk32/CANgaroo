@@ -23,7 +23,7 @@
 
 #include <QDomDocument>
 #include "driver/CanDriver.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 #include "core/BusMessage.h"
 
 class Backend;

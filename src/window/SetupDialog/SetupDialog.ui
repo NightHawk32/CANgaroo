@@ -236,7 +236,7 @@
               <item>
                <widget class="QPushButton" name="btAddDatabase">
                 <property name="text">
-                 <string>Add &amp;DBC...</string>
+                 <string>Add &amp;Database...</string>
                 </property>
                 <property name="icon">
                  <iconset theme="list-add"/>
@@ -246,7 +246,7 @@
               <item>
                <widget class="QPushButton" name="btRemoveDatabase">
                 <property name="text">
-                 <string>&amp;Remove DBC</string>
+                 <string>&amp;Remove Database</string>
                 </property>
                 <property name="icon">
                  <iconset theme="list-remove"/>

@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "../CanInterface.h"
+#include "../BusInterface.h"
 
 #include <QMutex>
 #include <QtSerialPort/QSerialPort>
@@ -57,7 +57,7 @@ struct can_status_t
     uint64_t tx_dropped;
 };
 
-class GrIPInterface : public CanInterface
+class GrIPInterface : public BusInterface
 {
     Q_OBJECT
 
@@ -93,8 +93,8 @@ public:
     void close() override;
     bool isOpen() override;
 
-    void sendMessage(const CanMessage &msg) override;
-    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
+    void sendMessage(const BusMessage &msg) override;
+    bool readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms) override;
 
     bool updateStatistics() override;
     void resetStatistics() override;

@@ -54,7 +54,7 @@ protected:
     void retranslateUi() override;
 
 signals:
-    void loopbackFrame(const CanMessage &msg);
+    void loopbackFrame(const BusMessage &msg);
     void interfaceChanged(CanInterfaceId interfaceId);
 
 public slots:
@@ -94,7 +94,7 @@ private:
     class QPushButton *_btnRandomPayload;
 
     struct CyclicMessage {
-        CanMessage msg;
+        BusMessage msg;
         QString name;
         int interval;
         bool enabled;

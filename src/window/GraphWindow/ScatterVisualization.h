@@ -38,7 +38,7 @@ public:
     explicit ScatterVisualization(QWidget *parent, Backend &backend);
     virtual ~ScatterVisualization();
 
-    virtual void addMessage(const CanMessage &msg) override;
+    virtual void addMessage(const BusMessage &msg) override;
     virtual void addDecodedData(const QMap<CanDbSignal*, DecodedSignalData>& newPoints) override;
     virtual void clear() override;
     virtual void addSignal(CanDbSignal *signal, const CanInterfaceIdList &interfaces = {}) override;

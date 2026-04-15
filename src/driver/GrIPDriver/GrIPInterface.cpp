@@ -34,7 +34,7 @@
 #include "GrIP/GrIPHandler.h"
 
 GrIPInterface::GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer)
-    : CanInterface(reinterpret_cast<CanDriver *>(driver)),
+    : BusInterface(reinterpret_cast<CanDriver *>(driver)),
       _manufacturer(manufacturer),
       _idx(index),
       _isOpen(false),
@@ -190,18 +190,18 @@ uint32_t GrIPInterface::getCapabilities()
     if (_manufacturer == GrIPInterface::CANIL_CAN)
     {
         retval =
-            CanInterface::capability_auto_restart |
-            CanInterface::capability_listen_only;
+            BusInterface::capability_auto_restart |
+            BusInterface::capability_listen_only;
     }
 
     if (supportsCanFD())
     {
-        retval |= CanInterface::capability_canfd;
+        retval |= BusInterface::capability_canfd;
     }
 
     if (supportsTripleSampling())
     {
-        retval |= CanInterface::capability_triple_sampling;
+        retval |= BusInterface::capability_triple_sampling;
     }
 
     return retval;
@@ -221,7 +221,7 @@ void GrIPInterface::resetStatistics()
     _status.tx_errors = 0;
     _status.tx_dropped = 0;
 
-    CanInterface::resetStatistics();
+    BusInterface::resetStatistics();
 }
 
 uint32_t GrIPInterface::getState()
@@ -305,17 +305,24 @@ void GrIPInterface::open()
         QThread::msleep(2);
     }
 
-    // Disable the channel before reconfiguring to avoid spurious traffic.
-    m_GrIPHandler->CanEnableChannel(_idx, false);
-    QThread::msleep(2);
-
-    // Apply bit rate — use custom value if set, otherwise use the selected preset.
-    const uint32_t baud = _settings.isCustomBitrate() ? _settings.customBitrate() : _settings.bitrate();
-
     m_GrIPHandler->SetStatus(true);
 
-    m_GrIPHandler->CanSetConfig(_idx, baud > 0 ? baud : 500000, _settings.isListenOnlyMode(), true, _settings.doAutoRestart());
-    m_GrIPHandler->CanEnableChannel(_idx, true);
+    if (_manufacturer == CANIL_CAN)
+    {
+        // Disable the channel before reconfiguring to avoid spurious traffic.
+        m_GrIPHandler->CanEnableChannel(_idx, false);
+        QThread::msleep(2);
+
+        // Apply bit rate — use custom value if set, otherwise use the selected preset.
+        const uint32_t baud = _settings.isCustomBitrate() ? _settings.customBitrate() : _settings.bitrate();
+
+        m_GrIPHandler->CanSetConfig(_idx, baud > 0 ? baud : 500000, _settings.isListenOnlyMode(), true, _settings.doAutoRestart());
+        m_GrIPHandler->CanEnableChannel(_idx, true);
+    }
+    else if (_manufacturer == CANIL_LIN)
+    {
+        // LIN
+    }
 
     _isOpen = true;
     _isOffline = false;
@@ -384,7 +391,7 @@ bool GrIPInterface::isOpen()
     return _isOpen;
 }
 
-void GrIPInterface::sendMessage(const CanMessage &msg)
+void GrIPInterface::sendMessage(const BusMessage &msg)
 {
     QMutexLocker locker(&_serport_mutex);
 
@@ -395,7 +402,7 @@ void GrIPInterface::sendMessage(const CanMessage &msg)
     }
 }
 
-bool GrIPInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
+bool GrIPInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms)
 {
     Q_UNUSED(timeout_ms);
 
@@ -410,34 +417,27 @@ bool GrIPInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout
     while (m_GrIPHandler->CanAvailable(_idx))
     {
         auto msg = m_GrIPHandler->CanReceive(_idx);
-        if (msg.getId() != 0)
+        msg.setInterfaceId(getId());
+
+        if (!msg.isRX())
         {
-            msg.setInterfaceId(getId());
-
-            if (!msg.isRX())
+            // TX echo frame
+            if (!msg.isErrorFrame())
             {
-                // TX echo frame
-                if (!msg.isErrorFrame())
-                {
-                    _status.tx_count++;
-                    addFrameBits(msg);
-                }
-                else
-                {
-                    _status.tx_errors++;
-                }
-
-                //if (msg.isShow())
-                {
-                    msglist.append(msg);
-                }
+                _status.tx_count++;
+                addFrameBits(msg);
             }
             else
             {
-                msglist.append(msg);
-                _status.rx_count++;
-                addFrameBits(msg);
+                _status.tx_errors++;
             }
+            msglist.append(msg);
+        }
+        else
+        {
+            msglist.append(msg);
+            _status.rx_count++;
+            addFrameBits(msg);
         }
     }
 

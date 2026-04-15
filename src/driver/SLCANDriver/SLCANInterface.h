@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "../CanInterface.h"
+#include "../BusInterface.h"
 
 #include <QDateTime>
 #include <QMutex>
@@ -65,7 +65,7 @@ struct can_msg_t {
     qint64 length;
 };
 
-class SLCANInterface: public CanInterface {
+class SLCANInterface: public BusInterface {
     Q_OBJECT
 public:
     enum {
@@ -97,8 +97,8 @@ public:
     void close() override;
     bool isOpen() override;
 
-    void sendMessage(const CanMessage &msg) override;
-    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
+    void sendMessage(const BusMessage &msg) override;
+    bool readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms) override;
 
     bool updateStatistics() override;
     uint32_t getState() override;
@@ -130,7 +130,7 @@ private:
     bool _no_confirm;
     QSerialPort* _serport;
     QList<can_msg_t> _can_msg_queue;
-    QList<CanMessage> _can_msg_tx_queue;
+    QList<BusMessage> _can_msg_tx_queue;
     QMutex _serport_mutex;
     QString _name;
     char _rx_linbuf[SLCAN_MTU+1];
@@ -152,7 +152,7 @@ private:
     QDateTime  _readMessage_datetime_run;
 
     bool updateStatus();
-    bool parseMessage(CanMessage &msg);
+    bool parseMessage(BusMessage &msg);
 
 private slots:
     void handleSerialError(QSerialPort::SerialPortError error);

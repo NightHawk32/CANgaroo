@@ -36,7 +36,7 @@
 #include <QtCharts/QLegendMarker>
 
 #include "core/Backend.h"
-#include "core/CanTrace.h"
+#include "core/BusTrace.h"
 #include "core/MeasurementSetup.h"
 #include "core/MeasurementNetwork.h"
 
@@ -95,7 +95,7 @@ void SignalDecoderWorker::onTraceAppended()
     QMap<CanDbSignal*, DecodedSignalData> newPoints;
 
     for (int i = _lastProcessedIdx; i < currentSize; ++i) {
-        CanMessage msg = _backend.getTrace()->getMessage(i);
+        BusMessage msg = _backend.getTrace()->getMessage(i);
         CanInterfaceId msgIfId = msg.getInterfaceId();
         double t = msg.getFloatTimestamp() - _globalStartTime;
 

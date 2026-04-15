@@ -164,12 +164,12 @@ public:
     /**
      * @brief Dequeues and returns the oldest received CAN frame on @p ch.
      *
-     * Returns a default-constructed CanMessage if the queue is empty or the
+     * Returns a default-constructed BusMessage if the queue is empty or the
      * channel index is out of range.
      *
      * @param ch  Zero-based channel index.
      */
-    CanMessage CanReceive(uint8_t ch);
+    BusMessage CanReceive(uint8_t ch);
 
     /**
      * @brief Transmits a CAN frame on @p ch.
@@ -177,7 +177,7 @@ public:
      * @param msg  Frame to transmit.
      * @return true if the frame was handed to the GrIP layer successfully.
      */
-    bool CanTransmit(uint8_t ch, const CanMessage &msg);
+    bool CanTransmit(uint8_t ch, const BusMessage &msg);
 
     /**
      * @brief Low-level send — transmits a pre-built GrIP PDU.
@@ -253,8 +253,8 @@ private:
 
     // --- Received frame queues (one per channel) ---
     mutable std::mutex m_MutexData;                    ///< Guards m_ReceiveQueue, m_TxPending, m_Version, and channel counts.
-    std::vector<std::queue<CanMessage>> m_ReceiveQueue; ///< Per-channel inbound frame queues, populated by ProcessData().
-    std::unordered_map<uint32_t, std::pair<uint8_t, CanMessage>> m_TxPending; ///< Frames awaiting TX echo, keyed by correlation token; value is {channel, msg}.
+    std::vector<std::queue<BusMessage>> m_ReceiveQueue; ///< Per-channel inbound frame queues, populated by ProcessData().
+    std::unordered_map<uint32_t, std::pair<uint8_t, BusMessage>> m_TxPending; ///< Frames awaiting TX echo, keyed by correlation token; value is {channel, msg}.
 
     // --- Device state ---
     std::string m_Version;                ///< Firmware version string, set on SYSTEM_REPORT_INFO reply.

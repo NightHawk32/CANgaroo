@@ -29,7 +29,9 @@
 
 #include "core/Backend.h"
 #include "core/MeasurementSetup.h"
-#include "driver/CanInterface.h"
+#include "core/MeasurementInterface.h"
+#include "core/DBC/LinDb.h"
+#include "driver/BusInterface.h"
 #include "driver/CanDriver.h"
 
 #include "SetupDialogTreeModel.h"
@@ -53,6 +55,7 @@ SetupDialog::SetupDialog(Backend &backend, QWidget *parent) :
     _actionDeleteInterface = new QAction("Delete", this);
     _actionAddCanDb = new QAction("Add...", this);
     _actionDeleteCanDb = new QAction("Delete", this);
+    _actionDeleteLinDb = new QAction("Delete", this);
     _actionReloadCanDbs = new QAction("Reload", this);
 
     model = new SetupDialogTreeModel(_backend, this);
@@ -88,6 +91,7 @@ SetupDialog::SetupDialog(Backend &backend, QWidget *parent) :
 
     connect(_actionAddCanDb, &QAction::triggered, this, &SetupDialog::executeAddCanDb);
     connect(_actionDeleteCanDb, &QAction::triggered, this, &SetupDialog::executeDeleteCanDb);
+    connect(_actionDeleteLinDb, &QAction::triggered, this, &SetupDialog::executeDeleteLinDb);
 
     connect(_actionAddInterface, &QAction::triggered, this, &SetupDialog::executeAddInterface);
     connect(_actionDeleteInterface, &QAction::triggered, this, &SetupDialog::executeDeleteInterface);
@@ -224,6 +228,9 @@ void SetupDialog::treeViewContextMenu(const QPoint &pos)
             case SetupDialogTreeItem::type_candb:
                 contextMenu.addAction(_actionDeleteCanDb);
                 contextMenu.addAction(_actionReloadCanDbs);
+                break;
+            case SetupDialogTreeItem::type_lindb:
+                contextMenu.addAction(_actionDeleteLinDb);
                 break;
             default:
                 break;
@@ -365,12 +372,78 @@ void SetupDialog::addCanDb(const QModelIndex &parent, const QString &filename)
 
 void SetupDialog::on_btAddDatabase_clicked()
 {
-    QStringList files = QFileDialog::getOpenFileNames(this, "Load CAN Databases", "", "Vector DBC Files (*.dbc)");
-    if (files.isEmpty()) return;
+    // Detect bus type from the network's interfaces
+    bool isLin = false;
+    if (_currentNetwork) {
+        for (auto *mi : _currentNetwork->interfaces()) {
+            if (mi->busType() == BusType::LIN) {
+                isLin = true;
+                break;
+            }
+        }
+    }
 
     QModelIndex parent = ui->treeView->selectionModel()->currentIndex();
-    for (const QString &filename : files) {
-        addCanDb(parent, filename);
+
+    if (isLin) {
+        QStringList files = QFileDialog::getOpenFileNames(this, "Load LIN Databases", "", "LIN Description Files (*.ldf)");
+        for (const QString &filename : files) {
+            addLinDb(parent, filename);
+        }
+    } else {
+        QStringList files = QFileDialog::getOpenFileNames(this, "Load CAN Databases", "", "Vector DBC Files (*.dbc)");
+        for (const QString &filename : files) {
+            addCanDb(parent, filename);
+        }
+    }
+}
+
+void SetupDialog::addLinDb(const QModelIndex &parent, const QString &filename)
+{
+    if (_currentNetwork) {
+        for (const auto &existingDb : _currentNetwork->_linDbs) {
+            if (existingDb->path() == filename) {
+                QMessageBox::StandardButton reply =
+                    QMessageBox::question(this, tr("Duplicate LDF"),
+                        tr("The file is already loaded:\n%1\n\nDo you want to reload it?").arg(filename),
+                        QMessageBox::Yes | QMessageBox::No);
+
+                if (reply == QMessageBox::Yes) {
+                    SetupDialogTreeItem *root = static_cast<SetupDialogTreeItem*>(parent.internalPointer());
+                    if (root && root->getType() == SetupDialogTreeItem::type_candb_root) {
+                        for (int i = 0; i < root->getChildCount(); ++i) {
+                            SetupDialogTreeItem *child = root->child(i);
+                            if (child->getType() == SetupDialogTreeItem::type_lindb && child->lindb->path() == filename) {
+                                model->deleteLinDb(model->indexOfItem(child));
+                                break;
+                            }
+                        }
+                    }
+
+                    QString errorMsg;
+                    pLinDb lindb = _backend->loadLdf(filename, &errorMsg);
+                    if (lindb) {
+                        model->addLinDb(parent, lindb);
+                    } else {
+                        QMessageBox::critical(this, tr("Reload Failed"),
+                            tr("Failed to reload LDF:\n%1\n\nReason: %2").arg(filename, errorMsg));
+                    }
+                }
+                return;
+            }
+        }
+    }
+
+    QString errorMsg;
+    pLinDb lindb = _backend->loadLdf(filename, &errorMsg);
+    if (lindb) {
+        model->addLinDb(parent, lindb);
+        if (!errorMsg.isEmpty()) {
+            QMessageBox::warning(this, tr("LDF Warning"), errorMsg);
+        }
+    } else {
+        QMessageBox::critical(this, tr("LDF Error"),
+            tr("Failed to load LDF file:\n%1\n\nReason: %2").arg(filename, errorMsg));
     }
 }
 
@@ -382,6 +455,11 @@ void SetupDialog::executeAddCanDb()
 void SetupDialog::executeDeleteCanDb()
 {
     model->deleteCanDb(getSelectedIndex());
+}
+
+void SetupDialog::executeDeleteLinDb()
+{
+    model->deleteLinDb(getSelectedIndex());
 }
 
 void SetupDialog::on_btRemoveDatabase_clicked()

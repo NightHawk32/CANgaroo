@@ -20,7 +20,7 @@
 #include "GenericLinSetupPage.h"
 #include "ui_GenericLinSetupPage.h"
 #include "core/Backend.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 #include "core/MeasurementInterface.h"
 #include "window/SetupDialog/SetupDialog.h"
 
@@ -61,7 +61,7 @@ void GenericLinSetupPage::onShowInterfacePage(SetupDialog &dlg, MeasurementInter
 
     _mi = mi;
 
-    CanInterface *intf = backend().getInterfaceById(_mi->canInterface());
+    BusInterface *intf = backend().getInterfaceById(_mi->canInterface());
     ui->laDriver->setText(intf->getDriver()->getName());
     ui->laInterface->setText(QString("%1 - [ID: %2]").arg(intf->getName()).arg(intf->getId()));
     ui->laInterfaceDetails->setText(intf->getDetailsStr());

@@ -69,6 +69,7 @@ private slots:
     void executeAddCanDb();
     void executeReloadCanDbs();
     void executeDeleteCanDb();
+    void executeDeleteLinDb();
 
 
 
@@ -86,6 +87,7 @@ private:
 
     QAction *_actionDeleteInterface;
     QAction *_actionDeleteCanDb;
+    QAction *_actionDeleteLinDb;
     QAction *_actionAddInterface;
     QAction *_actionAddCanDb;
     QAction *_actionReloadCanDbs;
@@ -97,6 +99,7 @@ private:
     SetupDialogTreeItem *getSelectedItem();
 
     void addCanDb(const QModelIndex &parent, const QString &filename);
+    void addLinDb(const QModelIndex &parent, const QString &filename);
     void reloadCanDbs(const QModelIndex &parent);
     void addInterface(const QModelIndex &parent);
 

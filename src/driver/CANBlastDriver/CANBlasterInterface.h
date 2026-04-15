@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "../CanInterface.h"
+#include "../BusInterface.h"
 
 #include <QTimer>
 #include <QtNetwork/QUdpSocket>
@@ -51,7 +51,7 @@ struct can_status_t {
     uint64_t tx_dropped;
 };
 
-class CANBlasterInterface: public CanInterface {
+class CANBlasterInterface: public BusInterface {
     Q_OBJECT
 public:
     CANBlasterInterface(CANBlasterDriver *driver, int index, QString name, bool fd_support);
@@ -76,8 +76,8 @@ public:
     void close() override;
     bool isOpen() override;
 
-    void sendMessage(const CanMessage &msg) override;
-    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
+    void sendMessage(const BusMessage &msg) override;
+    bool readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms) override;
 
     bool updateStatistics() override;
     uint32_t getState() override;

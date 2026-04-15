@@ -35,7 +35,7 @@
 
 
 CANBlasterInterface::CANBlasterInterface(CANBlasterDriver *driver, int index, QString name, bool fd_support)
-  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
+  : BusInterface(reinterpret_cast<CanDriver*>(driver)),
     _idx(index),
     _isOpen(false),
     _name(name),
@@ -126,16 +126,16 @@ unsigned CANBlasterInterface::getBitrate()
 uint32_t CANBlasterInterface::getCapabilities()
 {
     uint32_t retval =
-        CanInterface::capability_config_os |
-        CanInterface::capability_listen_only |
-        CanInterface::capability_auto_restart;
+        BusInterface::capability_config_os |
+        BusInterface::capability_listen_only |
+        BusInterface::capability_auto_restart;
 
     if (supportsCanFD()) {
-        retval |= CanInterface::capability_canfd;
+        retval |= BusInterface::capability_canfd;
     }
 
     if (supportsTripleSampling()) {
-        retval |= CanInterface::capability_triple_sampling;
+        retval |= BusInterface::capability_triple_sampling;
     }
 
     return retval;
@@ -228,12 +228,12 @@ bool CANBlasterInterface::isOpen()
     return _isOpen;
 }
 
-void CANBlasterInterface::sendMessage(const CanMessage &msg)
+void CANBlasterInterface::sendMessage(const BusMessage &msg)
 {
     Q_UNUSED(msg);
 }
 
-bool CANBlasterInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
+bool CANBlasterInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms)
 {
     // Don't saturate the thread
     QThread().usleep(250);
@@ -282,7 +282,7 @@ bool CANBlasterInterface::readMessage(QList<CanMessage> &msglist, unsigned int t
         if(res > 0)
         {
             // Set timestamp to current time
-            CanMessage msg;
+            BusMessage msg;
 
             msg.setTimestamp_ms(QDateTime::currentMSecsSinceEpoch());
 

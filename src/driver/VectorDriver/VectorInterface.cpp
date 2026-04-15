@@ -34,7 +34,7 @@
 #include "core/MeasurementInterface.h"
 
 VectorInterface::VectorInterface(VectorDriver *driver, QString deviceName, QString description)
-  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
+  : BusInterface(reinterpret_cast<CanDriver*>(driver)),
     _deviceName(deviceName),
     _name(description),
     _device(nullptr),
@@ -109,8 +109,8 @@ unsigned VectorInterface::getBitrate()
 
 uint32_t VectorInterface::getCapabilities()
 {
-    return CanInterface::capability_listen_only
-         | CanInterface::capability_canfd;
+    return BusInterface::capability_listen_only
+         | BusInterface::capability_canfd;
 }
 
 void VectorInterface::open()
@@ -165,7 +165,7 @@ void VectorInterface::close()
     log_info(QString("VectorInterface %1: closed").arg(_name));
 }
 
-void VectorInterface::sendMessage(const CanMessage &msg)
+void VectorInterface::sendMessage(const BusMessage &msg)
 {
     if (!isOpen()) {
         log_error(QString("VectorInterface %1: cannot send, interface not open").arg(_name));
@@ -177,7 +177,7 @@ void VectorInterface::sendMessage(const CanMessage &msg)
     _txMsgList.append(msg);
 }
 
-bool VectorInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
+bool VectorInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms)
 {
     if (!isOpen()) {
         return false;
@@ -187,7 +187,7 @@ bool VectorInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeo
     // _device (the CanListener thread that also called open()).
     {
         QMutexLocker lock(&_txMutex);
-        for (const CanMessage &qMsg : std::as_const(_txMsgList)) {
+        for (const BusMessage &qMsg : std::as_const(_txMsgList)) {
             QCanBusFrame frame;
             frame.setFrameId(qMsg.getId());
             frame.setExtendedFrameFormat(qMsg.isExtended());
@@ -217,7 +217,7 @@ bool VectorInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeo
                 _stats.tx_count++;
                 addFrameBits(qMsg);
 
-                CanMessage txMsg = qMsg;
+                BusMessage txMsg = qMsg;
                 txMsg.setRX(false);
                 auto now = std::chrono::system_clock::now().time_since_epoch();
                 txMsg.setTimestamp_us(
@@ -247,7 +247,7 @@ bool VectorInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeo
         return hasTx;
     }
 
-    CanMessage msg;
+    BusMessage msg;
     msg.setId(frame.frameId());
     msg.setExtended(frame.hasExtendedFrameFormat());
     msg.setRTR(frame.frameType() == QCanBusFrame::RemoteRequestFrame);
@@ -283,7 +283,7 @@ bool VectorInterface::updateStatistics()
 void VectorInterface::resetStatistics()
 {
     _offset_stats = _stats;
-    CanInterface::resetStatistics();
+    BusInterface::resetStatistics();
 }
 
 uint32_t VectorInterface::getState()

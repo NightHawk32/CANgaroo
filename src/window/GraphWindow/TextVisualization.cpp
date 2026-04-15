@@ -79,7 +79,7 @@ void TextVisualization::addDecodedData(const QMap<CanDbSignal*, DecodedSignalDat
     }
 }
 
-void TextVisualization::addMessage(const CanMessage &msg)
+void TextVisualization::addMessage(const BusMessage &msg)
 {
     CanInterfaceId msgIfId = msg.getInterfaceId();
 

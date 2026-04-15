@@ -18,14 +18,14 @@
 #include <QStandardPaths>
 
 #include "core/Backend.h"
-#include "core/CanTrace.h"
+#include "core/BusTrace.h"
 #include "core/DBC/CanDb.h"
 #include "core/DBC/CanDbMessage.h"
 #include "core/DBC/CanDbSignal.h"
 #include "core/MeasurementSetup.h"
 #include "core/MeasurementNetwork.h"
 #include "core/Log.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 
 namespace py = pybind11;
 using namespace py::literals;
@@ -36,10 +36,10 @@ using namespace py::literals;
 static PythonEngine *g_activeEngine = nullptr;
 
 // ---------------------------------------------------------------------------
-// Helper: pack a raw value into a CanMessage at the given signal position.
-// This is the inverse of CanMessage::extractRawSignal.
+// Helper: pack a raw value into a BusMessage at the given signal position.
+// This is the inverse of BusMessage::extractRawSignal.
 // ---------------------------------------------------------------------------
-static void insertRawSignalIntoMsg(CanMessage &msg,
+static void insertRawSignalIntoMsg(BusMessage &msg,
                                    uint8_t start_bit,
                                    uint8_t length,
                                    bool isBigEndian,
@@ -149,22 +149,22 @@ static py::dict buildMessageDict(CanDbMessage *dbMsg)
 // ---------------------------------------------------------------------------
 PYBIND11_EMBEDDED_MODULE(cangaroo, m)
 {
-    // --- CanMessage binding ---
-    py::class_<CanMessage>(m, "Message")
+    // --- BusMessage binding ---
+    py::class_<BusMessage>(m, "Message")
         .def(py::init<>())
         .def(py::init<uint32_t>())
-        .def_property("id",        &CanMessage::getId,       &CanMessage::setId)
-        .def_property("dlc",       &CanMessage::getLength,   &CanMessage::setLength)
-        .def_property("extended",  &CanMessage::isExtended,  &CanMessage::setExtended)
-        .def_property("fd",        &CanMessage::isFD,        &CanMessage::setFD)
-        .def_property("rtr",       &CanMessage::isRTR,       &CanMessage::setRTR)
-        .def_property("brs",       &CanMessage::isBRS,       &CanMessage::setBRS)
-        .def_property_readonly("interface_id", &CanMessage::getInterfaceId)
-        .def_property_readonly("timestamp",    &CanMessage::getFloatTimestamp)
-        .def_property_readonly("is_rx",        &CanMessage::isRX)
-        .def("get_byte", &CanMessage::getByte)
-        .def("set_byte", &CanMessage::setByte)
-        .def("get_data", [](const CanMessage &msg) -> py::bytes
+        .def_property("id",        &BusMessage::getId,       &BusMessage::setId)
+        .def_property("dlc",       &BusMessage::getLength,   &BusMessage::setLength)
+        .def_property("extended",  &BusMessage::isExtended,  &BusMessage::setExtended)
+        .def_property("fd",        &BusMessage::isFD,        &BusMessage::setFD)
+        .def_property("rtr",       &BusMessage::isRTR,       &BusMessage::setRTR)
+        .def_property("brs",       &BusMessage::isBRS,       &BusMessage::setBRS)
+        .def_property_readonly("interface_id", &BusMessage::getInterfaceId)
+        .def_property_readonly("timestamp",    &BusMessage::getFloatTimestamp)
+        .def_property_readonly("is_rx",        &BusMessage::isRX)
+        .def("get_byte", &BusMessage::getByte)
+        .def("set_byte", &BusMessage::setByte)
+        .def("get_data", [](const BusMessage &msg) -> py::bytes
         {
             std::string data(msg.getLength(), '\0');
             for (int i = 0; i < msg.getLength(); i++)
@@ -173,7 +173,7 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
             }
             return py::bytes(data);
         })
-        .def("set_data", [](CanMessage &msg, py::bytes data)
+        .def("set_data", [](BusMessage &msg, py::bytes data)
         {
             std::string s = data;
             msg.setLength(static_cast<uint8_t>(std::min<size_t>(s.size(), 64)));
@@ -182,7 +182,7 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
                 msg.setByte(i, static_cast<uint8_t>(s[i]));
             }
         })
-        .def("__repr__", [](const CanMessage &msg) -> std::string
+        .def("__repr__", [](const BusMessage &msg) -> std::string
         {
             return "<cangaroo.Message id=0x"
                    + msg.getIdString().toStdString()
@@ -192,11 +192,11 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
 
     // --- send / receive ---
 
-    m.def("send", [](CanMessage &msg, uint16_t interface_id)
+    m.def("send", [](BusMessage &msg, uint16_t interface_id)
     {
         if (!g_activeEngine) { return; }
         msg.setInterfaceId(interface_id);
-        CanInterface *intf = g_activeEngine->backend().getInterfaceById(interface_id);
+        BusInterface *intf = g_activeEngine->backend().getInterfaceById(interface_id);
         if (intf)
         {
             intf->sendMessage(msg);
@@ -218,7 +218,7 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
             // main thread waits for the GIL.
             py::gil_scoped_release release;
             QMutexLocker lck(&g_activeEngine->msgQueueMutex());
-            QQueue<CanMessage> &q = g_activeEngine->msgQueue();
+            QQueue<BusMessage> &q = g_activeEngine->msgQueue();
 
             if (q.isEmpty() && !g_activeEngine->stopRequested())
             {
@@ -229,7 +229,7 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
 
         {
             QMutexLocker lck(&g_activeEngine->msgQueueMutex());
-            QQueue<CanMessage> &q = g_activeEngine->msgQueue();
+            QQueue<BusMessage> &q = g_activeEngine->msgQueue();
             while (!q.isEmpty())
             {
                 result.append(q.dequeue());
@@ -262,7 +262,7 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
 
     // --- Periodic TX ---
 
-    m.def("send_periodic", [](CanMessage msg, unsigned interval_ms, uint16_t interface_id) -> int
+    m.def("send_periodic", [](BusMessage msg, unsigned interval_ms, uint16_t interface_id) -> int
     {
         if (!g_activeEngine) { return -1; }
         return g_activeEngine->startPeriodicTask(msg, interval_ms, interface_id);
@@ -283,15 +283,15 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         py::list result;
         if (!g_activeEngine) { return result; }
 
-        // getSnapshot holds the CanTrace mutex for the entire copy, avoiding a
+        // getSnapshot holds the BusTrace mutex for the entire copy, avoiding a
         // TOCTOU race between size() and getMessage() calls.
-        QVector<CanMessage> snapshot;
+        QVector<BusMessage> snapshot;
         {
             py::gil_scoped_release release;
             snapshot = g_activeEngine->backend().getTrace()->getSnapshot(count);
         }
 
-        for (const CanMessage &msg : std::as_const(snapshot))
+        for (const BusMessage &msg : std::as_const(snapshot))
         {
             result.append(msg);
         }
@@ -440,7 +440,7 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
     // Decode signals from a received message using loaded DBCs.
     // Returns { "message": str, "id": int, "signals": { name: { "value", "raw", "unit", "min", "max" } } }
     // or None if no DBC definition is found.
-    m.def("decode", [](const CanMessage &msg) -> py::object
+    m.def("decode", [](const BusMessage &msg) -> py::object
     {
         if (!g_activeEngine) { return py::none(); }
 
@@ -482,8 +482,8 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         return result;
     }, py::arg("msg"));
 
-    // Look up the DBC signal layout for a message (by live CanMessage).
-    m.def("lookup", [](const CanMessage &msg) -> py::object
+    // Look up the DBC signal layout for a message (by live BusMessage).
+    m.def("lookup", [](const BusMessage &msg) -> py::object
     {
         if (!g_activeEngine) { return py::none(); }
         CanDbMessage *dbMsg = g_activeEngine->backend().findDbMessage(msg);
@@ -506,8 +506,8 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         }
         else
         {
-            // Numeric ID — build a dummy CanMessage with that raw_id
-            CanMessage dummy;
+            // Numeric ID — build a dummy BusMessage with that raw_id
+            BusMessage dummy;
             dummy.setRawId(name_or_id.cast<uint32_t>());
             dbMsg = g_activeEngine->backend().findDbMessage(dummy);
         }
@@ -518,7 +518,7 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
 
     // Convenience: extract a single named signal's physical value from a message.
     // Returns float, or None if the message or signal is not found in the DBC.
-    m.def("signal_value", [](const CanMessage &msg, const std::string &signal_name) -> py::object
+    m.def("signal_value", [](const BusMessage &msg, const std::string &signal_name) -> py::object
     {
         if (!g_activeEngine) { return py::none(); }
 
@@ -531,11 +531,11 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         return py::cast(sig->extractPhysicalFromMessage(msg));
     }, py::arg("msg"), py::arg("signal_name"));
 
-    // Build a CanMessage by encoding signal physical values according to the DBC.
+    // Build a BusMessage by encoding signal physical values according to the DBC.
     // name_or_id: str (message name) or int (raw CAN ID)
     // signals:    dict mapping signal name -> physical value
     // Returns the populated Message, or raises ValueError on error.
-    m.def("encode", [](py::object name_or_id, py::dict values) -> CanMessage
+    m.def("encode", [](py::object name_or_id, py::dict values) -> BusMessage
     {
         if (!g_activeEngine)
         {
@@ -550,7 +550,7 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         }
         else
         {
-            CanMessage dummy;
+            BusMessage dummy;
             dummy.setRawId(name_or_id.cast<uint32_t>());
             dbMsg = g_activeEngine->backend().findDbMessage(dummy);
         }
@@ -561,7 +561,7 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         }
 
         // Create a zero-initialised message with the DBC id and DLC
-        CanMessage msg;
+        BusMessage msg;
         msg.setRawId(dbMsg->getRaw_id());
         msg.setLength(dbMsg->getDlc());
 
@@ -779,7 +779,7 @@ bool PythonEngine::isRunning() const
     return _running;
 }
 
-void PythonEngine::enqueueMessage(const CanMessage &msg)
+void PythonEngine::enqueueMessage(const BusMessage &msg)
 {
     if (!_running) { return; }
     if (!passesRxFilter(msg)) { return; }
@@ -811,7 +811,7 @@ void PythonEngine::clearRxFilter()
     _rxFilter.active = false;
 }
 
-bool PythonEngine::passesRxFilter(const CanMessage &msg) const
+bool PythonEngine::passesRxFilter(const BusMessage &msg) const
 {
     QMutexLocker lck(&_rxFilterMutex);
     if (!_rxFilter.active) { return true; }
@@ -824,7 +824,7 @@ bool PythonEngine::passesRxFilter(const CanMessage &msg) const
 // Periodic TX tasks
 // ---------------------------------------------------------------------------
 
-int PythonEngine::startPeriodicTask(CanMessage msg, unsigned interval_ms, uint16_t interface_id)
+int PythonEngine::startPeriodicTask(BusMessage msg, unsigned interval_ms, uint16_t interface_id)
 {
     // Allocate handle before taking the lock — only ever called from the Python
     // worker thread, so no concurrent access to _nextHandle.
@@ -841,10 +841,10 @@ int PythonEngine::startPeriodicTask(CanMessage msg, unsigned interval_ms, uint16
             auto task = task_ptr.lock();
             if (!task || task->stop.load() || _stopRequested.load()) { break; }
 
-            CanInterface *intf = _backend.getInterfaceById(interface_id);
+            BusInterface *intf = _backend.getInterfaceById(interface_id);
             if (intf)
             {
-                CanMessage tx = msg;
+                BusMessage tx = msg;
                 tx.setInterfaceId(interface_id);
                 intf->sendMessage(tx);
             }

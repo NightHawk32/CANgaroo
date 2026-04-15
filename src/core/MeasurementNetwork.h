@@ -26,7 +26,7 @@
 #include <QDomDocument>
 
 #include "driver/CanDriver.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 #include "core/DBC/CanDb.h"
 #include "core/DBC/LinDb.h"
 

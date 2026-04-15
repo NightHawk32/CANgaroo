@@ -6,7 +6,7 @@ namespace Ui {
 class GenericLinSetupPage;
 }
 
-class CanInterface;
+class BusInterface;
 class SetupDialog;
 class MeasurementInterface;
 class Backend;

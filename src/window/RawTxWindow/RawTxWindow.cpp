@@ -40,7 +40,7 @@
 #include "core/MeasurementSetup.h"
 #include "core/MeasurementNetwork.h"
 #include "core/MeasurementInterface.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 
 RawTxWindow::RawTxWindow(QWidget *parent, Backend &backend)
     : ConfigurableWidget(parent)
@@ -328,7 +328,7 @@ void RawTxWindow::updateSignalTable()
     }
 }
 
-void RawTxWindow::setMessage(const CanMessage &msg, const QString &name, CanInterfaceId interfaceId, CanDbMessage *dbMsg)
+void RawTxWindow::setMessage(const BusMessage &msg, const QString &name, CanInterfaceId interfaceId, CanDbMessage *dbMsg)
 {
     _settingMessage = true;
     this->setEnabled(true);
@@ -344,7 +344,7 @@ void RawTxWindow::setMessage(const CanMessage &msg, const QString &name, CanInte
     for (auto *network : setup.getNetworks()) {
         for (auto *mi : network->interfaces()) {
             CanInterfaceId ifid = mi->canInterface();
-            CanInterface *i = _backend.getInterfaceById(ifid);
+            BusInterface *i = _backend.getInterfaceById(ifid);
             if (i) {
                 QString label = network->name() + ": " + i->getName();
                 _comboInterface->addItem(label, QVariant(ifid));
@@ -360,8 +360,8 @@ void RawTxWindow::setMessage(const CanMessage &msg, const QString &name, CanInte
     _comboInterface->blockSignals(false);
 
     // Determine capabilities from interface
-    CanInterface *intf = _backend.getInterfaceById(interfaceId);
-    bool canfd = intf && (intf->getCapabilities() & CanInterface::capability_canfd);
+    BusInterface *intf = _backend.getInterfaceById(interfaceId);
+    bool canfd = intf && (intf->getCapabilities() & BusInterface::capability_canfd);
     populateDlcCombo(canfd);
 
     _cbFD->setEnabled(canfd);

@@ -126,7 +126,7 @@ void TimeSeriesVisualization::addDecodedData(const QMap<CanDbSignal*, DecodedSig
     }
 }
 
-void TimeSeriesVisualization::addMessage(const CanMessage &msg)
+void TimeSeriesVisualization::addMessage(const BusMessage &msg)
 {
     // Keeping for backwards compatibility if needed directly
     double timestamp = msg.getFloatTimestamp();

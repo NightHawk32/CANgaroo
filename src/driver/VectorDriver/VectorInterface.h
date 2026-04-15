@@ -21,14 +21,14 @@
 
 #pragma once
 
-#include "../CanInterface.h"
+#include "../BusInterface.h"
 
 #include <QMutex>
 
 class QCanBusDevice;
 class VectorDriver;
 
-class VectorInterface : public CanInterface {
+class VectorInterface : public BusInterface {
 public:
     VectorInterface(VectorDriver *driver, QString deviceName, QString description);
     virtual ~VectorInterface();
@@ -47,8 +47,8 @@ public:
     bool isOpen() override;
     void close() override;
 
-    void sendMessage(const CanMessage &msg) override;
-    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
+    void sendMessage(const BusMessage &msg) override;
+    bool readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms) override;
 
     bool updateStatistics() override;
     void resetStatistics() override;
@@ -81,5 +81,5 @@ private:
     } _stats, _offset_stats;
 
     QMutex _txMutex;
-    QList<CanMessage> _txMsgList;
+    QList<BusMessage> _txMsgList;
 };

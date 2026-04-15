@@ -23,7 +23,7 @@
 
 #include <QAbstractItemModel>
 #include "core/DBC/CanDb.h"
-#include "core/CanTrace.h"
+#include "core/BusTrace.h"
 #include "BaseTraceViewModel.h"
 
 class Backend;

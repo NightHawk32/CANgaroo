@@ -29,11 +29,11 @@ public:
 
     Backend &backend() { return _backend; }
 
-    void enqueueMessage(const CanMessage &msg);
+    void enqueueMessage(const BusMessage &msg);
 
     QMutex &msgQueueMutex() { return _msgQueueMutex; }
     QWaitCondition &msgQueueCondition() { return _msgQueueCondition; }
-    QQueue<CanMessage> &msgQueue() { return _msgQueue; }
+    QQueue<BusMessage> &msgQueue() { return _msgQueue; }
     bool stopRequested() const { return _stopRequested.load(); }
 
     // RX filter — applied in enqueueMessage before the message enters the queue
@@ -41,7 +41,7 @@ public:
     void clearRxFilter();
 
     // Periodic TX tasks — each runs on its own std::thread
-    int  startPeriodicTask(CanMessage msg, unsigned interval_ms, uint16_t interface_id);
+    int  startPeriodicTask(BusMessage msg, unsigned interval_ms, uint16_t interface_id);
     void stopPeriodicTask(int handle);
     void stopAllPeriodicTasks();
 
@@ -64,7 +64,7 @@ private:
 
     QMutex _msgQueueMutex;
     QWaitCondition _msgQueueCondition;
-    QQueue<CanMessage> _msgQueue;
+    QQueue<BusMessage> _msgQueue;
 
     // RX filter state
     struct RxFilter
@@ -77,7 +77,7 @@ private:
     RxFilter _rxFilter;
     mutable QMutex _rxFilterMutex;
 
-    [[nodiscard]] bool passesRxFilter(const CanMessage &msg) const;
+    [[nodiscard]] bool passesRxFilter(const BusMessage &msg) const;
 
     // Periodic TX tasks
     struct PeriodicTask

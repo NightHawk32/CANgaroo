@@ -84,7 +84,7 @@ void ConditionalLoggingManager::setLogFilePath(const QString &path)
     _logFilePath = path;
 }
 
-void ConditionalLoggingManager::processMessage(const CanMessage &msg)
+void ConditionalLoggingManager::processMessage(const BusMessage &msg)
 {
     if (!_enabled) return;
 

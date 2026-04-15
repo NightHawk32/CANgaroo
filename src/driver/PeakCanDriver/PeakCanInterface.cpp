@@ -34,7 +34,7 @@
 #include <PCANBasic.h>
 
 PeakCanInterface::PeakCanInterface(PeakCanDriver *driver, TPCANHandle channel, QString name)
-  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
+  : BusInterface(reinterpret_cast<CanDriver*>(driver)),
     _channel(channel),
     _rxEvent(nullptr),
     _isOpen(false),
@@ -114,7 +114,7 @@ unsigned PeakCanInterface::getBitrate()
 
 uint32_t PeakCanInterface::getCapabilities()
 {
-    return CanInterface::capability_listen_only;
+    return BusInterface::capability_listen_only;
 }
 
 void PeakCanInterface::open()
@@ -162,7 +162,7 @@ void PeakCanInterface::close()
     log_info(QString("PeakCanInterface %1: closed").arg(_name));
 }
 
-void PeakCanInterface::sendMessage(const CanMessage &msg)
+void PeakCanInterface::sendMessage(const BusMessage &msg)
 {
     if (!_isOpen) {
         log_error(QString("PeakCanInterface %1: cannot send, interface not open").arg(_name));
@@ -196,7 +196,7 @@ void PeakCanInterface::sendMessage(const CanMessage &msg)
         _stats.tx_count++;
         addFrameBits(msg);
 
-        CanMessage txMsg = msg;
+        BusMessage txMsg = msg;
         txMsg.setRX(false);
         auto now = std::chrono::system_clock::now().time_since_epoch();
         txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
@@ -205,7 +205,7 @@ void PeakCanInterface::sendMessage(const CanMessage &msg)
     }
 }
 
-bool PeakCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
+bool PeakCanInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms)
 {
     if (!_isOpen) {
         return false;
@@ -246,7 +246,7 @@ bool PeakCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int time
         return false;
     }
 
-    CanMessage msg;
+    BusMessage msg;
     msg.setId(frame.ID);
     msg.setExtended((frame.MSGTYPE & PCAN_MESSAGE_EXTENDED) != 0);
     msg.setRTR((frame.MSGTYPE & PCAN_MESSAGE_RTR) != 0);
@@ -279,7 +279,7 @@ bool PeakCanInterface::updateStatistics()
 void PeakCanInterface::resetStatistics()
 {
     _offset_stats = _stats;
-    CanInterface::resetStatistics();
+    BusInterface::resetStatistics();
 }
 
 uint32_t PeakCanInterface::getState()

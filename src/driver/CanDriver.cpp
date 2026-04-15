@@ -21,7 +21,7 @@
 
 #include "CanDriver.h"
 #include "core/Backend.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 
 CanDriver::CanDriver(Backend &backend)
   : _backend(backend)
@@ -53,7 +53,7 @@ int CanDriver::id()
     return _id;
 }
 
-QList<CanInterface *> CanDriver::getInterfaces() const
+QList<BusInterface *> CanDriver::getInterfaces() const
 {
     return _interfaces;
 }
@@ -67,19 +67,19 @@ CanInterfaceIdList CanDriver::getInterfaceIds() const
     return retval;
 }
 
-CanInterface *CanDriver::getInterfaceById(CanInterfaceId id)
+BusInterface *CanDriver::getInterfaceById(CanInterfaceId id)
 {
     return _interfaces.value(id & 0xFF);
 }
 
-CanInterfaceId CanDriver::addInterface(CanInterface *intf)
+CanInterfaceId CanDriver::addInterface(BusInterface *intf)
 {
     intf->setId((id()<<8) | _interfaces.size());
     _interfaces.push_back(intf);
     return intf->getId();
 }
 
-void CanDriver::deleteInterface(CanInterface *intf)
+void CanDriver::deleteInterface(BusInterface *intf)
 {
     delete intf;
     _interfaces.removeOne(intf);
@@ -93,7 +93,7 @@ void CanDriver::deleteAllInterfaces()
 
 
 
-CanInterface *CanDriver::getInterfaceByName(QString ifName)
+BusInterface *CanDriver::getInterfaceByName(QString ifName)
 {
     for (auto *intf : _interfaces) {
         if (intf->getName() == ifName) {

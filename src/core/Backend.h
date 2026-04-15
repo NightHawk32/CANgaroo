@@ -37,8 +37,8 @@
 #include "core/ConditionalLoggingManager.h"
 
 class MeasurementNetwork;
-class CanTrace;
-class CanListener;
+class BusTrace;
+class BusListener;
 class CanDbMessage;
 class LinFrame;
 class SetupDialog;
@@ -74,7 +74,7 @@ public:
 
     double currentTimeStamp() const;
 
-    CanTrace *getTrace();
+    BusTrace *getTrace();
     void clearTrace();
 
     ConditionalLoggingManager *getConditionalLoggingManager() const { return _conditionalLoggingManager; }
@@ -84,12 +84,12 @@ public:
 
     CanInterfaceIdList getInterfaceList();
     CanDriver *getDriverById(CanInterfaceId id);
-    CanInterface *getInterfaceById(CanInterfaceId id);
+    BusInterface *getInterfaceById(CanInterfaceId id);
     QString getInterfaceName(CanInterfaceId id);
     QString getDriverName(CanInterfaceId id);
 
     CanDriver *getDriverByName(QString driverName);
-    CanInterface *getInterfaceByDriverAndName(QString driverName, QString deviceName);
+    BusInterface *getInterfaceByDriverAndName(QString driverName, QString deviceName);
 
     pCanDb loadDbc(QString filename, QString *errorMsg = nullptr);
     pLinDb loadLdf(QString filename, QString *errorMsg = nullptr);
@@ -120,8 +120,8 @@ private:
     QElapsedTimer _timerSinceStart;
     QList<CanDriver*> _drivers;
     MeasurementSetup _setup;
-    CanTrace *_trace;
-    QList<CanListener*> _listeners;
+    BusTrace *_trace;
+    QList<BusListener*> _listeners;
 
     LogModel *_logModel;
     ConditionalLoggingManager *_conditionalLoggingManager;

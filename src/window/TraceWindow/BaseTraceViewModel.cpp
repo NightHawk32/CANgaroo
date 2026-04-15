@@ -26,7 +26,7 @@
 #include <QColor>
 
 #include "core/Backend.h"
-#include "core/CanTrace.h"
+#include "core/BusTrace.h"
 #include "core/BusMessage.h"
 #include "core/DBC/CanDbMessage.h"
 #include "core/DBC/LinFrame.h"
@@ -134,7 +134,7 @@ Backend *BaseTraceViewModel::backend() const
     return _backend;
 }
 
-CanTrace *BaseTraceViewModel::trace() const
+BusTrace *BaseTraceViewModel::trace() const
 {
     return _backend->getTrace();
 }

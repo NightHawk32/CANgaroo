@@ -35,7 +35,7 @@ public:
     explicit TextVisualization(QWidget *parent, Backend &backend);
     virtual ~TextVisualization();
 
-    virtual void addMessage(const CanMessage &msg) override;
+    virtual void addMessage(const BusMessage &msg) override;
     virtual void addDecodedData(const QMap<CanDbSignal*, DecodedSignalData>& newPoints) override;
     virtual void clear() override;
     virtual void onActivated() override;

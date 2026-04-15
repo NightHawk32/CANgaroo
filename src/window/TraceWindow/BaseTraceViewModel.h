@@ -26,7 +26,7 @@
 #include "core/BusMessage.h"
 
 class Backend;
-class CanTrace;
+class BusTrace;
 class CanDbSignal;
 
 class BaseTraceViewModel : public QAbstractItemModel
@@ -58,7 +58,7 @@ public:
     virtual BusMessage getMessage(const QModelIndex &index) const = 0;
 
     Backend *backend() const;
-    CanTrace *trace() const;
+    BusTrace *trace() const;
 
     timestamp_mode_t timestampMode() const;
     void setTimestampMode(timestamp_mode_t timestampMode);

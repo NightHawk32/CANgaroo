@@ -8,7 +8,7 @@
 
 class UnifiedTraceItem {
 public:
-    UnifiedTraceItem(const CanMessage& frame, UnifiedTraceItem* parent = nullptr);
+    UnifiedTraceItem(const BusMessage& frame, UnifiedTraceItem* parent = nullptr);
     UnifiedTraceItem(const ProtocolMessage& msg, UnifiedTraceItem* parent = nullptr);
     UnifiedTraceItem(const QString& name, const QString& value, UnifiedTraceItem* parent = nullptr);
     ~UnifiedTraceItem();
@@ -25,7 +25,7 @@ public:
 
     bool isProtocol() const { return m_isProtocol; }
     bool isMetadata() const { return m_isMetadata; }
-    const CanMessage& rawFrame() const { return m_rawFrame; }
+    const BusMessage& rawFrame() const { return m_rawFrame; }
     const ProtocolMessage& protocolMessage() const { return m_protocolMessage; }
     QString metadataName() const { return m_metadataName; }
     QString metadataValue() const { return m_metadataValue; }
@@ -44,7 +44,7 @@ private:
     
     bool m_isProtocol;
     bool m_isMetadata = false;
-    CanMessage m_rawFrame;
+    BusMessage m_rawFrame;
     ProtocolMessage m_protocolMessage;
     QString m_metadataName;
     QString m_metadataValue;

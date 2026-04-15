@@ -39,7 +39,7 @@
 #include "core/MeasurementInterface.h"
 #include <unistd.h>
 #include "core/Backend.h"
-#include "core/CanTrace.h"
+#include "core/BusTrace.h"
 #include "core/ThemeManager.h"
 #include "window/TraceWindow/TraceWindow.h"
 #include "window/SetupDialog/SetupDialog.h"
@@ -1057,7 +1057,7 @@ bool MainWindow::showSetupDialog()
         {
             for (auto *mi : network->interfaces())
             {
-                CanInterface *intf = backend().getInterfaceById(mi->canInterface());
+                BusInterface *intf = backend().getInterfaceById(mi->canInterface());
                 if (intf && intf->getDriver()->getName() == "SocketCAN")
                 {
                     mi->setDoConfigure(false);
@@ -1331,7 +1331,7 @@ void MainWindow::exportFullTrace()
     }
 
     auto *model = tw->linearModel();
-    CanTrace *trace = backend().getTrace();
+    BusTrace *trace = backend().getTrace();
 
     QString filename = QFileDialog::getSaveFileName(
         this,
@@ -1357,7 +1357,7 @@ void MainWindow::exportFullTrace()
 
     for (unsigned long i = 0; i < count; i++)
     {
-        const CanMessage *msg = trace->getMessage(i);
+        const BusMessage *msg = trace->getMessage(i);
         if (!msg)
             continue;
 
@@ -1450,7 +1450,7 @@ void MainWindow::importFullTrace()
     for (int i = 0; i < msgs.size(); i++)
     {
         QJsonObject m = msgs[i].toObject();
-        CanMessage msg;
+        BusMessage msg;
 
         double ts = m["timestamp"].toDouble();
         msg.setTimestamp(ts);

@@ -51,7 +51,7 @@
 
 
 SocketCanInterface::SocketCanInterface(SocketCanDriver *driver, int index, QString name)
-    : CanInterface(reinterpret_cast<CanDriver *>(driver)),
+    : BusInterface(reinterpret_cast<CanDriver *>(driver)),
       _idx(index),
       _isOpen(false),
       _fd(0),
@@ -87,7 +87,7 @@ QString SocketCanInterface::getVersion()
     {
         return QString("%1").arg(uts.release);
     }
-    return CanInterface::getVersion();
+    return BusInterface::getVersion();
 }
 
 void SocketCanInterface::setName(QString name)
@@ -473,18 +473,18 @@ unsigned SocketCanInterface::getBitrate()
 uint32_t SocketCanInterface::getCapabilities()
 {
     uint32_t retval =
-        CanInterface::capability_config_os |
-        CanInterface::capability_listen_only |
-        CanInterface::capability_auto_restart;
+        BusInterface::capability_config_os |
+        BusInterface::capability_listen_only |
+        BusInterface::capability_auto_restart;
 
     if (supportsCanFD())
     {
-        retval |= CanInterface::capability_canfd;
+        retval |= BusInterface::capability_canfd;
     }
 
     if (supportsTripleSampling())
     {
-        retval |= CanInterface::capability_triple_sampling;
+        retval |= BusInterface::capability_triple_sampling;
     }
 
     return retval;
@@ -498,7 +498,7 @@ bool SocketCanInterface::updateStatistics()
 void SocketCanInterface::resetStatistics()
 {
     _offset_stats = _status;
-    CanInterface::resetStatistics();
+    BusInterface::resetStatistics();
 }
 
 uint32_t SocketCanInterface::getState()
@@ -613,7 +613,7 @@ void SocketCanInterface::close()
     _isOpen = false;
 }
 
-void SocketCanInterface::sendMessage(const CanMessage &msg)
+void SocketCanInterface::sendMessage(const BusMessage &msg)
 {
     if (!_isOpen)
     {
@@ -702,7 +702,7 @@ void SocketCanInterface::sendMessage(const CanMessage &msg)
     // Only reached on successful write
     addFrameBits(msg);
 
-    CanMessage txMsg = msg;
+    BusMessage txMsg = msg;
     txMsg.setRX(false);
     auto now = std::chrono::system_clock::now().time_since_epoch();
     txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
@@ -710,7 +710,7 @@ void SocketCanInterface::sendMessage(const CanMessage &msg)
     txMsgList.append(txMsg);
 }
 
-bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
+bool SocketCanInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms)
 {
     struct canfd_frame frame;
     struct timespec ts_rcv;
@@ -737,7 +737,7 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
         timeout.tv_usec = 0;
     }
 
-    CanMessage msg;
+    BusMessage msg;
 
     for (int retry = 0; retry < 4; retry++)
     {

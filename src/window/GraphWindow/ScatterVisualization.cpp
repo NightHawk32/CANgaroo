@@ -128,7 +128,7 @@ void ScatterVisualization::addDecodedData(const QMap<CanDbSignal*, DecodedSignal
     }
 }
 
-void ScatterVisualization::addMessage(const CanMessage &msg)
+void ScatterVisualization::addMessage(const BusMessage &msg)
 {
     if (_startTime < 0) {
         setGlobalStartTime(msg.getFloatTimestamp());

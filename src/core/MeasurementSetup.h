@@ -28,8 +28,8 @@
 
 class Backend;
 class MeasurementNetwork;
-class CanTrace;
-class CanInterface;
+class BusTrace;
+class BusInterface;
 class CanDbMessage;
 class LinFrame;
 class BusMessage;
@@ -46,7 +46,7 @@ public:
     CanDbMessage *findDbMessage(const BusMessage &msg) const;
     LinFrame     *findLinFrame(const BusMessage &msg) const;
     void rebuildMessageCache();
-    QString getInterfaceName(const CanInterface &id) const;
+    QString getInterfaceName(const BusInterface &id) const;
 
     int countNetworks() const;
     MeasurementNetwork *getNetwork(int index) const;

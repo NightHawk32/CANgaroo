@@ -33,7 +33,7 @@
 
 class MeasurementInterface;
 
-class CanInterface: public QObject  {
+class BusInterface: public QObject  {
     Q_OBJECT
 public:
     enum {
@@ -64,8 +64,8 @@ public:
     };
 
 public:
-    CanInterface(CanDriver *driver);
-    virtual ~CanInterface();
+    BusInterface(CanDriver *driver);
+    virtual ~BusInterface();
     virtual CanDriver *getDriver();
     virtual QString getName() const = 0;
     virtual QString getDetailsStr() const;
@@ -83,8 +83,8 @@ public:
 
     virtual bool isOpen();
 
-    virtual void sendMessage(const CanMessage &msg) = 0;
-    virtual bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) = 0;
+    virtual void sendMessage(const BusMessage &msg) = 0;
+    virtual bool readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms) = 0;
 
     virtual bool updateStatistics();
     virtual void resetStatistics() { _totalBits = 0; }
@@ -96,7 +96,7 @@ public:
     virtual int getNumRxOverruns() = 0;
     virtual int getNumTxDropped() = 0;
     virtual uint64_t getNumBits();
-    void addFrameBits(const CanMessage &msg);
+    void addFrameBits(const BusMessage &msg);
 
     virtual QString getVersion();
 
