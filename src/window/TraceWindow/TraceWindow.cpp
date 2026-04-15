@@ -347,9 +347,6 @@ void TraceWindow::on_cbFilterChanged()
 void TraceWindow::on_cbTraceClearpushButton()
 {
     _backend->clearTrace();
-    // clearTrace() triggers beforeClear/afterClear signals which the models are connected to.
-    // However, since we have multiple models, we should ensure they all reset correctly.
-    _backend->clearLog();
 }
 
 void TraceWindow::on_cbViewMode_currentIndexChanged(int index)

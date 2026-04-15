@@ -43,14 +43,51 @@ QVariant SetupDialogTreeModel::data(const QModelIndex &index, int role) const
     SetupDialogTreeItem *item = static_cast<SetupDialogTreeItem*>(index.internalPointer());
 
     if (item) {
-
-        if (role==Qt::DisplayRole) {
+        if (role == Qt::DisplayRole) {
             return item->dataDisplayRole(index);
         }
 
+        if (role == Qt::CheckStateRole
+            && item->getType() == SetupDialogTreeItem::type_interface
+            && index.column() == column_device)
+        {
+            return item->intf->isEnabled() ? Qt::Checked : Qt::Unchecked;
+        }
     }
 
     return QVariant();
+}
+
+bool SetupDialogTreeModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    SetupDialogTreeItem *item = static_cast<SetupDialogTreeItem*>(index.internalPointer());
+
+    if (item
+        && role == Qt::CheckStateRole
+        && item->getType() == SetupDialogTreeItem::type_interface
+        && index.column() == column_device)
+    {
+        item->intf->setEnabled(qvariant_cast<Qt::CheckState>(value) == Qt::Checked);
+        emit dataChanged(index, index, {Qt::CheckStateRole});
+        return true;
+    }
+
+    return false;
+}
+
+Qt::ItemFlags SetupDialogTreeModel::flags(const QModelIndex &index) const
+{
+    Qt::ItemFlags f = QAbstractItemModel::flags(index);
+
+    SetupDialogTreeItem *item = static_cast<SetupDialogTreeItem*>(index.internalPointer());
+    if (item
+        && item->getType() == SetupDialogTreeItem::type_interface
+        && index.column() == column_device)
+    {
+        f |= Qt::ItemIsUserCheckable;
+    }
+
+    return f;
 }
 
 QVariant SetupDialogTreeModel::headerData(int section, Qt::Orientation orientation, int role) const

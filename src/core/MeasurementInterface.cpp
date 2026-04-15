@@ -28,7 +28,9 @@
 
 MeasurementInterface::MeasurementInterface()
   : _busType(BusType::CAN),
+    _canif(0),
     _doConfigure(true),
+    _enabled(true),
     _bitrate(500000),
     _samplePoint(875),
     _isCanFD(false),
@@ -82,6 +84,7 @@ bool MeasurementInterface::loadXML(Backend &backend, QDomElement &el)
 
     _CustomBitrate = el.attribute("custom-bitrate", "0").toInt();
     _CustomFdBitrate = el.attribute("custom-fdbitrate", "0").toInt();
+    _enabled = el.attribute("enabled", "1").toInt() != 0;
 
     _linBaudRate = el.attribute("lin-baudrate", "19200").toUInt();
     _linProtocolVersion = static_cast<LinProtocolVersion>(el.attribute("lin-protocol", "4").toInt());
@@ -121,6 +124,7 @@ bool MeasurementInterface::saveXML(Backend &backend, QDomDocument &xml, QDomElem
 
     root.setAttribute("custom-bitrate", _CustomBitrate);
     root.setAttribute("custom-fdbitrate", _CustomFdBitrate);
+    root.setAttribute("enabled", _enabled ? 1 : 0);
 
     root.setAttribute("lin-baudrate", _linBaudRate);
     root.setAttribute("lin-protocol", static_cast<int>(_linProtocolVersion));
@@ -295,6 +299,16 @@ uint32_t MeasurementInterface::customFdBitrate() const
 void MeasurementInterface::setCustomFdBitrate(uint32_t customFdBitrate)
 {
     _CustomFdBitrate = customFdBitrate;
+}
+
+bool MeasurementInterface::isEnabled() const noexcept
+{
+    return _enabled;
+}
+
+void MeasurementInterface::setEnabled(bool enabled) noexcept
+{
+    _enabled = enabled;
 }
 
 BusType MeasurementInterface::busType() const { return _busType; }

@@ -85,6 +85,8 @@ void BusListener::run()
         {
             rxMessages.clear();
         }
+
+        QThread::msleep(1);
     }
     _intf.close();
     _thread->quit();

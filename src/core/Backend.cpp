@@ -92,6 +92,8 @@ bool Backend::startMeasurement()
     for (auto *network : _setup.getNetworks()) {
         for (auto *mi : network->interfaces()) {
 
+            if (!mi->isEnabled()) { continue; }
+
             BusInterface *intf = getInterfaceById(mi->canInterface());
             if (intf) {
                 intf->applyConfig(*mi);

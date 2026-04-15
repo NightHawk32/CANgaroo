@@ -439,14 +439,6 @@ bool GrIPInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout
 {
     Q_UNUSED(timeout_ms);
 
-    // Rate-limit processing to roughly once every 2 ms.
-    const qint64 now = QDateTime::currentMSecsSinceEpoch();
-    if (now - _lastReadMsec < 1)
-    {
-        return false;
-    }
-    _lastReadMsec = now + 1;
-
     if (_manufacturer == CANIL_CAN)
     {
         while (m_GrIPHandler->CanAvailable(_channel_idx))

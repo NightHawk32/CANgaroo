@@ -105,6 +105,9 @@ public:
     bool isCustomFdBitrate() const;
     void setCustomFdBitrateEn(bool customFdBitrate);
 
+    bool isEnabled() const noexcept;
+    void setEnabled(bool enabled) noexcept;
+
     uint32_t customBitrate() const;
     void setCustomBitrate(uint32_t customBitrate);
 
@@ -115,6 +118,7 @@ private:
     CanInterfaceId _canif;
 
     bool _doConfigure;
+    bool _enabled;
 
     unsigned _bitrate;
     unsigned _samplePoint;

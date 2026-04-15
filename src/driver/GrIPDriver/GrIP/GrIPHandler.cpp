@@ -708,7 +708,7 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms)
             msg.setBusType(BusType::LIN);
             msg.setErrorFrame(frame.Flags != 0x03);
             msg.setLength(frame.DLC);
-            msg.setRX(frame.Direction == 0); // 0 = subscriber (we received it), 1 = publisher (we sent it)
+            msg.setRX(frame.Direction == 1); // 1 = subscriber (we received it), 0 = publisher (we sent it)
             msg.setTimestamp_ms(rxTimestamp_ms);
 
             for (int i = 0; i < frame.DLC; i++)
@@ -721,6 +721,10 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms)
             {
                 m_LinReceiveQueue[frame.Channel].push(msg);
             }
+            /*qDebug() << "LIN MSG — ID:" << frame.ID
+                     << "DLC:" << frame.DLC
+                     << "Alive:" << (frame.Flags & 0x1)
+                     << "Valid:" << ((frame.Flags & 0x2) >> 1);*/
 
             break;
         }
@@ -812,7 +816,7 @@ void GrIPHandler::WorkerThread()
     // QSerialPort must be created on the thread that uses it.
     m_SerialPort = new QSerialPort();
     m_SerialPort->setPortName(m_PortName);
-    m_SerialPort->setBaudRate(500000);
+    m_SerialPort->setBaudRate(1000000);
     m_SerialPort->setDataBits(QSerialPort::Data8);
     m_SerialPort->setParity(QSerialPort::NoParity);
     m_SerialPort->setStopBits(QSerialPort::OneStop);

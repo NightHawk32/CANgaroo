@@ -418,9 +418,9 @@ QVariant UnifiedTraceViewModel::data_DisplayRole(const QModelIndex &index) const
             case column_type: {
                 QString t;
                 if (msg.isFD())       t += QStringLiteral("FD.");
-                if (msg.isExtended()) t += QStringLiteral("EXT."); else t += QStringLiteral("STD.");
-                if (msg.isRTR())      t += QStringLiteral("RTR");
-                if (msg.isBRS())      t += QStringLiteral("BRS");
+                if (msg.isExtended()) t += QStringLiteral("EXT"); else t += QStringLiteral("STD");
+                if (msg.isRTR())      t += QStringLiteral(".RTR");
+                if (msg.isBRS())      t += QStringLiteral(".BRS");
                 return t;
             }
             case column_canid: return QString("0x%1").arg(msg.getId(), 0, 16);

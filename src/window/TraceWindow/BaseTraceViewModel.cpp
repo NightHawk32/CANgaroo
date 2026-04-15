@@ -207,7 +207,7 @@ QVariant BaseTraceViewModel::data_DisplayRole_Message(const QModelIndex &index, 
         {
             if (isLin)
                 return QStringLiteral("LIN");
-            QString _type = QString(currentMsg.isFD()? "FD.":"") + QString(currentMsg.isExtended()? "EXT." : "STD.") + QString(currentMsg.isRTR()?"RTR":"") + QString((currentMsg.isBRS()?"BRS":""));
+            QString _type = QString(currentMsg.isFD()? "FD.":"") + QString(currentMsg.isExtended()? "EXT" : "STD") + QString(currentMsg.isRTR()?".RTR":"") + QString((currentMsg.isBRS()?".BRS":""));
             return _type;
         }
 
