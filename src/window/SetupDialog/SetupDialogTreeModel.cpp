@@ -254,7 +254,7 @@ SetupDialogTreeItem *SetupDialogTreeModel::loadMeasurementInterface(SetupDialogT
     return item;
 }
 
-SetupDialogTreeItem *SetupDialogTreeModel::loadCanDb(SetupDialogTreeItem &parent, pCanDb &db)
+SetupDialogTreeItem *SetupDialogTreeModel::loadCanDb(SetupDialogTreeItem &parent, const pCanDb &db)
 {
     SetupDialogTreeItem *item = new SetupDialogTreeItem(SetupDialogTreeItem::type_candb, _backend, &parent);
     item->candb = db;
@@ -262,7 +262,7 @@ SetupDialogTreeItem *SetupDialogTreeModel::loadCanDb(SetupDialogTreeItem &parent
     return item;
 }
 
-SetupDialogTreeItem *SetupDialogTreeModel::loadLinDb(SetupDialogTreeItem &parent, pLinDb &db)
+SetupDialogTreeItem *SetupDialogTreeModel::loadLinDb(SetupDialogTreeItem &parent, const pLinDb &db)
 {
     SetupDialogTreeItem *item = new SetupDialogTreeItem(SetupDialogTreeItem::type_lindb, _backend, &parent);
     item->lindb = db;
@@ -287,11 +287,11 @@ SetupDialogTreeItem *SetupDialogTreeModel::loadNetwork(SetupDialogTreeItem *root
         loadMeasurementInterface(*item_intf_root, intf);
     }
 
-    for (auto candb : network._canDbs) {
+    for (const auto &candb : network._canDbs) {
         loadCanDb(*item_candb_root, candb);
     }
 
-    for (auto lindb : network._linDbs) {
+    for (const auto &lindb : network._linDbs) {
         loadLinDb(*item_candb_root, lindb);
     }
 

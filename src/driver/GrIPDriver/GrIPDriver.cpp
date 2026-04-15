@@ -89,11 +89,11 @@ bool GrIPDriver::update()
                 createOrUpdateInterface(interface_cnt, m_GrIPHandler, "CANIL-CANFD" + QString::number(interface_cnt), true, GrIPInterface::CANIL_CAN);
                 interface_cnt++;
             }
-            /*for (int i = 0; i < m_GrIPHandler->Channels_LIN(); i++)
+            for (int i = 0; i < m_GrIPHandler->Channels_LIN(); i++)
             {
                 createOrUpdateInterface(interface_cnt, m_GrIPHandler, "CANIL-LIN" + QString::number(interface_cnt), false, GrIPInterface::CANIL_LIN);
                 interface_cnt++;
-            }*/
+            }
         }
         else
         {

@@ -111,11 +111,17 @@ public:
 
     int getIfIndex();
 
+private slots:
+    void handleSerialError(QSerialPort::SerialPortError error);
+
 private:
+    bool updateStatus();
+
     uint32_t _manufacturer;
     QString _version;
 
     int _idx;
+    int _channel_idx;
     bool _isOpen;
     bool _isOffline;
     bool _isLin;
@@ -132,8 +138,6 @@ private:
 
     GrIPHandler *m_GrIPHandler;
 
-    bool updateStatus();
+    static int _CanCounter, _LinCounter;
 
-private slots:
-    void handleSerialError(QSerialPort::SerialPortError error);
 };

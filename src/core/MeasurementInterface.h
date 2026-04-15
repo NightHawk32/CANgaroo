@@ -22,6 +22,7 @@
 #pragma once
 
 #include <QDomDocument>
+
 #include "driver/CanDriver.h"
 #include "driver/BusInterface.h"
 #include "core/BusMessage.h"

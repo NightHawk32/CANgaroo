@@ -271,8 +271,7 @@ QVariant BaseTraceViewModel::data_DisplayRole_Signal(const QModelIndex &index, i
                 return signal->name();
             case column_data:
             {
-                const uint8_t *data = reinterpret_cast<const uint8_t*>(msg.getData());
-                uint64_t raw = signal->extractRawValue(data, static_cast<uint8_t>(msg.getLength()));
+                uint64_t raw = signal->extractRawValue({msg.getData(), static_cast<std::size_t>(msg.getLength())});
                 const QString valName = signal->getValueName(raw);
                 if (valName.isEmpty()) {
                     const QString unit = signal->unit();

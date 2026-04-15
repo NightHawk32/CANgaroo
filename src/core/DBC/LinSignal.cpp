@@ -45,7 +45,7 @@ void LinSignal::setValueName(uint64_t value, const QString &name)
     _valueTable.insert(value, name);
 }
 
-uint64_t LinSignal::extractRawValue(const uint8_t *data, uint8_t dataLen) const
+uint64_t LinSignal::extractRawValue(std::span<const uint8_t> data) const
 {
     // LIN signals are always little-endian (LSB-first).
     uint64_t raw = 0;
@@ -54,7 +54,7 @@ uint64_t LinSignal::extractRawValue(const uint8_t *data, uint8_t dataLen) const
         uint32_t bitPos = _bitOffset + i;
         uint8_t  byteIdx = static_cast<uint8_t>(bitPos / 8);
         uint8_t  bitIdx  = static_cast<uint8_t>(bitPos % 8);
-        if (byteIdx < dataLen && ((data[byteIdx] >> bitIdx) & 1u))
+        if (byteIdx < data.size() && ((data[byteIdx] >> bitIdx) & 1u))
             raw |= (uint64_t{1} << i);
     }
     return raw;
@@ -65,7 +65,7 @@ double LinSignal::convertToPhysical(uint64_t rawValue) const
     return static_cast<double>(rawValue) * _factor + _offset;
 }
 
-double LinSignal::extractPhysicalValue(const uint8_t *data, uint8_t dataLen) const
+double LinSignal::extractPhysicalValue(std::span<const uint8_t> data) const
 {
-    return convertToPhysical(extractRawValue(data, dataLen));
+    return convertToPhysical(extractRawValue(data));
 }

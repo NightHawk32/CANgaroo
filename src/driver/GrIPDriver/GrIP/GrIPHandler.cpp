@@ -75,7 +75,7 @@ typedef struct __attribute__((packed))
 {
     Protocol_SystemHeader_t Header;
 
-    uint8_t CAN[8];
+    uint8_t BusState[8];
 } Protocol_BusStatus_t;
 
 // Payload for SYSTEM_CAN_MODE — sets listen-only or normal mode.
@@ -153,13 +153,11 @@ GrIPHandler::GrIPHandler(const QString &name)
     CRC_Init();
 }
 
-
 GrIPHandler::~GrIPHandler()
 {
     Stop();
     delete m_SerialPort;
 }
-
 
 bool GrIPHandler::Start()
 {
@@ -177,7 +175,6 @@ bool GrIPHandler::Start()
     // m_SerialPort is nullptr if the port failed to open.
     return m_SerialPort != nullptr;
 }
-
 
 void GrIPHandler::Stop()
 {
@@ -201,7 +198,6 @@ void GrIPHandler::Stop()
     }
 }
 
-
 // ---------------------------------------------------------------------------
 // Device configuration commands
 // ---------------------------------------------------------------------------
@@ -222,7 +218,6 @@ void GrIPHandler::SetStatus(bool open)
     GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 }
 
-
 void GrIPHandler::SetEchoTx(bool enable)
 {
     Protocol_SystemHeader_t header;
@@ -238,7 +233,6 @@ void GrIPHandler::SetEchoTx(bool enable)
 
     GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 }
-
 
 void GrIPHandler::RequestVersion()
 {
@@ -266,7 +260,6 @@ void GrIPHandler::RequestVersion()
     QThread::msleep(10);
 }
 
-
 // ---------------------------------------------------------------------------
 // Device state accessors (thread-safe reads)
 // ---------------------------------------------------------------------------
@@ -277,13 +270,11 @@ std::string GrIPHandler::GetVersion() const
     return m_Version;
 }
 
-
 int GrIPHandler::Channels_CAN() const
 {
     std::unique_lock<std::mutex> lck(m_MutexData);
     return m_ChannelsCAN;
 }
-
 
 int GrIPHandler::Channels_CANFD() const
 {
@@ -291,13 +282,11 @@ int GrIPHandler::Channels_CANFD() const
     return m_ChannelsCANFD;
 }
 
-
 int GrIPHandler::Channels_LIN() const
 {
     std::unique_lock<std::mutex> lck(m_MutexData);
     return m_ChannelsLIN;
 }
-
 
 // ---------------------------------------------------------------------------
 // Low-level send helpers
@@ -309,7 +298,6 @@ void GrIPHandler::Send(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType,
     GrIP_Transmit(ProtType, MsgType, ReturnCode, pdu);
 }
 
-
 void GrIPHandler::Send(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType, GrIP_ReturnType_e ReturnCode, const uint8_t *data, uint16_t len)
 {
     // GrIP_Pdu_t holds a non-const pointer; the cast is safe because GrIP
@@ -317,7 +305,6 @@ void GrIPHandler::Send(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType,
     GrIP_Pdu_t pdu = {const_cast<uint8_t *>(data), len};
     Send(ProtType, MsgType, ReturnCode, &pdu);
 }
-
 
 // ---------------------------------------------------------------------------
 // CAN channel control
@@ -349,6 +336,31 @@ void GrIPHandler::CanEnableChannel(uint8_t ch, bool enable)
     }
 }
 
+void GrIPHandler::LinEnableChannel(uint8_t ch, bool enable)
+{
+    Protocol_ChannelStatus_t status = {};
+
+    status.Header.Version = GRIP_HEADER_VERSION;
+    status.Header.Command = SYSTEM_START_LIN;
+    status.Header.Length = 2;
+    status.Header.Data = 0;
+
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&status), sizeof(Protocol_ChannelStatus_t)};
+
+    if (ch < m_Channel_StatusLIN.size())
+    {
+        // Update local shadow and rebuild the full channel state word.
+        // The firmware expects the enable state of all channels at once,
+        // not just the one being changed.
+        m_Channel_StatusLIN[ch] = enable;
+        status.Channel1 = m_Channel_StatusLIN[0];
+        status.Channel2 = m_Channel_StatusLIN[1];
+
+        std::unique_lock<std::mutex> lck(m_MutexSerial);
+
+        GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
+    }
+}
 
 void GrIPHandler::CanSetMode(uint8_t ch, bool listen_only)
 {
@@ -368,7 +380,6 @@ void GrIPHandler::CanSetMode(uint8_t ch, bool listen_only)
 
     GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 }
-
 
 void GrIPHandler::CanSetBaudrate(uint8_t ch, uint32_t baud)
 {
@@ -414,7 +425,6 @@ void GrIPHandler::CanSetConfig(uint8_t ch, uint32_t baud, bool listen, bool echo
     GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 }
 
-
 // ---------------------------------------------------------------------------
 // CAN receive queue access
 // ---------------------------------------------------------------------------
@@ -431,12 +441,31 @@ bool GrIPHandler::CanAvailable(uint8_t ch) const
     return false;
 }
 
-
 uint8_t GrIPHandler::CanGetState(uint8_t ch) const
 {
-    return m_CanBusStatus[ch];
+    if (ch < m_CanBusStatus.size())
+    {
+        return m_CanBusStatus[ch];
+    }
+    else
+    {
+        qWarning() << "GrIPHandler::CanGetState: channel index" << ch << "out of range (size:" << m_CanBusStatus.size() << ")";
+    }
+    return 0;
 }
 
+uint8_t GrIPHandler::LinGetState(uint8_t ch) const
+{
+    if (ch < m_LinBusStatus.size())
+    {
+        return m_LinBusStatus[ch];
+    }
+    else
+    {
+        qWarning() << "GrIPHandler::LinGetState: channel index" << ch << "out of range (size:" << m_CanBusStatus.size() << ")";
+    }
+    return 0;
+}
 
 BusMessage GrIPHandler::CanReceive(uint8_t ch)
 {
@@ -452,6 +481,31 @@ BusMessage GrIPHandler::CanReceive(uint8_t ch)
     return BusMessage();
 }
 
+bool GrIPHandler::LinAvailable(uint8_t ch) const
+{
+    std::unique_lock<std::mutex> lck(m_MutexData);
+
+    if (ch < m_LinReceiveQueue.size())
+    {
+        return !m_LinReceiveQueue[ch].empty();
+    }
+
+    return false;
+}
+
+BusMessage GrIPHandler::LinReceive(uint8_t ch)
+{
+    std::unique_lock<std::mutex> lck(m_MutexData);
+
+    if (ch < m_LinReceiveQueue.size() && !m_LinReceiveQueue[ch].empty())
+    {
+        auto front = m_LinReceiveQueue[ch].front();
+        m_LinReceiveQueue[ch].pop();
+        return front;
+    }
+
+    return BusMessage();
+}
 
 // ---------------------------------------------------------------------------
 // CAN transmit
@@ -527,7 +581,6 @@ bool GrIPHandler::CanTransmit(uint8_t ch, const BusMessage &msg)
     return GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p) == 0;
 }
 
-
 // ---------------------------------------------------------------------------
 // Packet dispatcher (called from WorkerThread, holds m_MutexData)
 // ---------------------------------------------------------------------------
@@ -564,11 +617,12 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms)
                 m_ReceiveQueue.push_back({});
                 m_CanBusStatus.push_back(CANIL_CAN_State::CAN_Off);
             }
+            m_LinReceiveQueue.clear();
             for (int i = 0; i < info.ChannelsLIN; i++)
             {
                 m_Channel_StatusLIN.push_back(false);
-                //m_ReceiveQueue.push_back({});
-                //m_LinBusStatus.push_back(CANIL_CAN_State::CAN_Off);
+                m_LinReceiveQueue.push_back({});
+                m_LinBusStatus.push_back(CANIL_CAN_State::CAN_Off);
             }
             break;
         }
@@ -598,6 +652,7 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms)
             BusMessage msg(frame.ID);
 
             // Initialise all flags to false; set individually from frame.Flags below.
+            msg.setBusType(BusType::CAN);
             msg.setErrorFrame(false);
             msg.setRTR(false);
             msg.setFD(false);
@@ -649,11 +704,24 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms)
             Protocol_LinFrame_t frame;
             std::memcpy(&frame, packet.Data, sizeof(Protocol_LinFrame_t));
 
-            // Flags: bit 0 = alive (response received), bit 1 = valid checksum
-            qDebug() << "LIN MSG — ID:" << frame.ID
-                     << "DLC:" << frame.DLC
-                     << "Alive:" << (frame.Flags & 0x1)
-                     << "Valid:" << ((frame.Flags & 0x2) >> 1);
+            BusMessage msg(frame.ID);
+            msg.setBusType(BusType::LIN);
+            msg.setErrorFrame(frame.Flags != 0x03);
+            msg.setLength(frame.DLC);
+            msg.setRX(frame.Direction == 0); // 0 = subscriber (we received it), 1 = publisher (we sent it)
+            msg.setTimestamp_ms(rxTimestamp_ms);
+
+            for (int i = 0; i < frame.DLC; i++)
+            {
+                msg.setByte(i, frame.Data[i]);
+            }
+
+            // Only enqueue if the channel is enabled
+            if (frame.Channel < m_Channel_StatusLIN.size() && m_Channel_StatusLIN[frame.Channel])
+            {
+                m_LinReceiveQueue[frame.Channel].push(msg);
+            }
+
             break;
         }
 
@@ -664,13 +732,26 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms)
 
             for (size_t i = 0; i < m_CanBusStatus.size(); i++)
             {
-                m_CanBusStatus[i] = frame.CAN[i];
+                m_CanBusStatus[i] = frame.BusState[i];
             }
-            //qDebug() << "CAN Status: " << frame.Channel[0] << " - " << frame.Channel[0];
+            //qDebug() << "CAN Status: " << frame.BusState[0] << " - " << frame.BusState[1];
             break;
         }
 
-        case 219u:
+        case 219u:  // LIJN Status Frame
+        {
+            Protocol_BusStatus_t frame;
+            std::memcpy(&frame, packet.Data, sizeof(Protocol_BusStatus_t));
+
+            for (size_t i = 0; i < m_LinBusStatus.size(); i++)
+            {
+                m_LinBusStatus[i] = frame.BusState[i];
+            }
+            //qDebug() << "LIN Status: " << frame.BusState[0] << " - " << frame.BusState[1];
+            break;
+        }
+
+        case 209u:
         {
             Protocol_CanTxEcho_t frame;
             std::memcpy(&frame, packet.Data, sizeof(Protocol_CanTxEcho_t));
@@ -721,7 +802,6 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms)
         break;
     }
 }
-
 
 // ---------------------------------------------------------------------------
 // Worker thread
@@ -837,7 +917,6 @@ void GrIPHandler::WorkerThread()
     }
 }
 
-
 // ---------------------------------------------------------------------------
 // TX pending timeout
 // ---------------------------------------------------------------------------
@@ -866,7 +945,6 @@ void GrIPHandler::PurgeStaleTxPending(qint64 timeout_ms)
         }
     }
 }
-
 
 // ---------------------------------------------------------------------------
 // Serial error handler (Qt slot)

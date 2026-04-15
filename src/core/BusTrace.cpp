@@ -96,7 +96,7 @@ void BusTrace::enqueueMessage(const BusMessage &msg, bool more_to_follow)
         _data.resize(_data.size() + pool_chunk_size);
     }
 
-    _data[idx].cloneFrom(msg);
+    _data[idx] = msg;
     _newRows++;
 
     if (!more_to_follow) {

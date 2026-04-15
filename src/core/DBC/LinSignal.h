@@ -1,6 +1,7 @@
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
+#include <span>
 #include <QString>
 #include <QMap>
 
@@ -47,9 +48,9 @@ public:
     void setValueName(uint64_t value, const QString &name);
 
     // Extract the raw bit field from a LIN frame payload (little-endian).
-    uint64_t extractRawValue(const uint8_t *data, uint8_t dataLen) const;
+    uint64_t extractRawValue(std::span<const uint8_t> data) const;
     double   convertToPhysical(uint64_t rawValue) const;
-    double   extractPhysicalValue(const uint8_t *data, uint8_t dataLen) const;
+    double   extractPhysicalValue(std::span<const uint8_t> data) const;
 
 private:
     LinFrame *_parent;

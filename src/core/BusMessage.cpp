@@ -44,28 +44,6 @@ BusMessage::BusMessage(uint32_t can_id)
     setId(can_id);
 }
 
-BusMessage::BusMessage(const BusMessage &msg)
-{
-    cloneFrom(msg);
-}
-
-void BusMessage::cloneFrom(const BusMessage &msg)
-{
-    _raw_id = msg._raw_id;
-    _dlc = msg._dlc;
-    _flags = msg._flags;
-    _isFD = msg._isFD;
-    _isBRS = msg._isBRS;
-    _isRX = msg._isRX;
-    _isShow = msg._isShow;
-    _busType = msg._busType;
-
-    memcpy(_u8, msg._u8, sizeof(_u8));
-
-    _interface = msg._interface;
-    _timestamp_us = msg._timestamp_us;
-}
-
 BusType BusMessage::busType() const { return _busType; }
 void    BusMessage::setBusType(BusType type) { _busType = type; }
 

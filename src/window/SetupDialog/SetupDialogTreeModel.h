@@ -77,6 +77,6 @@ private:
 
     SetupDialogTreeItem *loadNetwork(SetupDialogTreeItem *root, MeasurementNetwork &network);
     SetupDialogTreeItem *loadMeasurementInterface(SetupDialogTreeItem &parent, MeasurementInterface *intf);
-    SetupDialogTreeItem *loadCanDb(SetupDialogTreeItem &parent, pCanDb &db);
-    SetupDialogTreeItem *loadLinDb(SetupDialogTreeItem &parent, pLinDb &db);
+    SetupDialogTreeItem *loadCanDb(SetupDialogTreeItem &parent, const pCanDb &db);
+    SetupDialogTreeItem *loadLinDb(SetupDialogTreeItem &parent, const pLinDb &db);
 };

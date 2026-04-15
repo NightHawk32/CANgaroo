@@ -862,7 +862,7 @@ bool SLCANInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeou
             _status.tx_count++;
             _status.can_state = state_tx_success;
 
-            msgtx.cloneFrom(_can_msg_tx_queue.front());
+            msgtx = _can_msg_tx_queue.front();
             msgtx.setRX(false);
             msgtx.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(
                                       std::chrono::system_clock::now().time_since_epoch())
@@ -915,7 +915,7 @@ bool SLCANInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeou
                         {
                             if(_status.can_state == state_tx_success)
                             {
-                                msgtx.cloneFrom(_can_msg_tx_queue.front());
+                                msgtx = _can_msg_tx_queue.front();
                                 msgtx.setRX(false);
                                 msglist.append(msgtx);
                             }

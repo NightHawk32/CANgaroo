@@ -132,6 +132,8 @@ public:
      */
     void CanEnableChannel(uint8_t ch, bool enable);
 
+    void LinEnableChannel(uint8_t ch, bool enable);
+
     /**
      * @brief Sets the operating mode of a CAN channel.
      * @param ch           Zero-based channel index.
@@ -161,6 +163,14 @@ public:
 
     uint8_t CanGetState(uint8_t ch) const;
 
+    uint8_t LinGetState(uint8_t ch) const;
+
+    /**
+     * @brief Returns true if at least one received LIN frame is queued for @p ch.
+     * @param ch  Zero-based channel index.
+     */
+    bool LinAvailable(uint8_t ch) const;
+
     /**
      * @brief Dequeues and returns the oldest received CAN frame on @p ch.
      *
@@ -170,6 +180,16 @@ public:
      * @param ch  Zero-based channel index.
      */
     BusMessage CanReceive(uint8_t ch);
+
+    /**
+     * @brief Dequeues and returns the oldest received LIN frame on @p ch.
+     *
+     * Returns a default-constructed BusMessage if the queue is empty or the
+     * channel index is out of range.
+     *
+     * @param ch  Zero-based channel index.
+     */
+    BusMessage LinReceive(uint8_t ch);
 
     /**
      * @brief Transmits a CAN frame on @p ch.
@@ -252,18 +272,18 @@ private:
     bool m_WorkerReady = false;        ///< Predicate for m_CvReady.
 
     // --- Received frame queues (one per channel) ---
-    mutable std::mutex m_MutexData;                    ///< Guards m_ReceiveQueue, m_TxPending, m_Version, and channel counts.
-    std::vector<std::queue<BusMessage>> m_ReceiveQueue; ///< Per-channel inbound frame queues, populated by ProcessData().
+    mutable std::mutex m_MutexData;                       ///< Guards m_ReceiveQueue, m_LinReceiveQueue, m_TxPending, m_Version, and channel counts.
+    std::vector<std::queue<BusMessage>> m_ReceiveQueue;    ///< Per CAN-channel inbound frame queues, populated by ProcessData().
+    std::vector<std::queue<BusMessage>> m_LinReceiveQueue; ///< Per LIN-channel inbound frame queues, populated by ProcessData().
     std::unordered_map<uint32_t, std::pair<uint8_t, BusMessage>> m_TxPending; ///< Frames awaiting TX echo, keyed by correlation token; value is {channel, msg}.
 
     // --- Device state ---
     std::string m_Version;                ///< Firmware version string, set on SYSTEM_REPORT_INFO reply.
     int m_ChannelsCAN = 0;                ///< Number of classic CAN channels, set on SYSTEM_REPORT_INFO reply.
     int m_ChannelsCANFD = 0;              ///< Number of CAN-FD channels, set on SYSTEM_REPORT_INFO reply.
+    int m_ChannelsLIN = 0;
     std::vector<bool> m_Channel_StatusCAN; ///< Per-channel enabled state, indexed identically to m_ReceiveQueue.
     std::vector<bool> m_Channel_StatusLIN;
-
-    int m_ChannelsLIN = 0;
 
     std::vector<uint8_t> m_CanBusStatus;
     std::vector<uint8_t> m_LinBusStatus;
