@@ -136,7 +136,7 @@ void TimeSeriesVisualization::addMessage(const BusMessage &msg)
     }
 
     double t = timestamp - _startTime;
-    CanInterfaceId msgIfId = msg.getInterfaceId();
+    BusInterfaceId msgIfId = msg.getInterfaceId();
 
     for (CanDbSignal *signal : _signals) {
         if (signal->isPresentInMessage(msg)) {
@@ -399,7 +399,7 @@ void TimeSeriesVisualization::setWindowDuration(int seconds)
     _autoScroll = true;
 }
 
-void TimeSeriesVisualization::addSignal(CanDbSignal *signal, const CanInterfaceIdList &interfaces)
+void TimeSeriesVisualization::addSignal(CanDbSignal *signal, const BusInterfaceIdList &interfaces)
 {
     if (_seriesMap.contains(signal)) return;
 

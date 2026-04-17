@@ -58,21 +58,21 @@ QList<BusInterface *> CanDriver::getInterfaces() const
     return _interfaces;
 }
 
-CanInterfaceIdList CanDriver::getInterfaceIds() const
+BusInterfaceIdList CanDriver::getInterfaceIds() const
 {
-    CanInterfaceIdList retval;
+    BusInterfaceIdList retval;
     for (auto *intf : _interfaces) {
         retval.push_back(intf->getId());
     }
     return retval;
 }
 
-BusInterface *CanDriver::getInterfaceById(CanInterfaceId id)
+BusInterface *CanDriver::getInterfaceById(BusInterfaceId id)
 {
     return _interfaces.value(id & 0xFF);
 }
 
-CanInterfaceId CanDriver::addInterface(BusInterface *intf)
+BusInterfaceId CanDriver::addInterface(BusInterface *intf)
 {
     intf->setId((id()<<8) | _interfaces.size());
     _interfaces.push_back(intf);

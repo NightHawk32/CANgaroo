@@ -1057,7 +1057,7 @@ bool MainWindow::showSetupDialog()
         {
             for (auto *mi : network->interfaces())
             {
-                BusInterface *intf = backend().getInterfaceById(mi->canInterface());
+                BusInterface *intf = backend().getInterfaceById(mi->busInterface());
                 if (intf && intf->getDriver()->getName() == "SocketCAN")
                 {
                     mi->setDoConfigure(false);

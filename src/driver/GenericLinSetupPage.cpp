@@ -61,7 +61,7 @@ void GenericLinSetupPage::onShowInterfacePage(SetupDialog &dlg, MeasurementInter
 
     _mi = mi;
 
-    BusInterface *intf = backend().getInterfaceById(_mi->canInterface());
+    BusInterface *intf = backend().getInterfaceById(_mi->busInterface());
     ui->laDriver->setText(intf->getDriver()->getName());
     ui->laInterface->setText(QString("%1 - [ID: %2]").arg(intf->getName()).arg(intf->getId()));
     ui->laInterfaceDetails->setText(intf->getDetailsStr());

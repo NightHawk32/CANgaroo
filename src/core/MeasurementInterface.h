@@ -40,8 +40,8 @@ public:
     BusType busType() const;
     void setBusType(BusType type);
 
-    CanInterfaceId canInterface() const;
-    void setCanInterface(CanInterfaceId canif);
+    BusInterfaceId busInterface() const;
+    void setBusInterface(BusInterfaceId busif);
 
     // LIN-specific configuration
     unsigned linBaudRate() const;
@@ -115,7 +115,7 @@ public:
     void setCustomFdBitrate(uint32_t customFdBitrate);
 private:
     BusType        _busType;
-    CanInterfaceId _canif;
+    BusInterfaceId _busif;
 
     bool _doConfigure;
     bool _enabled;

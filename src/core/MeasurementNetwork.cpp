@@ -59,19 +59,19 @@ QList<MeasurementInterface *> MeasurementNetwork::interfaces()
     return _interfaces;
 }
 
-MeasurementInterface *MeasurementNetwork::addCanInterface(CanInterfaceId canif)
+MeasurementInterface *MeasurementNetwork::addBusInterface(BusInterfaceId busif)
 {
     MeasurementInterface *mi = new MeasurementInterface();
-    mi->setCanInterface(canif);
+    mi->setBusInterface(busif);
     addInterface(mi);
     return mi;
 }
 
-CanInterfaceIdList MeasurementNetwork::getReferencedCanInterfaces()
+BusInterfaceIdList MeasurementNetwork::getReferencedBusInterfaces()
 {
-    CanInterfaceIdList list;
+    BusInterfaceIdList list;
     for (auto *mi : _interfaces) {
-        list << mi->canInterface();
+        list << mi->busInterface();
     }
     return list;
 }
@@ -178,7 +178,7 @@ bool MeasurementNetwork::loadXML(Backend &backend, QDomElement el)
         QString deviceName = elIntf.attribute("name");
         BusInterface *intf = backend.getInterfaceByDriverAndName(driverName, deviceName);
         if (intf) {
-            MeasurementInterface *mi = addCanInterface(intf->getId());
+            MeasurementInterface *mi = addBusInterface(intf->getId());
             mi->loadXML(backend, elIntf);
         } else {
             log_error(QString("Could not find interface %1/%2, which is referenced in the workspace config file.").arg(driverName, deviceName));

@@ -35,7 +35,7 @@ public:
     explicit SignalSelectorDialog(QWidget *parent, Backend &backend);
     struct SelectedSignal {
         CanDbSignal *signal;
-        CanInterfaceIdList interfaces;
+        BusInterfaceIdList interfaces;
     };
 
     QList<SelectedSignal> getSelectedSignalsWithContext() const;

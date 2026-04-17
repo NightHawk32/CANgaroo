@@ -224,10 +224,10 @@ void BusTrace::saveVectorAsc(QFile &file)
     stream << "   0.000000 Start of measurement" << Qt::endl;
 
     // Build sequential channel numbers from interface IDs
-    QMap<CanInterfaceId, int> channelMap;
+    QMap<BusInterfaceId, int> channelMap;
     int nextChannel = 1;
     for (unsigned int i = 0; i < size(); i++) {
-        CanInterfaceId ifaceId = _data[i].getInterfaceId();
+        BusInterfaceId ifaceId = _data[i].getInterfaceId();
         if (!channelMap.contains(ifaceId)) {
             channelMap[ifaceId] = nextChannel++;
         }
@@ -663,10 +663,10 @@ void BusTrace::savePcapNg(QFile &file)
     ds.setByteOrder(QDataStream::LittleEndian);
 
     // --- Collect interfaces seen in the trace ---
-    QMap<CanInterfaceId, int> ifaceIndexMap; // interfaceId → IDB index (0-based)
-    QList<CanInterfaceId> ifaceOrder;
+    QMap<BusInterfaceId, int> ifaceIndexMap; // interfaceId → IDB index (0-based)
+    QList<BusInterfaceId> ifaceOrder;
     for (unsigned int i = 0; i < size(); i++) {
-        CanInterfaceId id = _data[i].getInterfaceId();
+        BusInterfaceId id = _data[i].getInterfaceId();
         if (!ifaceIndexMap.contains(id)) {
             ifaceIndexMap[id] = ifaceOrder.size();
             ifaceOrder.append(id);

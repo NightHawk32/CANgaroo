@@ -69,7 +69,7 @@ public:
     SetupDialogTreeItem *addLinDb(const QModelIndex &parent, pLinDb db);
     void deleteLinDb(const QModelIndex &index);
 
-    SetupDialogTreeItem *addInterface(const QModelIndex &parent, CanInterfaceId &interface);
+    SetupDialogTreeItem *addInterface(const QModelIndex &parent, BusInterfaceId &interface);
     void deleteInterface(const QModelIndex &index);
 
 private:

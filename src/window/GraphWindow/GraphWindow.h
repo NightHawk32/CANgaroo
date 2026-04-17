@@ -54,7 +54,7 @@ public:
     explicit SignalDecoderWorker(Backend& backend, QObject *parent = nullptr);
 
 public slots:
-    void updateActiveSignals(const QList<CanDbSignal*>& activeSignals, const QMap<CanDbSignal*, CanInterfaceIdList>& signalInterfaces, double globalStartTime);
+    void updateActiveSignals(const QList<CanDbSignal*>& activeSignals, const QMap<CanDbSignal*, BusInterfaceIdList>& signalInterfaces, double globalStartTime);
     void reset();
     
 private slots:
@@ -68,7 +68,7 @@ private:
     int _lastProcessedIdx;
     double _globalStartTime;
     QList<CanDbSignal*> _activeSignals;
-    QMap<CanDbSignal*, CanInterfaceIdList> _signalInterfaces;
+    QMap<CanDbSignal*, BusInterfaceIdList> _signalInterfaces;
     QMutex _mutex;
 };
 
@@ -114,7 +114,7 @@ private slots:
     void onPauseMeasurement();
 
 signals:
-    void activeSignalsUpdated(const QList<CanDbSignal*>& activeSignals, const QMap<CanDbSignal*, CanInterfaceIdList>& signalInterfaces, double globalStartTime);
+    void activeSignalsUpdated(const QList<CanDbSignal*>& activeSignals, const QMap<CanDbSignal*, BusInterfaceIdList>& signalInterfaces, double globalStartTime);
     void requestDecoderReset();
 
 private:

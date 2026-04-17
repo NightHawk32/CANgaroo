@@ -102,11 +102,11 @@ public:
 
     QString getStateText();
 
-    CanInterfaceId getId() const;
-    void setId(CanInterfaceId id);
+    BusInterfaceId getId() const;
+    void setId(BusInterfaceId id);
 
 private:
-    CanInterfaceId _id;
+    BusInterfaceId _id;
     CanDriver *_driver;
     std::atomic<uint64_t> _totalBits;
 };

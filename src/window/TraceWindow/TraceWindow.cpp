@@ -222,7 +222,7 @@ bool TraceWindow::saveXML(Backend &backend, QDomDocument &xml, QDomElement &root
     }
 
     QStringList hiddenIfs;
-    for (CanInterfaceId id : _filterHiddenInterfaces)
+    for (BusInterfaceId id : _filterHiddenInterfaces)
     {
         hiddenIfs.append(QString::number(id));
     }
@@ -272,7 +272,7 @@ bool TraceWindow::loadXML(Backend &backend, QDomElement &el)
         {
             for (const QString &s : hiddenIfsStr.split(","))
             {
-                _filterHiddenInterfaces.insert(static_cast<CanInterfaceId>(s.toUInt()));
+                _filterHiddenInterfaces.insert(static_cast<BusInterfaceId>(s.toUInt()));
             }
         }
 

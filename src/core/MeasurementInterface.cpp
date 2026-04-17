@@ -28,7 +28,7 @@
 
 MeasurementInterface::MeasurementInterface()
   : _busType(BusType::CAN),
-    _canif(0),
+    _busif(0),
     _doConfigure(true),
     _enabled(true),
     _bitrate(500000),
@@ -102,8 +102,8 @@ bool MeasurementInterface::saveXML(Backend &backend, QDomDocument &xml, QDomElem
 
     root.setAttribute("bus-type", _busType == BusType::LIN ? "lin" : "can");
     root.setAttribute("type", _busType == BusType::LIN ? "lin" : "can");
-    root.setAttribute("driver", backend.getDriverName(_canif));
-    root.setAttribute("name", backend.getInterfaceName(_canif));
+    root.setAttribute("driver", backend.getDriverName(_busif));
+    root.setAttribute("name", backend.getInterfaceName(_busif));
 
     root.setAttribute("configure", _doConfigure ? 1 : 0);
 
@@ -146,14 +146,14 @@ void MeasurementInterface::setBitrate(unsigned bitrate)
     _bitrate = bitrate;
 }
 
-CanInterfaceId MeasurementInterface::canInterface() const
+BusInterfaceId MeasurementInterface::busInterface() const
 {
-    return _canif;
+    return _busif;
 }
 
-void MeasurementInterface::setCanInterface(CanInterfaceId canif)
+void MeasurementInterface::setBusInterface(BusInterfaceId busif)
 {
-    _canif = canif;
+    _busif = busif;
 }
 
 void MeasurementInterface::cloneFrom(MeasurementInterface &origin)

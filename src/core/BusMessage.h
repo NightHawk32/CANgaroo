@@ -69,8 +69,8 @@ public:
     [[nodiscard]] bool isErrorFrame() const;
     void setErrorFrame(const bool isErrorFrame);
 
-    [[nodiscard]] CanInterfaceId getInterfaceId() const;
-    void setInterfaceId(CanInterfaceId id);
+    [[nodiscard]] BusInterfaceId getInterfaceId() const;
+    void setInterfaceId(BusInterfaceId id);
 
     [[nodiscard]] uint8_t getLength() const;
     void setLength(const uint8_t dlc);
@@ -123,7 +123,7 @@ private:
     bool _isRX;
     bool _isShow;
     BusType _busType;
-    CanInterfaceId _interface;
+    BusInterfaceId _interface;
     union {
         uint8_t  _u8[k_maxDataBytes];
         uint16_t _u16[k_maxDataBytes / 2];

@@ -43,7 +43,7 @@ BusListener::~BusListener()
     delete _thread;
 }
 
-CanInterfaceId BusListener::getInterfaceId()
+BusInterfaceId BusListener::getInterfaceId()
 {
     return _intf.getId();
 }

@@ -44,8 +44,8 @@ public:
     void setConditions(const QList<LoggingCondition> &conditions, bool useAndLogic);
     void setLogSignals(const QList<CanDbSignal*> &signalList);
     const QList<CanDbSignal*>& getLogSignals() const { return _logSignals; }
-    void setSignalInterfaces(const QMap<CanDbSignal*, CanInterfaceIdList> &interfaces) { _signalInterfaces = interfaces; }
-    QMap<CanDbSignal*, CanInterfaceIdList> getSignalInterfaces() const { return _signalInterfaces; }
+    void setSignalInterfaces(const QMap<CanDbSignal*, BusInterfaceIdList> &interfaces) { _signalInterfaces = interfaces; }
+    QMap<CanDbSignal*, BusInterfaceIdList> getSignalInterfaces() const { return _signalInterfaces; }
     void setLogFilePath(const QString &path);
 
     const QList<LoggingCondition>& getConditions() const { return _conditions; }
@@ -85,7 +85,7 @@ private:
     QList<LoggingCondition> _conditions;
     QList<CanDbSignal*> _logSignals;
     QList<QPair<double, QMap<CanDbSignal*, double>>> _preBuffer;
-    QMap<CanDbSignal*, CanInterfaceIdList> _signalInterfaces;
+    QMap<CanDbSignal*, BusInterfaceIdList> _signalInterfaces;
     QMap<CanDbSignal*, double> _signalValues;
     QMap<CanDbSignal*, qint64> _signalUpdateTimes;
 

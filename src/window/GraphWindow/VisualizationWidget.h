@@ -55,7 +55,7 @@ public:
     virtual void zoomOut() {}
     virtual void resetZoom() {}
     virtual void setWindowDuration(int seconds) { Q_UNUSED(seconds); }
-    virtual void addSignal(CanDbSignal *signal, const CanInterfaceIdList &interfaces = {}) { 
+    virtual void addSignal(CanDbSignal *signal, const BusInterfaceIdList &interfaces = {}) { 
         if (!_signals.contains(signal)) {
             _signals.append(signal);
         }
@@ -70,7 +70,7 @@ public:
     virtual void clearSignals() { _signals.clear(); _signalInterfaces.clear(); _signalBuffers.clear(); }
     virtual QList<CanDbSignal*> getSignals() const { return _signals; }
 
-    virtual CanInterfaceIdList getSignalInterfaces(CanDbSignal *signal) const {
+    virtual BusInterfaceIdList getSignalInterfaces(CanDbSignal *signal) const {
         return _signalInterfaces.value(signal);
     }
 
@@ -96,7 +96,7 @@ protected:
     Backend &_backend;
     QList<CanDbSignal*> _signals;
     QMap<CanDbSignal*, QColor> _signalColors;
-    QMap<CanDbSignal*, CanInterfaceIdList> _signalInterfaces;
+    QMap<CanDbSignal*, BusInterfaceIdList> _signalInterfaces;
     QMap<CanDbSignal*, GraphSignalBuffer> _signalBuffers;
     QMap<CanDbSignal*, int> _syncIndices; // Index of next point in buffer to add to chart
     double _startTime = -1.0;
@@ -105,5 +105,5 @@ protected:
 Q_DECLARE_METATYPE(DecodedSignalData)
 Q_DECLARE_METATYPE(QList<CanDbSignal*>)
 
-typedef QMap<CanDbSignal*,CanInterfaceIdList> SignalInterfaceMap;
+typedef QMap<CanDbSignal*,BusInterfaceIdList> SignalInterfaceMap;
 Q_DECLARE_METATYPE(SignalInterfaceMap)

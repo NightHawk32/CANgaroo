@@ -92,7 +92,7 @@ void ConditionalLoggingManager::processMessage(const BusMessage &msg)
     if (!dbmsg) return;
 
     bool relevantUpdate = false;
-    CanInterfaceId msgIfId = msg.getInterfaceId();
+    BusInterfaceId msgIfId = msg.getInterfaceId();
     qint64 now = QDateTime::currentMSecsSinceEpoch();
 
     for (CanDbSignal *signal : dbmsg->getSignals()) {

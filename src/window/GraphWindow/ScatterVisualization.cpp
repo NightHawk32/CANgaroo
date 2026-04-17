@@ -135,7 +135,7 @@ void ScatterVisualization::addMessage(const BusMessage &msg)
     }
 
     double t = msg.getFloatTimestamp() - _startTime;
-    CanInterfaceId msgIfId = msg.getInterfaceId();
+    BusInterfaceId msgIfId = msg.getInterfaceId();
 
     for (CanDbSignal *signal : _signals) {
         if (signal->isPresentInMessage(msg)) {
@@ -538,7 +538,7 @@ void ScatterVisualization::setWindowDuration(int seconds)
     _autoScroll = true;
 }
 
-void ScatterVisualization::addSignal(CanDbSignal *signal, const CanInterfaceIdList &interfaces)
+void ScatterVisualization::addSignal(CanDbSignal *signal, const BusInterfaceIdList &interfaces)
 {
     if (_seriesMap.contains(signal)) return;
 

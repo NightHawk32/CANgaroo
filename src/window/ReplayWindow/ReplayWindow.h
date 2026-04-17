@@ -107,5 +107,5 @@ private:
     void buildFilterTree();
     void updatePositionLabel();
     bool isMessageEnabled(int index) const;
-    CanInterfaceId getMappedInterface(const QString &channel) const;
+    BusInterfaceId getMappedInterface(const QString &channel) const;
 };

@@ -41,7 +41,7 @@ void TraceFilterModel::setHiddenMessageIds(const QSet<uint32_t> &ids)
     _hiddenMessageIds = ids;
 }
 
-void TraceFilterModel::setHiddenInterfaces(const QSet<CanInterfaceId> &ids)
+void TraceFilterModel::setHiddenInterfaces(const QSet<BusInterfaceId> &ids)
 {
     _hiddenInterfaces = ids;
 }

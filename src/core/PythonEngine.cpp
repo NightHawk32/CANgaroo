@@ -359,7 +359,7 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
     {
         py::list result;
         if (!g_activeEngine) { return result; }
-        for (CanInterfaceId id : g_activeEngine->backend().getInterfaceList())
+        for (BusInterfaceId id : g_activeEngine->backend().getInterfaceList())
         {
             py::dict d;
             d["id"]   = id;

@@ -832,7 +832,7 @@ void ReplayWindow::buildFilterTree()
     }
 
     // Collect available CAN interfaces for the combo boxes
-    CanInterfaceIdList availableInterfaces = _backend->getInterfaceList();
+    BusInterfaceIdList availableInterfaces = _backend->getInterfaceList();
 
     // Build tree items
     for (auto ifaceIt = ifaceIds.constBegin(); ifaceIt != ifaceIds.constEnd(); ++ifaceIt)
@@ -848,7 +848,7 @@ void ReplayWindow::buildFilterTree()
         // Output interface combo box
         auto *combo = new QComboBox(_filterTree);
         combo->addItem(tr("Trace only"), QVariant(static_cast<int>(-1)));
-        for (CanInterfaceId id : availableInterfaces)
+        for (BusInterfaceId id : availableInterfaces)
         {
             QString name = _backend->getInterfaceName(id);
             combo->addItem(name, QVariant(static_cast<int>(id)));
@@ -1075,14 +1075,14 @@ bool ReplayWindow::isMessageEnabled(int index) const
     return (*idIt & flag) != 0;
 }
 
-CanInterfaceId ReplayWindow::getMappedInterface(const QString &channel) const
+BusInterfaceId ReplayWindow::getMappedInterface(const QString &channel) const
 {
     auto it = _channelCombos.constFind(channel);
     if (it == _channelCombos.constEnd())
     {
         return -1;
     }
-    return static_cast<CanInterfaceId>(it.value()->currentData().toInt());
+    return static_cast<BusInterfaceId>(it.value()->currentData().toInt());
 }
 
 void ReplayWindow::onPlayClicked()
@@ -1174,12 +1174,12 @@ void ReplayWindow::onTimerTick()
 
             const QString &channel = _messageInterfaces[_playbackIndex];
             int mappedInt = _channelCombos.contains(channel) ? _channelCombos[channel]->currentData().toInt() : -1;
-            BusInterface *intf = (mappedInt >= 0) ? _backend->getInterfaceById(static_cast<CanInterfaceId>(mappedInt)) : nullptr;
+            BusInterface *intf = (mappedInt >= 0) ? _backend->getInterfaceById(static_cast<BusInterfaceId>(mappedInt)) : nullptr;
 
             bool sentOnInterface = false;
             if (intf && intf->isOpen() && !msg.isErrorFrame())
             {
-                msg.setInterfaceId(static_cast<CanInterfaceId>(mappedInt));
+                msg.setInterfaceId(static_cast<BusInterfaceId>(mappedInt));
                 msg.setRX(false);
                 intf->sendMessage(msg);
                 sentOnInterface = true;
@@ -1189,7 +1189,7 @@ void ReplayWindow::onTimerTick()
             {
                 if (mappedInt >= 0)
                 {
-                    msg.setInterfaceId(static_cast<CanInterfaceId>(mappedInt));
+                    msg.setInterfaceId(static_cast<BusInterfaceId>(mappedInt));
                 }
 
                 bool moreToFollow = false;

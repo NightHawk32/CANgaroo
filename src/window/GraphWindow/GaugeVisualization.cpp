@@ -145,7 +145,7 @@ void GaugeVisualization::addDecodedData(const QMap<CanDbSignal*, DecodedSignalDa
 
 void GaugeVisualization::addMessage(const BusMessage &msg)
 {
-    CanInterfaceId msgIfId = msg.getInterfaceId();
+    BusInterfaceId msgIfId = msg.getInterfaceId();
 
     for (CanDbSignal *signal : _signals) {
         if (signal->isPresentInMessage(msg)) {
@@ -199,7 +199,7 @@ void GaugeVisualization::clearSignals()
     _signals.clear();
 }
 
-void GaugeVisualization::addSignal(CanDbSignal *signal, const CanInterfaceIdList &interfaces)
+void GaugeVisualization::addSignal(CanDbSignal *signal, const BusInterfaceIdList &interfaces)
 {
     if (_gaugeMap.contains(signal)) return;
 

@@ -253,8 +253,8 @@ void SetupDialog::edNetworkNameChanged()
 void SetupDialog::addInterface(const QModelIndex &parent)
 {
     SelectCanInterfacesDialog dlg(0);
-    CanInterfaceIdList list;
-    if (dlg.selectInterfaces(*_backend, list, _currentNetwork->getReferencedCanInterfaces())) {
+    BusInterfaceIdList list;
+    if (dlg.selectInterfaces(*_backend, list, _currentNetwork->getReferencedBusInterfaces())) {
         for (auto intf : list) {
             model->addInterface(parent, intf);
         }

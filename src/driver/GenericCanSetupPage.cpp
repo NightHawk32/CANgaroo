@@ -69,7 +69,7 @@ void GenericCanSetupPage::onShowInterfacePage(SetupDialog &dlg, MeasurementInter
         return;
 
     _mi = mi;
-    BusInterface *intf = backend().getInterfaceById(_mi->canInterface());
+    BusInterface *intf = backend().getInterfaceById(_mi->busInterface());
 
     _enable_ui_updates = false;
 
@@ -103,7 +103,7 @@ void GenericCanSetupPage::onShowInterfacePage(SetupDialog &dlg, MeasurementInter
 void GenericCanSetupPage::updateUI()
 {
     if (_enable_ui_updates && (_mi!=0)) {
-        BusInterface *intf = backend().getInterfaceById(_mi->canInterface());
+        BusInterface *intf = backend().getInterfaceById(_mi->busInterface());
 
         _mi->setDoConfigure(!ui->cbConfigOS->isChecked());
         _mi->setListenOnlyMode(ui->cbListenOnly->isChecked());
@@ -326,7 +326,7 @@ void GenericCanSetupPage::fillSamplePointsForFdBitrate(BusInterface *intf, unsig
 void GenericCanSetupPage::disenableUI(bool enabled)
 {
 
-    BusInterface *intf = backend().getInterfaceById(_mi->canInterface());
+    BusInterface *intf = backend().getInterfaceById(_mi->busInterface());
     uint32_t caps = intf->getCapabilities();
 
     ui->cbBitrate->setEnabled(!ui->cbCustomBitrate->isChecked());

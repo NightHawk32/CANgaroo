@@ -142,7 +142,7 @@ bool TxGeneratorWindow::saveXML(Backend &backend, QDomDocument &xml, QDomElement
         QString ifName;
         for (int i = 0; i < ui->comboBoxInterface->count(); i++)
         {
-            if (static_cast<CanInterfaceId>(ui->comboBoxInterface->itemData(i).toUInt()) == cm.interfaceId)
+            if (static_cast<BusInterfaceId>(ui->comboBoxInterface->itemData(i).toUInt()) == cm.interfaceId)
             {
                 ifName = ui->comboBoxInterface->itemText(i);
                 break;
@@ -232,7 +232,7 @@ void TxGeneratorWindow::resolveInterfaceNames()
         {
             if (ui->comboBoxInterface->itemText(i) == cm.interfaceName)
             {
-                cm.interfaceId = static_cast<CanInterfaceId>(ui->comboBoxInterface->itemData(i).toUInt());
+                cm.interfaceId = static_cast<BusInterfaceId>(ui->comboBoxInterface->itemData(i).toUInt());
                 break;
             }
         }
@@ -247,7 +247,7 @@ void TxGeneratorWindow::refreshInterfaces()
     MeasurementSetup &setup = _backend.getSetup();
     for (auto *network : setup.getNetworks()) {
         for (auto *mi : network->interfaces()) {
-            CanInterfaceId ifid = mi->canInterface();
+            BusInterfaceId ifid = mi->busInterface();
             BusInterface *intf = _backend.getInterfaceById(ifid);
             if (intf) {
                 QString name = network->name() + ": " + intf->getName();
@@ -269,7 +269,7 @@ void TxGeneratorWindow::populateDbcMessages()
 {
     ui->treeAvailable->clear();
 
-    CanInterfaceId currentId = static_cast<CanInterfaceId>(ui->comboBoxInterface->currentData().toUInt());
+    BusInterfaceId currentId = static_cast<BusInterfaceId>(ui->comboBoxInterface->currentData().toUInt());
     MeasurementSetup &setup = _backend.getSetup();
 
     for (auto *network : setup.getNetworks()) {
@@ -278,7 +278,7 @@ void TxGeneratorWindow::populateDbcMessages()
         // Let's find if this network is using our interface.
         bool interfaceMatches = false;
         for (auto *mi : network->interfaces()) {
-            if (mi->canInterface() == currentId) {
+            if (mi->busInterface() == currentId) {
                 interfaceMatches = true;
                 break;
             }
@@ -364,7 +364,7 @@ void TxGeneratorWindow::on_btnAddToList_released()
         cm.interval = 100;
         cm.enabled = false;
         cm.lastSent = 0;
-        cm.interfaceId = static_cast<CanInterfaceId>(ui->comboBoxInterface->currentData().toUInt());
+        cm.interfaceId = static_cast<BusInterfaceId>(ui->comboBoxInterface->currentData().toUInt());
         cm.dbMsg = dbMsg;
 
         _cyclicMessages.append(cm);
@@ -388,7 +388,7 @@ void TxGeneratorWindow::on_btnAddManual_released()
     cm.interval = ui->spinInterval->value();
     cm.enabled = false;
     cm.lastSent = 0;
-    cm.interfaceId = static_cast<CanInterfaceId>(ui->comboBoxInterface->currentData().toUInt());
+    cm.interfaceId = static_cast<BusInterfaceId>(ui->comboBoxInterface->currentData().toUInt());
     cm.dbMsg = nullptr;
 
     _cyclicMessages.append(cm);
@@ -515,7 +515,7 @@ void TxGeneratorWindow::on_comboBoxInterface_currentIndexChanged(int index)
 {
     (void)index;
     populateDbcMessages();
-    emit interfaceChanged(static_cast<CanInterfaceId>(ui->comboBoxInterface->currentData().toUInt()));
+    emit interfaceChanged(static_cast<BusInterfaceId>(ui->comboBoxInterface->currentData().toUInt()));
 }
 
 void TxGeneratorWindow::on_treeAvailable_itemDoubleClicked(QTreeWidgetItem *item, int column)
@@ -591,16 +591,16 @@ void TxGeneratorWindow::treeActiveItemDoubleClicked(QTreeWidgetItem *item, int c
     connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
 
     BusMessage editedMsg = cm.msg;
-    CanInterfaceId editedInterfaceId = cm.interfaceId;
+    BusInterfaceId editedInterfaceId = cm.interfaceId;
     QString editedInterfaceName = cm.interfaceName;
 
     connect(rawTx, &RawTxWindow::messageUpdated, this, [&editedMsg](const BusMessage &msg) {
         editedMsg = msg;
     });
-    connect(rawTx, &RawTxWindow::interfaceSelected, this, [&](CanInterfaceId id) {
+    connect(rawTx, &RawTxWindow::interfaceSelected, this, [&](BusInterfaceId id) {
         editedInterfaceId = id;
         for (int i = 0; i < ui->comboBoxInterface->count(); ++i) {
-            if (static_cast<CanInterfaceId>(ui->comboBoxInterface->itemData(i).toUInt()) == id) {
+            if (static_cast<BusInterfaceId>(ui->comboBoxInterface->itemData(i).toUInt()) == id) {
                 editedInterfaceName = ui->comboBoxInterface->itemText(i);
                 break;
             }

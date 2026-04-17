@@ -94,7 +94,7 @@ bool Backend::startMeasurement()
 
             if (!mi->isEnabled()) { continue; }
 
-            BusInterface *intf = getInterfaceById(mi->canInterface());
+            BusInterface *intf = getInterfaceById(mi->busInterface());
             if (intf) {
                 intf->applyConfig(*mi);
 
@@ -152,7 +152,7 @@ void Backend::loadDefaultSetup(MeasurementSetup &setup)
             network->setName(tr("Network ") + QString("%1").arg(i++));
 
             MeasurementInterface *mi = new MeasurementInterface();
-            mi->setCanInterface(intf);
+            mi->setBusInterface(intf);
             BusInterface *canIntf = getInterfaceById(intf);
             if (canIntf)
                 mi->setBusType(canIntf->busType());
@@ -206,9 +206,9 @@ LinFrame *Backend::findLinFrame(const BusMessage &msg) const
     return _setup.findLinFrame(msg);
 }
 
-CanInterfaceIdList Backend::getInterfaceList()
+BusInterfaceIdList Backend::getInterfaceList()
 {
-    CanInterfaceIdList result;
+    BusInterfaceIdList result;
     for (auto *driver : _drivers) {
         for (auto id : driver->getInterfaceIds()) {
             result.append(id);
@@ -217,7 +217,7 @@ CanInterfaceIdList Backend::getInterfaceList()
     return result;
 }
 
-CanDriver *Backend::getDriverById(CanInterfaceId id)
+CanDriver *Backend::getDriverById(BusInterfaceId id)
 {
     int driverIdx = (id >> 8) & 0xFF;
     if (driverIdx >= _drivers.size())
@@ -228,19 +228,19 @@ CanDriver *Backend::getDriverById(CanInterfaceId id)
     return _drivers.value(driverIdx);
 }
 
-BusInterface *Backend::getInterfaceById(CanInterfaceId id)
+BusInterface *Backend::getInterfaceById(BusInterfaceId id)
 {
     CanDriver *driver = getDriverById(id);
     return driver ? driver->getInterfaceById(id) : nullptr;
 }
 
-QString Backend::getInterfaceName(CanInterfaceId id)
+QString Backend::getInterfaceName(BusInterfaceId id)
 {
     BusInterface *intf = getInterfaceById(id);
     return intf ? intf->getName() : QString::number(id);
 }
 
-QString Backend::getDriverName(CanInterfaceId id)
+QString Backend::getDriverName(BusInterfaceId id)
 {
     CanDriver *driver = getDriverById(id);
     return driver ? driver->getName() : "";

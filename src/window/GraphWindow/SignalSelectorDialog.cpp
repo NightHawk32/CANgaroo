@@ -88,7 +88,7 @@ void SignalSelectorDialog::populateTree()
         netItem->setText(0, network->name());
         
         // Store interfaces for this network
-        CanInterfaceIdList interfaces = network->getReferencedCanInterfaces();
+        BusInterfaceIdList interfaces = network->getReferencedBusInterfaces();
         QVariant interfaceData = QVariant::fromValue(interfaces);
 
         for (pCanDb db : network->_canDbs) {
@@ -135,7 +135,7 @@ QList<SignalSelectorDialog::SelectedSignal> SignalSelectorDialog::getSelectedSig
             if (sigPtr) {
                 SelectedSignal s;
                 s.signal = (CanDbSignal*)sigPtr;
-                s.interfaces = (*it)->data(0, Qt::UserRole + 1).value<CanInterfaceIdList>();
+                s.interfaces = (*it)->data(0, Qt::UserRole + 1).value<BusInterfaceIdList>();
                 selected.append(s);
             }
         }

@@ -451,7 +451,7 @@ unsigned SocketCanInterface::getBitrate()
         {
             for (auto *mi : network->interfaces())
             {
-                if (mi->canInterface() == getId())
+                if (mi->busInterface() == getId())
                 {
                     unsigned fallbackBr = mi->bitrate();
                     if (!_name.startsWith("vcan"))

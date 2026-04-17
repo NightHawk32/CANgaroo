@@ -93,12 +93,12 @@ QString BusInterface::getStateText()
     }
 }
 
-CanInterfaceId BusInterface::getId() const
+BusInterfaceId BusInterface::getId() const
 {
     return _id;
 }
 
-void BusInterface::setId(CanInterfaceId id)
+void BusInterface::setId(BusInterfaceId id)
 {
     _id = id;
 }

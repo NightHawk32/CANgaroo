@@ -39,7 +39,7 @@ public:
     explicit BusListener(QObject *parent, Backend &backend, BusInterface &intf);
     virtual ~BusListener();
 
-    CanInterfaceId getInterfaceId();
+    BusInterfaceId getInterfaceId();
     BusInterface &getInterface();
 
 signals:

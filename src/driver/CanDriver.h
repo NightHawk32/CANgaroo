@@ -28,8 +28,8 @@
 class Backend;
 class BusInterface;
 
-using CanInterfaceId = uint16_t;
-using CanInterfaceIdList = QList<uint16_t>;
+using BusInterfaceId = uint16_t;
+using BusInterfaceIdList = QList<uint16_t>;
 
 class CanDriver {
 public:
@@ -45,10 +45,10 @@ public:
     virtual QString getName() = 0;
     virtual bool update() = 0;
 
-    CanInterfaceIdList getInterfaceIds() const;
+    BusInterfaceIdList getInterfaceIds() const;
     QList<BusInterface*> getInterfaces() const;
-    BusInterface *getInterfaceById(CanInterfaceId id);
-    CanInterfaceId addInterface(BusInterface *intf);
+    BusInterface *getInterfaceById(BusInterfaceId id);
+    BusInterfaceId addInterface(BusInterface *intf);
     void deleteInterface(BusInterface *intf);
     void deleteAllInterfaces();
 

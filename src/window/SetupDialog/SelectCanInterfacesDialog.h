@@ -40,7 +40,7 @@ public:
     explicit SelectCanInterfacesDialog(QWidget *parent = 0);
     ~SelectCanInterfacesDialog();
 
-    bool selectInterfaces(Backend &backend, CanInterfaceIdList &selectedInterfaces, const CanInterfaceIdList &excludeInterfaces);
+    bool selectInterfaces(Backend &backend, BusInterfaceIdList &selectedInterfaces, const BusInterfaceIdList &excludeInterfaces);
 
 private:
     Ui::SelectCanInterfacesDialog *ui;

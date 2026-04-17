@@ -82,11 +82,11 @@ public:
     CanDbMessage *findDbMessage(const BusMessage &msg) const;
     LinFrame     *findLinFrame(const BusMessage &msg) const;
 
-    CanInterfaceIdList getInterfaceList();
-    CanDriver *getDriverById(CanInterfaceId id);
-    BusInterface *getInterfaceById(CanInterfaceId id);
-    QString getInterfaceName(CanInterfaceId id);
-    QString getDriverName(CanInterfaceId id);
+    BusInterfaceIdList getInterfaceList();
+    CanDriver *getDriverById(BusInterfaceId id);
+    BusInterface *getInterfaceById(BusInterfaceId id);
+    QString getInterfaceName(BusInterfaceId id);
+    QString getDriverName(BusInterfaceId id);
 
     CanDriver *getDriverByName(QString driverName);
     BusInterface *getInterfaceByDriverAndName(QString driverName, QString deviceName);

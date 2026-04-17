@@ -107,7 +107,7 @@ void TraceFilterDialog::populateMessages(Backend &backend)
 
 void TraceFilterDialog::populateInterfaces(Backend &backend)
 {
-    for (CanInterfaceId id : backend.getInterfaceList())
+    for (BusInterfaceId id : backend.getInterfaceList())
     {
         QString name = backend.getInterfaceName(id);
         auto *item = new QListWidgetItem(name, m_interfaceList);
@@ -148,15 +148,15 @@ QSet<uint32_t> TraceFilterDialog::hiddenMessageIds() const
     return hidden;
 }
 
-QSet<CanInterfaceId> TraceFilterDialog::hiddenInterfaces() const
+QSet<BusInterfaceId> TraceFilterDialog::hiddenInterfaces() const
 {
-    QSet<CanInterfaceId> hidden;
+    QSet<BusInterfaceId> hidden;
     for (int i = 0; i < m_interfaceList->count(); ++i)
     {
         auto *item = m_interfaceList->item(i);
         if ((item->flags() & Qt::ItemIsUserCheckable) && item->checkState() == Qt::Unchecked)
         {
-            hidden.insert(static_cast<CanInterfaceId>(item->data(Qt::UserRole).toUInt()));
+            hidden.insert(static_cast<BusInterfaceId>(item->data(Qt::UserRole).toUInt()));
         }
     }
     return hidden;
@@ -185,14 +185,14 @@ void TraceFilterDialog::setHiddenMessageIds(const QSet<uint32_t> &ids)
     }
 }
 
-void TraceFilterDialog::setHiddenInterfaces(const QSet<CanInterfaceId> &ids)
+void TraceFilterDialog::setHiddenInterfaces(const QSet<BusInterfaceId> &ids)
 {
     for (int i = 0; i < m_interfaceList->count(); ++i)
     {
         auto *item = m_interfaceList->item(i);
         if (item->flags() & Qt::ItemIsUserCheckable)
         {
-            auto ifId = static_cast<CanInterfaceId>(item->data(Qt::UserRole).toUInt());
+            auto ifId = static_cast<BusInterfaceId>(item->data(Qt::UserRole).toUInt());
             item->setCheckState(ids.contains(ifId) ? Qt::Unchecked : Qt::Checked);
         }
     }
@@ -264,7 +264,7 @@ bool TraceFilterDialog::saveXML(QDomDocument &xml, QDomElement &root) const
     }
 
     QStringList hiddenIfs;
-    for (CanInterfaceId id : hiddenInterfaces())
+    for (BusInterfaceId id : hiddenInterfaces())
     {
         hiddenIfs.append(QString::number(id));
     }
@@ -302,10 +302,10 @@ bool TraceFilterDialog::loadXML(QDomElement &el)
     QString hiddenIfsStr = filterEl.attribute("hiddenInterfaces");
     if (!hiddenIfsStr.isEmpty())
     {
-        QSet<CanInterfaceId> ids;
+        QSet<BusInterfaceId> ids;
         for (const QString &s : hiddenIfsStr.split(","))
         {
-            ids.insert(static_cast<CanInterfaceId>(s.toUInt()));
+            ids.insert(static_cast<BusInterfaceId>(s.toUInt()));
         }
         setHiddenInterfaces(ids);
     }

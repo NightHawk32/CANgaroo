@@ -43,8 +43,8 @@ public:
     void removeInterface(MeasurementInterface *intf);
     QList<MeasurementInterface*> interfaces();
 
-    MeasurementInterface *addCanInterface(CanInterfaceId canif);
-    CanInterfaceIdList getReferencedCanInterfaces();
+    MeasurementInterface *addBusInterface(BusInterfaceId busif);
+    BusInterfaceIdList getReferencedBusInterfaces();
 
     void addCanDb(pCanDb candb);
     bool reloadCanDbs(Backend *backend, QStringList *errors = nullptr);

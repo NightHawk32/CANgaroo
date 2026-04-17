@@ -244,7 +244,7 @@ void SetupDialogTreeModel::deleteLinDb(const QModelIndex &index)
     }
 }
 
-SetupDialogTreeItem *SetupDialogTreeModel::addInterface(const QModelIndex &parent, CanInterfaceId &interface)
+SetupDialogTreeItem *SetupDialogTreeModel::addInterface(const QModelIndex &parent, BusInterfaceId &interface)
 {
     SetupDialogTreeItem *parentItem = static_cast<SetupDialogTreeItem*>(parent.internalPointer());
     if (!parentItem) { return 0; }
@@ -252,7 +252,7 @@ SetupDialogTreeItem *SetupDialogTreeModel::addInterface(const QModelIndex &paren
     SetupDialogTreeItem *item = 0;
     if (parentItem && parentItem->network) {
         beginInsertRows(parent, parentItem->getChildCount(), parentItem->getChildCount());
-        MeasurementInterface *mi = parentItem->network->addCanInterface(interface);
+        MeasurementInterface *mi = parentItem->network->addBusInterface(interface);
         // Propagate the actual bus type (e.g. LIN) from the underlying interface
         BusInterface *canIntf = _backend->getInterfaceById(interface);
         if (canIntf)

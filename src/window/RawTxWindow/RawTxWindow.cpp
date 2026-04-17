@@ -86,7 +86,7 @@ RawTxWindow::RawTxWindow(QWidget *parent, Backend &backend)
     headerLayout->addWidget(_comboInterface);
 
     connect(_comboInterface, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
-        CanInterfaceId id = static_cast<CanInterfaceId>(_comboInterface->currentData().toUInt());
+        BusInterfaceId id = static_cast<BusInterfaceId>(_comboInterface->currentData().toUInt());
         _slavedInterfaceId = id;
         emit interfaceSelected(id);
     });
@@ -328,7 +328,7 @@ void RawTxWindow::updateSignalTable()
     }
 }
 
-void RawTxWindow::setMessage(const BusMessage &msg, const QString &name, CanInterfaceId interfaceId, CanDbMessage *dbMsg)
+void RawTxWindow::setMessage(const BusMessage &msg, const QString &name, BusInterfaceId interfaceId, CanDbMessage *dbMsg)
 {
     _settingMessage = true;
     this->setEnabled(true);
@@ -343,7 +343,7 @@ void RawTxWindow::setMessage(const BusMessage &msg, const QString &name, CanInte
     MeasurementSetup &setup = _backend.getSetup();
     for (auto *network : setup.getNetworks()) {
         for (auto *mi : network->interfaces()) {
-            CanInterfaceId ifid = mi->canInterface();
+            BusInterfaceId ifid = mi->busInterface();
             BusInterface *i = _backend.getInterfaceById(ifid);
             if (i) {
                 QString label = network->name() + ": " + i->getName();
@@ -352,7 +352,7 @@ void RawTxWindow::setMessage(const BusMessage &msg, const QString &name, CanInte
         }
     }
     for (int i = 0; i < _comboInterface->count(); ++i) {
-        if (static_cast<CanInterfaceId>(_comboInterface->itemData(i).toUInt()) == interfaceId) {
+        if (static_cast<BusInterfaceId>(_comboInterface->itemData(i).toUInt()) == interfaceId) {
             _comboInterface->setCurrentIndex(i);
             break;
         }

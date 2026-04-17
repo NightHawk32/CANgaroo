@@ -126,12 +126,12 @@ void BusMessage::setErrorFrame(const bool isErrorFrame) {
     }
 }
 
-CanInterfaceId BusMessage::getInterfaceId() const
+BusInterfaceId BusMessage::getInterfaceId() const
 {
     return _interface;
 }
 
-void BusMessage::setInterfaceId(CanInterfaceId id)
+void BusMessage::setInterfaceId(BusInterfaceId id)
 {
     _interface = id;
 }

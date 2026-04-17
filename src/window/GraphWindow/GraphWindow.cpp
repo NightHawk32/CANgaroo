@@ -53,10 +53,10 @@ SignalDecoderWorker::SignalDecoderWorker(Backend& backend, QObject* parent)
 {
     qRegisterMetaType<QMap<CanDbSignal*, DecodedSignalData>>("QMap<CanDbSignal*,DecodedSignalData>");
     qRegisterMetaType<QList<CanDbSignal*>>("QList<CanDbSignal*>");
-    qRegisterMetaType<QMap<CanDbSignal*,CanInterfaceIdList>>("QMap<CanDbSignal*,CanInterfaceIdList>");
+    qRegisterMetaType<QMap<CanDbSignal*,BusInterfaceIdList>>("QMap<CanDbSignal*,BusInterfaceIdList>");
 }
 
-void SignalDecoderWorker::updateActiveSignals(const QList<CanDbSignal*>& activeSignals, const QMap<CanDbSignal*, CanInterfaceIdList>& signalInterfaces, double globalStartTime)
+void SignalDecoderWorker::updateActiveSignals(const QList<CanDbSignal*>& activeSignals, const QMap<CanDbSignal*, BusInterfaceIdList>& signalInterfaces, double globalStartTime)
 {
     QMutexLocker locker(&_mutex);
     _activeSignals = activeSignals;
@@ -96,7 +96,7 @@ void SignalDecoderWorker::onTraceAppended()
 
     for (int i = _lastProcessedIdx; i < currentSize; ++i) {
         BusMessage msg = _backend.getTrace()->getMessage(i);
-        CanInterfaceId msgIfId = msg.getInterfaceId();
+        BusInterfaceId msgIfId = msg.getInterfaceId();
         double t = msg.getFloatTimestamp() - _globalStartTime;
 
         for (CanDbSignal* signal : _activeSignals) {
@@ -449,7 +449,7 @@ void GraphWindow::onAddToConditionClicked()
                     QTableWidgetItem *nameItem = new QTableWidgetItem(QString("[%1] %2").arg(parentMsgName).arg(sig->name()));
                     nameItem->setData(Qt::UserRole, QVariant::fromValue((void*)sig));
 
-                    CanInterfaceIdList ifaces = (*it)->data(0, Qt::UserRole + 1).value<CanInterfaceIdList>();
+                    BusInterfaceIdList ifaces = (*it)->data(0, Qt::UserRole + 1).value<BusInterfaceIdList>();
                     nameItem->setData(Qt::UserRole + 1, QVariant::fromValue(ifaces));
 
                     ui->conditionTable->setItem(row, 0, nameItem);
@@ -492,13 +492,13 @@ void GraphWindow::buildConditionsFromTable()
 {
     QList<LoggingCondition> conds;
     QList<CanDbSignal*> sigs;
-    QMap<CanDbSignal*, CanInterfaceIdList> interfaces;
+    QMap<CanDbSignal*, BusInterfaceIdList> interfaces;
 
     for (int r = 0; r < ui->conditionTable->rowCount(); ++r) {
         QTableWidgetItem *nameItem = ui->conditionTable->item(r, 0);
         if (!nameItem) continue;
         CanDbSignal *sig = (CanDbSignal*)nameItem->data(Qt::UserRole).value<void*>();
-        CanInterfaceIdList ifaces = nameItem->data(Qt::UserRole + 1).value<CanInterfaceIdList>();
+        BusInterfaceIdList ifaces = nameItem->data(Qt::UserRole + 1).value<BusInterfaceIdList>();
 
         QComboBox *opCombo = qobject_cast<QComboBox*>(ui->conditionTable->cellWidget(r, 1));
         QLineEdit *valEdit = qobject_cast<QLineEdit*>(ui->conditionTable->cellWidget(r, 2));
@@ -540,7 +540,7 @@ void GraphWindow::updateConditionalSignals()
 {
     ConditionalLoggingManager *mgr = _backend.getConditionalLoggingManager();
     QList<CanDbSignal*> signalList = mgr->getLogSignals();
-    QMap<CanDbSignal*, CanInterfaceIdList> interfaceMap = mgr->getSignalInterfaces();
+    QMap<CanDbSignal*, BusInterfaceIdList> interfaceMap = mgr->getSignalInterfaces();
     notifyWorkerActiveSignals();
 }
 
@@ -549,7 +549,7 @@ void GraphWindow::updateConditionalSignals()
 void GraphWindow::notifyWorkerActiveSignals()
 {
     QList<CanDbSignal*> allActive;
-    QMap<CanDbSignal*, CanInterfaceIdList> allInterfaces;
+    QMap<CanDbSignal*, BusInterfaceIdList> allInterfaces;
 
     if (_activeVisualization) {
         allActive = _activeVisualization->getSignals();
@@ -560,12 +560,12 @@ void GraphWindow::notifyWorkerActiveSignals()
 
     ConditionalLoggingManager *mgr = _backend.getConditionalLoggingManager();
     QList<CanDbSignal*> condSignals = mgr->getLogSignals();
-    QMap<CanDbSignal*, CanInterfaceIdList> condInterfaces = mgr->getSignalInterfaces();
+    QMap<CanDbSignal*, BusInterfaceIdList> condInterfaces = mgr->getSignalInterfaces();
 
     for (auto sig : condSignals) {
         if (!allActive.contains(sig)) allActive.append(sig);
         if (condInterfaces.contains(sig)) {
-            CanInterfaceIdList ifaces = condInterfaces[sig];
+            BusInterfaceIdList ifaces = condInterfaces[sig];
             for (auto iface : ifaces) {
                 if (!allInterfaces[sig].contains(iface)) {
                     allInterfaces[sig].append(iface);
@@ -781,7 +781,7 @@ void GraphWindow::populateSignalTree()
         QTreeWidgetItem *netItem = new QTreeWidgetItem(networksItem);
         netItem->setText(0, network->name());
 
-        CanInterfaceIdList interfaces = network->getReferencedCanInterfaces();
+        BusInterfaceIdList interfaces = network->getReferencedBusInterfaces();
         QVariant interfaceData = QVariant::fromValue(interfaces);
 
         for (pCanDb db : network->_canDbs) {
@@ -942,7 +942,7 @@ void GraphWindow::onAddGraphClicked()
             void* sigPtr = (*it)->data(0, Qt::UserRole).value<void*>();
             if (sigPtr) {
                 CanDbSignal *sig = (CanDbSignal*)sigPtr;
-                CanInterfaceIdList interfaces = (*it)->data(0, Qt::UserRole + 1).value<CanInterfaceIdList>();
+                BusInterfaceIdList interfaces = (*it)->data(0, Qt::UserRole + 1).value<BusInterfaceIdList>();
 
                 QColor sigColor = (*it)->icon(0).pixmap(1,1).toImage().pixelColor(0,0);
 

@@ -81,7 +81,7 @@ void TextVisualization::addDecodedData(const QMap<CanDbSignal*, DecodedSignalDat
 
 void TextVisualization::addMessage(const BusMessage &msg)
 {
-    CanInterfaceId msgIfId = msg.getInterfaceId();
+    BusInterfaceId msgIfId = msg.getInterfaceId();
 
     for (CanDbSignal *signal : _signals) {
         if (signal->isPresentInMessage(msg)) {
@@ -190,7 +190,7 @@ void TextVisualization::clearSignals()
     _updateTimer->start();
 }
 
-void TextVisualization::addSignal(CanDbSignal *signal, const CanInterfaceIdList &interfaces)
+void TextVisualization::addSignal(CanDbSignal *signal, const BusInterfaceIdList &interfaces)
 {
     if (_signalDataMap.contains(signal)) return;
 
