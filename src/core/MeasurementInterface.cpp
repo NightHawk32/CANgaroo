@@ -92,6 +92,10 @@ bool MeasurementInterface::loadXML(Backend &backend, QDomElement &el)
     _linListenOnly = el.attribute("lin-listen-only", "0").toInt() != 0;
     _linChecksumClassic = el.attribute("lin-checksum-classic", "0").toInt() != 0;
     _linWakeupOnBus = el.attribute("lin-wakeup-on-bus", "0").toInt() != 0;
+    _linLdfPath = el.attribute("lin-ldf-path", "");
+    _linScheduleTable = el.attribute("lin-schedule-table", "");
+    _linTimebaseMs = static_cast<uint8_t>(el.attribute("lin-timebase-ms", "5").toUInt());
+    _linJitterUs   = static_cast<uint16_t>(el.attribute("lin-jitter-us", "0").toUInt());
 
     return true;
 }
@@ -132,6 +136,10 @@ bool MeasurementInterface::saveXML(Backend &backend, QDomDocument &xml, QDomElem
     root.setAttribute("lin-listen-only", _linListenOnly ? 1 : 0);
     root.setAttribute("lin-checksum-classic", _linChecksumClassic ? 1 : 0);
     root.setAttribute("lin-wakeup-on-bus", _linWakeupOnBus ? 1 : 0);
+    root.setAttribute("lin-ldf-path", _linLdfPath);
+    root.setAttribute("lin-schedule-table", _linScheduleTable);
+    root.setAttribute("lin-timebase-ms", _linTimebaseMs);
+    root.setAttribute("lin-jitter-us",   _linJitterUs);
 
     return true;
 }
@@ -331,3 +339,15 @@ void MeasurementInterface::setLinChecksumClassic(bool val) { _linChecksumClassic
 
 bool MeasurementInterface::linWakeupOnBus() const { return _linWakeupOnBus; }
 void MeasurementInterface::setLinWakeupOnBus(bool val) { _linWakeupOnBus = val; }
+
+QString MeasurementInterface::linLdfPath() const { return _linLdfPath; }
+void    MeasurementInterface::setLinLdfPath(const QString &path) { _linLdfPath = path; }
+
+QString MeasurementInterface::linScheduleTable() const { return _linScheduleTable; }
+void    MeasurementInterface::setLinScheduleTable(const QString &table) { _linScheduleTable = table; }
+
+uint8_t MeasurementInterface::linTimebaseMs() const { return _linTimebaseMs; }
+void    MeasurementInterface::setLinTimebaseMs(uint8_t ms) { _linTimebaseMs = ms; }
+
+uint16_t MeasurementInterface::linJitterUs() const { return _linJitterUs; }
+void     MeasurementInterface::setLinJitterUs(uint16_t us) { _linJitterUs = us; }

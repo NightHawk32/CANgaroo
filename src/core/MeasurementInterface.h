@@ -62,6 +62,18 @@ public:
     bool linWakeupOnBus() const;
     void setLinWakeupOnBus(bool val);
 
+    QString linLdfPath() const;
+    void setLinLdfPath(const QString &path);
+
+    QString linScheduleTable() const;
+    void setLinScheduleTable(const QString &table);
+
+    uint8_t linTimebaseMs() const;
+    void setLinTimebaseMs(uint8_t ms);
+
+    uint16_t linJitterUs() const;
+    void setLinJitterUs(uint16_t us);
+
     void cloneFrom(MeasurementInterface &origin);
     bool loadXML(Backend &backend, QDomElement &el);
     bool saveXML(Backend &backend, QDomDocument &xml, QDomElement &root);
@@ -146,4 +158,8 @@ private:
     bool               _linListenOnly;
     bool               _linChecksumClassic;
     bool               _linWakeupOnBus;
+    QString            _linLdfPath;
+    QString            _linScheduleTable;
+    uint8_t            _linTimebaseMs {5};
+    uint16_t           _linJitterUs   {0};
 };

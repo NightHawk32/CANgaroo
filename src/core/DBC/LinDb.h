@@ -27,6 +27,11 @@ public:
     QString     channelName() const;
     QString     masterNode() const;
     QStringList slaveNodes() const;
+    double      masterTimebaseMs() const;
+    double      masterJitterMs() const;
+
+    // Schedule tables
+    QStringList scheduleTableNames() const;
 
     // Frame access
     LinFrame           *frameById(uint8_t id) const;
@@ -45,6 +50,9 @@ private:
     QString     _masterNode;
     QStringList _slaveNodes;
     LinFrameMap _frames;
+    QStringList _scheduleTableNames;
+    double      _masterTimebaseMs {0.0};
+    double      _masterJitterMs   {0.0};
     QString     _lastError;
 };
 

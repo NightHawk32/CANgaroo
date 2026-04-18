@@ -142,6 +142,8 @@ public:
      */
     void CanSetMode(uint8_t ch, bool listen_only);
 
+    void LinSetScheduleTable(uint8_t ch, uint8_t table_idx);
+
     /**
      * @brief Configures the nominal bit rate of a CAN channel.
      *
@@ -155,15 +157,17 @@ public:
 
     void CanSetConfig(uint8_t ch, uint32_t baud, bool listen, bool echoTx, bool abom);
 
+    void LinSetConfig(uint8_t ch, uint32_t baud, bool master, uint8_t protocol, uint8_t timebase, uint16_t jitter_us);
+
+    uint8_t CanGetState(uint8_t ch) const;
+
+    uint8_t LinGetState(uint8_t ch) const;
+
     /**
      * @brief Returns true if at least one received CAN frame is queued for @p ch.
      * @param ch  Zero-based channel index.
      */
     bool CanAvailable(uint8_t ch) const;
-
-    uint8_t CanGetState(uint8_t ch) const;
-
-    uint8_t LinGetState(uint8_t ch) const;
 
     /**
      * @brief Returns true if at least one received LIN frame is queued for @p ch.

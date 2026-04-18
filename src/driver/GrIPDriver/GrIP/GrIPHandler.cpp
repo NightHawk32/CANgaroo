@@ -123,6 +123,17 @@ typedef struct __attribute__((packed))
     char    BuildDate[128]; // Null-terminated build date string
 } Protocol_SystemInfoReply_t;
 
+typedef struct __attribute__((packed))
+{
+    Protocol_SystemHeader_t Header;
+    uint8_t Channel;
+    uint16_t Baudrate;
+    uint8_t Timebase;
+    uint16_t Jitter;
+    uint8_t Mode;
+    uint8_t Protocol;
+} Protocol_LinConfig_t;
+
 // Payload for incoming DATA_REPORT_LIN_MSG (253).
 typedef struct __attribute__((packed))
 {
@@ -412,11 +423,35 @@ void GrIPHandler::CanSetConfig(uint8_t ch, uint32_t baud, bool listen, bool echo
     cfg.Header.Command = SYSTEM_SEND_CAN_CFG;
     cfg.Header.Length = sizeof(Protocol_CanConfig_t) - sizeof(Protocol_SystemHeader_t);
     cfg.Header.Data = 0;
+
     cfg.Channel = ch;
     cfg.Baudrate = baud;
     cfg.EchoTx = echoTx;
     cfg.ABOM = abom;
     cfg.ListenMode = listen;
+
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&cfg), sizeof(Protocol_CanConfig_t)};
+
+    std::unique_lock<std::mutex> lck(m_MutexSerial);
+
+    GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
+}
+
+void GrIPHandler::LinSetConfig(uint8_t ch, uint32_t baud, bool master, uint8_t protocol, uint8_t timebase, uint16_t jitter_us)
+{
+    Protocol_LinConfig_t cfg = {};
+
+    cfg.Header.Version = GRIP_HEADER_VERSION;
+    cfg.Header.Command = SYSTEM_SEND_LIN_CFG;
+    cfg.Header.Length = sizeof(Protocol_LinConfig_t) - sizeof(Protocol_SystemHeader_t);
+    cfg.Header.Data = 0;
+
+    cfg.Channel = ch;
+    cfg.Baudrate = baud;
+    cfg.Mode = master ? 0 : 1;
+    cfg.Protocol = protocol;
+    cfg.Timebase = timebase;
+    cfg.Jitter = jitter_us;
 
     GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&cfg), sizeof(Protocol_CanConfig_t)};
 

@@ -35,12 +35,15 @@ QString LinDb::directory() const
     return QFileInfo(_path).absolutePath();
 }
 
-QString     LinDb::protocolVersion() const { return _protocolVersion; }
-double      LinDb::speedBps()        const { return _speedBps; }
-QString     LinDb::channelName()     const { return _channelName; }
-QString     LinDb::masterNode()      const { return _masterNode; }
-QStringList LinDb::slaveNodes()      const { return _slaveNodes; }
-QString     LinDb::lastError()       const { return _lastError; }
+QString     LinDb::protocolVersion()     const { return _protocolVersion; }
+double      LinDb::speedBps()            const { return _speedBps; }
+QString     LinDb::channelName()         const { return _channelName; }
+QString     LinDb::masterNode()          const { return _masterNode; }
+QStringList LinDb::slaveNodes()          const { return _slaveNodes; }
+QStringList LinDb::scheduleTableNames()  const { return _scheduleTableNames; }
+double      LinDb::masterTimebaseMs()    const { return _masterTimebaseMs; }
+double      LinDb::masterJitterMs()      const { return _masterJitterMs; }
+QString     LinDb::lastError()           const { return _lastError; }
 
 LinFrame *LinDb::frameById(uint8_t id) const
 {
@@ -79,10 +82,16 @@ bool LinDb::loadFile(const QString &path)
     _speedBps        = ldf.lin_speed_bps;
     _channelName     = QString::fromStdString(ldf.channel_name);
     _masterNode      = QString::fromStdString(ldf.nodes.master);
+    _masterTimebaseMs = ldf.nodes.master_time_base_s * 1000.0;
+    _masterJitterMs   = ldf.nodes.master_jitter_s    * 1000.0;
 
     _slaveNodes.clear();
     for (const auto &slave : ldf.nodes.slaves)
         _slaveNodes.append(QString::fromStdString(slave));
+
+    _scheduleTableNames.clear();
+    for (const auto &tbl : ldf.schedule_tables)
+        _scheduleTableNames.append(QString::fromStdString(tbl.name));
 
     // Build signal-name → encoding-type lookup
     std::unordered_map<std::string, const ldf::SignalEncodingType*> sigEncoding;

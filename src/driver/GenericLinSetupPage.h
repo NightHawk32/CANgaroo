@@ -9,6 +9,7 @@ class GenericLinSetupPage;
 class BusInterface;
 class SetupDialog;
 class MeasurementInterface;
+class MeasurementNetwork;
 class Backend;
 
 class GenericLinSetupPage : public QWidget
@@ -25,15 +26,18 @@ public slots:
 
 private slots:
     void updateUI();
+    void onLdfSelected(int index);
 
 private:
     Ui::GenericLinSetupPage *ui;
-    MeasurementInterface *_mi;
-    bool _enableUiUpdates;
+    MeasurementInterface    *_mi;
+    MeasurementNetwork      *_network;
+    bool                     _enableUiUpdates;
 
     void populateBaudrates();
     void populateProtocolVersions();
-    void populateNodeModes();
+    void populateLdfCombo();
+    void updateLdfInfo(int ldfIndex);
 
     Backend &backend();
 };

@@ -48,6 +48,7 @@ public:
     void addPage(QWidget *widget);
     void displayPage(QWidget *widget);
     bool isReflashNetworks();
+    MeasurementNetwork *currentNetwork() const { return _currentNetwork; }
 
 signals:
     void onShowInterfacePage(SetupDialog &dlg, MeasurementInterface *mi);

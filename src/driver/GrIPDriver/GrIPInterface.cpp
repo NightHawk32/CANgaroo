@@ -337,10 +337,17 @@ void GrIPInterface::open()
     else if (_manufacturer == CANIL_LIN)
     {
         // Disable the channel before reconfiguring to avoid spurious traffic.
-        //m_GrIPHandler->LinEnableChannel(_channel_idx, false);
+        m_GrIPHandler->LinEnableChannel(_channel_idx, false);
         QThread::msleep(2);
 
-        //m_GrIPHandler->CanSetConfig(_channel_idx, baud > 0 ? baud : 500000, _settings.isListenOnlyMode(), true, _settings.doAutoRestart());
+        m_GrIPHandler->LinSetConfig(
+            _channel_idx,
+            _settings.linBaudRate(),
+            _settings.linNodeMode() == LinNodeMode::Master,
+            static_cast<uint8_t>(_settings.linProtocolVersion()),
+            _settings.linTimebaseMs(),
+            _settings.linJitterUs()
+        );
         m_GrIPHandler->LinEnableChannel(_channel_idx, true);
     }
 

@@ -286,6 +286,7 @@ SetupDialogTreeItem *SetupDialogTreeModel::itemOrRoot(const QModelIndex &index) 
 SetupDialogTreeItem *SetupDialogTreeModel::loadMeasurementInterface(SetupDialogTreeItem &parent, MeasurementInterface *intf)
 {
     SetupDialogTreeItem *item = new SetupDialogTreeItem(SetupDialogTreeItem::type_interface, _backend, &parent);
+    item->network = parent.network;
     item->intf = intf;
     parent.appendChild(item);
     return item;
