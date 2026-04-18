@@ -27,6 +27,7 @@
 
 #include "core/Backend.h"
 #include "core/BusMessage.h"
+#include "core/DBC/LinDb.h"
 #include "core/MeasurementInterface.h"
 
 #include "GrIP/GrIPHandler.h"
@@ -340,15 +341,53 @@ void GrIPInterface::open()
         m_GrIPHandler->LinEnableChannel(_channel_idx, false);
         QThread::msleep(2);
 
-        m_GrIPHandler->LinSetConfig(
-            _channel_idx,
-            _settings.linBaudRate(),
-            _settings.linNodeMode() == LinNodeMode::Master,
-            static_cast<uint8_t>(_settings.linProtocolVersion()),
-            _settings.linTimebaseMs(),
-            _settings.linJitterUs()
-        );
-        m_GrIPHandler->LinEnableChannel(_channel_idx, true);
+        // LIN only enabled if valid LDF is loaded
+        if (!_settings.linLdfPath().isEmpty())
+        {
+            m_GrIPHandler->LinSetConfig(
+                _channel_idx,
+                _settings.linBaudRate(),
+                _settings.linNodeMode() == LinNodeMode::Master,
+                static_cast<uint8_t>(_settings.linProtocolVersion()),
+                _settings.linTimebaseMs(),
+                _settings.linJitterUs()
+            );
+
+            m_GrIPHandler->LinSetScheduleTable(_channel_idx, _settings.linScheduleTableIndex());
+
+            LinDb ldb;
+            if (ldb.loadFile(_settings.linLdfPath()))
+            {
+                const bool isMaster  = _settings.linNodeMode() == LinNodeMode::Master;
+                const QString slaveNode = _settings.linSlaveNode();
+                const auto entries = ldb.scheduleTableEntries(_settings.linScheduleTableIndex());
+
+                for (const LinScheduleEntry &entry : entries)
+                {
+                    if (!isMaster && entry.publisherName != slaveNode)
+                        continue;
+
+                    // TX when this node is the publisher of the frame, RX otherwise.
+                    const bool isTX = isMaster ? entry.isMasterPublisher : (entry.publisherName == slaveNode);
+                    const bool isRX = !isTX;
+                    qDebug() << "[LIN]" << (isMaster ? "Master" : "Slave")
+                             << "AddFrame:" << entry.frameName
+                             << "ID:" << Qt::hex << entry.frameId
+                             << "DLC:" << Qt::dec << entry.dlc
+                             << "Publisher:" << entry.publisherName
+                             << "Direction:" << (isRX ? "RX" : "TX")
+                             << "Delay:" << entry.delayMs << "ms";
+
+                    BusMessage msg;
+                    msg.setId(entry.frameId);
+                    msg.setLength(entry.dlc);
+                    msg.setRX(isRX);
+                    m_GrIPHandler->LinAddFrame(_channel_idx, msg, entry.delayMs);
+                }
+            }
+
+            m_GrIPHandler->LinEnableChannel(_channel_idx, true);
+        }
     }
 
     _isOpen = true;

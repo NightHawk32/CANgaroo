@@ -94,6 +94,7 @@ bool MeasurementInterface::loadXML(Backend &backend, QDomElement &el)
     _linWakeupOnBus = el.attribute("lin-wakeup-on-bus", "0").toInt() != 0;
     _linLdfPath = el.attribute("lin-ldf-path", "");
     _linScheduleTable = el.attribute("lin-schedule-table", "");
+    _linSlaveNode = el.attribute("lin-slave-node", "");
     _linTimebaseMs = static_cast<uint8_t>(el.attribute("lin-timebase-ms", "5").toUInt());
     _linJitterUs   = static_cast<uint16_t>(el.attribute("lin-jitter-us", "0").toUInt());
 
@@ -138,6 +139,7 @@ bool MeasurementInterface::saveXML(Backend &backend, QDomDocument &xml, QDomElem
     root.setAttribute("lin-wakeup-on-bus", _linWakeupOnBus ? 1 : 0);
     root.setAttribute("lin-ldf-path", _linLdfPath);
     root.setAttribute("lin-schedule-table", _linScheduleTable);
+    root.setAttribute("lin-slave-node", _linSlaveNode);
     root.setAttribute("lin-timebase-ms", _linTimebaseMs);
     root.setAttribute("lin-jitter-us",   _linJitterUs);
 
@@ -345,6 +347,12 @@ void    MeasurementInterface::setLinLdfPath(const QString &path) { _linLdfPath =
 
 QString MeasurementInterface::linScheduleTable() const { return _linScheduleTable; }
 void    MeasurementInterface::setLinScheduleTable(const QString &table) { _linScheduleTable = table; }
+
+uint8_t MeasurementInterface::linScheduleTableIndex() const { return _linScheduleTableIndex; }
+void    MeasurementInterface::setLinScheduleTableIndex(uint8_t idx) { _linScheduleTableIndex = idx; }
+
+QString MeasurementInterface::linSlaveNode() const { return _linSlaveNode; }
+void    MeasurementInterface::setLinSlaveNode(const QString &node) { _linSlaveNode = node; }
 
 uint8_t MeasurementInterface::linTimebaseMs() const { return _linTimebaseMs; }
 void    MeasurementInterface::setLinTimebaseMs(uint8_t ms) { _linTimebaseMs = ms; }

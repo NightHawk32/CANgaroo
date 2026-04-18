@@ -22,6 +22,7 @@
 #define SYSTEM_ADD_LIN_FRAME    25u // Add LIN frame to schedule
 #define SYSTEM_CAN_MODE         26u // Set CAN channel operating mode
 #define SYSTEM_CAN_TXECHO       27u // Enable/disable TX echo
+#define SYSTEM_LIN_SET_TABLE    28u
 #define SYSTEM_SEND_CAN_FRAME   30u // Transmit a CAN frame immediately
 
 // ---------------------------------------------------------------------------
@@ -133,6 +134,13 @@ typedef struct __attribute__((packed))
     uint8_t Mode;
     uint8_t Protocol;
 } Protocol_LinConfig_t;
+
+typedef struct __attribute__((packed))
+{
+    Protocol_SystemHeader_t Header;
+    uint8_t Channel;
+    uint8_t TableIdx;
+} Protocol_LinTable_t;
 
 // Payload for incoming DATA_REPORT_LIN_MSG (253).
 typedef struct __attribute__((packed))
@@ -392,6 +400,25 @@ void GrIPHandler::CanSetMode(uint8_t ch, bool listen_only)
     GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 }
 
+void GrIPHandler::LinSetScheduleTable(uint8_t ch, uint8_t table_idx)
+{
+    Protocol_LinTable_t tbl_cfg;
+
+    tbl_cfg.Header.Version = GRIP_HEADER_VERSION;
+    tbl_cfg.Header.Command = SYSTEM_LIN_SET_TABLE;
+    tbl_cfg.Header.Length = sizeof(Protocol_LinTable_t) - sizeof(Protocol_SystemHeader_t);
+    tbl_cfg.Header.Data = 0;
+
+    tbl_cfg.Channel = ch;
+    tbl_cfg.TableIdx = table_idx;
+
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&tbl_cfg), sizeof(Protocol_LinTable_t)};
+
+    std::unique_lock<std::mutex> lck(m_MutexSerial);
+
+    GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
+}
+
 void GrIPHandler::CanSetBaudrate(uint8_t ch, uint32_t baud)
 {
     Protocol_ChannelParam_t cfg = {};
@@ -453,7 +480,31 @@ void GrIPHandler::LinSetConfig(uint8_t ch, uint32_t baud, bool master, uint8_t p
     cfg.Timebase = timebase;
     cfg.Jitter = jitter_us;
 
-    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&cfg), sizeof(Protocol_CanConfig_t)};
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&cfg), sizeof(Protocol_LinConfig_t)};
+
+    std::unique_lock<std::mutex> lck(m_MutexSerial);
+
+    GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
+}
+
+void GrIPHandler::LinAddFrame(uint8_t ch, const BusMessage &msg, uint8_t frame_time)
+{
+    Protocol_LinFrame_t frame = {};
+
+    frame.Header.Version = GRIP_HEADER_VERSION;
+    frame.Header.Command = SYSTEM_ADD_LIN_FRAME;
+    frame.Header.Length = sizeof(Protocol_LinFrame_t) - sizeof(Protocol_SystemHeader_t);
+    frame.Header.Data = 0;
+
+    frame.Channel = ch;
+    frame.ID = static_cast<uint8_t>(msg.getId());
+    frame.DLC = msg.getLength();
+    frame.Direction = msg.isRX() ? 0 : 1;
+    frame.Delay = frame_time;
+
+    std::memcpy(frame.Data, msg.getData(), msg.getLength());
+
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&frame), sizeof(Protocol_LinConfig_t)};
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 

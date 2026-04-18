@@ -4,10 +4,21 @@
 #include <QList>
 #include <QMap>
 #include <QSharedPointer>
+#include <QVector>
 
 class LinFrame;
 
 using LinFrameMap = QMap<uint8_t, LinFrame*>;
+
+struct LinScheduleEntry
+{
+    uint8_t frameId          {0};
+    QString frameName;
+    QString publisherName;
+    uint8_t dlc              {0};
+    uint8_t delayMs          {0};
+    bool    isMasterPublisher {false};
+};
 
 class LinDb
 {
@@ -32,6 +43,7 @@ public:
 
     // Schedule tables
     QStringList scheduleTableNames() const;
+    QVector<LinScheduleEntry> scheduleTableEntries(int tableIndex) const;
 
     // Frame access
     LinFrame           *frameById(uint8_t id) const;
@@ -51,6 +63,7 @@ private:
     QStringList _slaveNodes;
     LinFrameMap _frames;
     QStringList _scheduleTableNames;
+    QVector<QVector<LinScheduleEntry>> _scheduleTables;
     double      _masterTimebaseMs {0.0};
     double      _masterJitterMs   {0.0};
     QString     _lastError;

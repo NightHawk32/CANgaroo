@@ -41,6 +41,13 @@ QString     LinDb::channelName()         const { return _channelName; }
 QString     LinDb::masterNode()          const { return _masterNode; }
 QStringList LinDb::slaveNodes()          const { return _slaveNodes; }
 QStringList LinDb::scheduleTableNames()  const { return _scheduleTableNames; }
+
+QVector<LinScheduleEntry> LinDb::scheduleTableEntries(int tableIndex) const
+{
+    if (tableIndex < 0 || tableIndex >= _scheduleTables.size())
+        return {};
+    return _scheduleTables.at(tableIndex);
+}
 double      LinDb::masterTimebaseMs()    const { return _masterTimebaseMs; }
 double      LinDb::masterJitterMs()      const { return _masterJitterMs; }
 QString     LinDb::lastError()           const { return _lastError; }
@@ -90,8 +97,42 @@ bool LinDb::loadFile(const QString &path)
         _slaveNodes.append(QString::fromStdString(slave));
 
     _scheduleTableNames.clear();
+    _scheduleTables.clear();
+
     for (const auto &tbl : ldf.schedule_tables)
+    {
         _scheduleTableNames.append(QString::fromStdString(tbl.name));
+
+        QVector<LinScheduleEntry> entries;
+        for (const auto &e : tbl.entries)
+        {
+            if (!std::holds_alternative<ldf::UnconditionalCmd>(e.command))
+                continue;
+
+            const auto &cmd = std::get<ldf::UnconditionalCmd>(e.command);
+            const QString frameName = QString::fromStdString(cmd.frame_name);
+
+            LinScheduleEntry entry;
+            entry.frameName  = frameName;
+            entry.delayMs    = static_cast<uint8_t>(qBound(0.0, e.delay_s * 1000.0, 255.0));
+
+            // Resolve frame ID and DLC from the frame definitions
+            for (const auto &ldfFrame : ldf.frames)
+            {
+                if (ldfFrame.name == cmd.frame_name)
+                {
+                    entry.frameId       = ldfFrame.id;
+                    entry.dlc           = ldfFrame.length;
+                    entry.publisherName = QString::fromStdString(ldfFrame.publisher);
+                    entry.isMasterPublisher = (ldfFrame.publisher == ldf.nodes.master);
+                    break;
+                }
+            }
+
+            entries.append(entry);
+        }
+        _scheduleTables.append(entries);
+    }
 
     // Build signal-name → encoding-type lookup
     std::unordered_map<std::string, const ldf::SignalEncodingType*> sigEncoding;

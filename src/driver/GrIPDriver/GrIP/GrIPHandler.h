@@ -159,6 +159,8 @@ public:
 
     void LinSetConfig(uint8_t ch, uint32_t baud, bool master, uint8_t protocol, uint8_t timebase, uint16_t jitter_us);
 
+    void LinAddFrame(uint8_t ch, const BusMessage &msg, uint8_t frame_time);
+
     uint8_t CanGetState(uint8_t ch) const;
 
     uint8_t LinGetState(uint8_t ch) const;

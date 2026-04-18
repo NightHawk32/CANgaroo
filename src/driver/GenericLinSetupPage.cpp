@@ -46,7 +46,12 @@ GenericLinSetupPage::GenericLinSetupPage(QWidget *parent)
     connect(ui->cbLdfSelect,      &QComboBox::currentIndexChanged, this, &GenericLinSetupPage::onLdfSelected);
     connect(ui->cbScheduleTable,  &QComboBox::currentIndexChanged, this, [this]() { updateUI(); });
     connect(ui->rbMaster,         &QRadioButton::toggled,          this, [this]() { updateUI(); });
-    connect(ui->rbSlave,          &QRadioButton::toggled,          this, [this]() { updateUI(); });
+    connect(ui->rbSlave,          &QRadioButton::toggled,          this, [this](bool checked)
+    {
+        ui->cbSlaveNode->setEnabled(checked);
+        updateUI();
+    });
+    connect(ui->cbSlaveNode,      &QComboBox::currentIndexChanged, this, [this]() { updateUI(); });
 }
 
 GenericLinSetupPage::~GenericLinSetupPage()
@@ -99,29 +104,18 @@ void GenericLinSetupPage::updateUI()
     if (!_enableUiUpdates || !_mi)
         return;
 
-    _mi->setLinBaudRate(ui->cbBaudrate->currentData().toUInt());
-    _mi->setLinProtocolVersion(static_cast<LinProtocolVersion>(ui->cbProtocolVersion->currentIndex()));
     _mi->setLinChecksumClassic(ui->cbChecksumClassic->isChecked());
     _mi->setLinWakeupOnBus(ui->cbWakeupOnBus->isChecked());
 
     // LDF group
     if (ui->gbLdfConfig->isEnabled())
     {
-        int ldfIdx = ui->cbLdfSelect->currentIndex();
-        if (_network && ldfIdx >= 0 && ldfIdx < _network->_linDbs.size())
-        {
-            const auto &ldb = _network->_linDbs.at(ldfIdx);
-            _mi->setLinLdfPath(ldb->path());
-            _mi->setLinTimebaseMs(static_cast<uint8_t>(qBound(0.0, ldb->masterTimebaseMs(), 255.0)));
-            _mi->setLinJitterUs(static_cast<uint16_t>(qBound(0.0, ldb->masterJitterMs() * 1000.0, 65535.0)));
-        }
-        else
-        {
-            _mi->setLinLdfPath(QString());
-        }
-
+        _mi->setLinBaudRate(ui->cbBaudrate->currentData().toUInt());
+        _mi->setLinProtocolVersion(static_cast<LinProtocolVersion>(ui->cbProtocolVersion->currentIndex()));
         _mi->setLinScheduleTable(ui->cbScheduleTable->currentText());
+        _mi->setLinScheduleTableIndex(static_cast<uint8_t>(ui->cbScheduleTable->currentIndex()));
         _mi->setLinNodeMode(ui->rbMaster->isChecked() ? LinNodeMode::Master : LinNodeMode::Slave);
+        _mi->setLinSlaveNode(ui->rbSlave->isChecked() ? ui->cbSlaveNode->currentText() : QString());
     }
 }
 
@@ -158,8 +152,8 @@ void GenericLinSetupPage::populateLdfCombo()
 
     ui->cbLdfSelect->clear();
     ui->cbScheduleTable->clear();
-    ui->laLdfBaudrate->setText(QStringLiteral("-"));
-    ui->laLdfProtocol->setText(QStringLiteral("-"));
+    ui->cbSlaveNode->clear();
+    ui->cbSlaveNode->setEnabled(false);
     ui->laLdfTimebase->setText(QStringLiteral("-"));
     ui->laLdfJitter->setText(QStringLiteral("-"));
 
@@ -185,38 +179,53 @@ void GenericLinSetupPage::populateLdfCombo()
     // Trigger info update for the selected LDF
     updateLdfInfo(selectIdx);
 
-    // Restore node mode radio buttons
-    ui->rbMaster->setChecked(_mi->linNodeMode() != LinNodeMode::Slave);
-    ui->rbSlave->setChecked(_mi->linNodeMode() == LinNodeMode::Slave);
+    // Restore node mode radio buttons and slave node enabled state
+    const bool isSlave = _mi->linNodeMode() == LinNodeMode::Slave;
+    ui->rbMaster->setChecked(!isSlave);
+    ui->rbSlave->setChecked(isSlave);
+    ui->cbSlaveNode->setEnabled(isSlave);
 }
 
 void GenericLinSetupPage::updateLdfInfo(int ldfIndex)
 {
     if (!_network || ldfIndex < 0 || ldfIndex >= _network->_linDbs.size())
     {
-        ui->laLdfBaudrate->setText(QStringLiteral("-"));
-        ui->laLdfProtocol->setText(QStringLiteral("-"));
         ui->laLdfTimebase->setText(QStringLiteral("-"));
         ui->laLdfJitter->setText(QStringLiteral("-"));
         ui->cbScheduleTable->clear();
+        ui->cbSlaveNode->clear();
+        ui->cbSlaveNode->setEnabled(false);
+        if (_mi)
+        {
+            _mi->setLinLdfPath(QString());
+            _mi->setLinTimebaseMs(0);
+            _mi->setLinJitterUs(0);
+        }
         return;
     }
 
     const auto &ldb = _network->_linDbs.at(ldfIndex);
 
-    ui->laLdfBaudrate->setText(QString::number(ldb->speedBps()) + QStringLiteral(" bps"));
-    ui->laLdfProtocol->setText(QStringLiteral("LIN ") + ldb->protocolVersion());
     ui->laLdfTimebase->setText(QString::number(ldb->masterTimebaseMs()) + QStringLiteral(" ms"));
     ui->laLdfJitter->setText(QString::number(ldb->masterJitterMs()) + QStringLiteral(" ms"));
 
-    // Sync cbProtocolVersion with the LDF-specified protocol
+    // Persist LDF-derived values to MeasurementInterface immediately
+    if (_mi)
     {
-        int pvIdx = ui->cbProtocolVersion->findText(QStringLiteral("LIN ") + ldb->protocolVersion());
-        if (pvIdx >= 0)
-            ui->cbProtocolVersion->setCurrentIndex(pvIdx);
+        _mi->setLinLdfPath(ldb->path());
+        _mi->setLinTimebaseMs(static_cast<uint8_t>(qBound(0.0, ldb->masterTimebaseMs(), 255.0)));
+        _mi->setLinJitterUs(static_cast<uint16_t>(qBound(0.0, ldb->masterJitterMs() * 1000.0, 65535.0)));
     }
 
-    // Sync cbBaudrate with the LDF-specified speed
+    // Sync combos and _mi with LDF values — suppress signals to avoid
+    // updateUI() reading a mix of old and new combo states mid-update.
+    const bool wasUpdating = _enableUiUpdates;
+    _enableUiUpdates = false;
+
+    int pvIdx = ui->cbProtocolVersion->findText(QStringLiteral("LIN ") + ldb->protocolVersion());
+    if (pvIdx >= 0)
+        ui->cbProtocolVersion->setCurrentIndex(pvIdx);
+
     const unsigned ldfBaud = static_cast<unsigned>(ldb->speedBps());
     int brIdx = ui->cbBaudrate->findData(ldfBaud);
     if (brIdx < 0)
@@ -226,17 +235,29 @@ void GenericLinSetupPage::updateLdfInfo(int ldfIndex)
     }
     ui->cbBaudrate->setCurrentIndex(brIdx);
 
-    // Populate schedule table dropdown
-    const bool wasUpdating = _enableUiUpdates;
-    _enableUiUpdates = false;
+    // Write LDF-derived baud/protocol directly so _mi is always consistent.
+    if (_mi)
+    {
+        _mi->setLinBaudRate(ldfBaud);
+        if (pvIdx >= 0)
+            _mi->setLinProtocolVersion(static_cast<LinProtocolVersion>(pvIdx));
+    }
+
+    // Populate schedule table and slave node dropdowns
 
     ui->cbScheduleTable->clear();
     for (const QString &name : ldb->scheduleTableNames())
         ui->cbScheduleTable->addItem(name);
 
-    // Restore saved selection
     int tblIdx = ui->cbScheduleTable->findText(_mi->linScheduleTable());
     ui->cbScheduleTable->setCurrentIndex(tblIdx >= 0 ? tblIdx : 0);
+
+    ui->cbSlaveNode->clear();
+    for (const QString &name : ldb->slaveNodes())
+        ui->cbSlaveNode->addItem(name);
+
+    int slaveIdx = ui->cbSlaveNode->findText(_mi->linSlaveNode());
+    ui->cbSlaveNode->setCurrentIndex(slaveIdx >= 0 ? slaveIdx : 0);
 
     _enableUiUpdates = wasUpdating;
 }

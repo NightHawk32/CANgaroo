@@ -68,6 +68,12 @@ public:
     QString linScheduleTable() const;
     void setLinScheduleTable(const QString &table);
 
+    uint8_t linScheduleTableIndex() const;
+    void setLinScheduleTableIndex(uint8_t idx);
+
+    QString linSlaveNode() const;
+    void setLinSlaveNode(const QString &node);
+
     uint8_t linTimebaseMs() const;
     void setLinTimebaseMs(uint8_t ms);
 
@@ -160,6 +166,8 @@ private:
     bool               _linWakeupOnBus;
     QString            _linLdfPath;
     QString            _linScheduleTable;
+    uint8_t            _linScheduleTableIndex {0};
+    QString            _linSlaveNode;
     uint8_t            _linTimebaseMs {5};
     uint16_t           _linJitterUs   {0};
 };
