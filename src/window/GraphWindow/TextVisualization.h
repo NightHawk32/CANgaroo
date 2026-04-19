@@ -36,12 +36,12 @@ public:
     virtual ~TextVisualization();
 
     virtual void addMessage(const BusMessage &msg) override;
-    virtual void addDecodedData(const QMap<CanDbSignal*, DecodedSignalData>& newPoints) override;
+    virtual void addDecodedData(const QMap<GraphSignal*, DecodedSignalData>& newPoints) override;
     virtual void clear() override;
     virtual void onActivated() override;
-    virtual void addSignal(CanDbSignal *signal, const BusInterfaceIdList &interfaces = {}) override;
+    virtual void addSignal(GraphSignal *signal, const BusInterfaceIdList &interfaces = {}) override;
     virtual void clearSignals() override;
-    virtual void setSignalColor(CanDbSignal *signal, const QColor &color) override;
+    virtual void setSignalColor(GraphSignal *signal, const QColor &color) override;
     virtual void applyTheme(ThemeManager::Theme theme) override;
 
 protected:
@@ -52,7 +52,7 @@ private slots:
 
 private:
     void updateFontScaling();
-    void createSignalCard(CanDbSignal *signal);
+    void createSignalCard(GraphSignal *signal);
 
     struct SignalData {
         double value;
@@ -65,5 +65,5 @@ private:
     QWidget *_container;
     QVBoxLayout *_containerLayout;
     QTimer *_updateTimer;
-    QMap<CanDbSignal*, SignalData> _signalDataMap;
+    QMap<GraphSignal*, SignalData> _signalDataMap;
 };

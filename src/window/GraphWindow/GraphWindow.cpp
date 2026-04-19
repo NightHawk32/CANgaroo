@@ -37,8 +37,12 @@
 
 #include "core/Backend.h"
 #include "core/BusTrace.h"
+#include "core/BusMessage.h"
 #include "core/MeasurementSetup.h"
 #include "core/MeasurementNetwork.h"
+#include "core/DBC/CanDbMessage.h"
+#include "core/DBC/LinFrame.h"
+#include "core/DBC/LinSignal.h"
 
 #include "TimeSeriesVisualization.h"
 #include "window/ConditionalLoggingDialog.h"
@@ -51,17 +55,24 @@
 SignalDecoderWorker::SignalDecoderWorker(Backend& backend, QObject* parent)
     : QObject(parent), _backend(backend), _lastProcessedIdx(0), _globalStartTime(-1.0)
 {
-    qRegisterMetaType<QMap<CanDbSignal*, DecodedSignalData>>("QMap<CanDbSignal*,DecodedSignalData>");
-    qRegisterMetaType<QList<CanDbSignal*>>("QList<CanDbSignal*>");
-    qRegisterMetaType<QMap<CanDbSignal*,BusInterfaceIdList>>("QMap<CanDbSignal*,BusInterfaceIdList>");
+    qRegisterMetaType<QMap<GraphSignal*, DecodedSignalData>>("QMap<GraphSignal*,DecodedSignalData>");
+    qRegisterMetaType<QList<GraphSignal*>>("QList<GraphSignal*>");
+    qRegisterMetaType<QMap<GraphSignal*,BusInterfaceIdList>>("QMap<GraphSignal*,BusInterfaceIdList>");
 }
 
-void SignalDecoderWorker::updateActiveSignals(const QList<CanDbSignal*>& activeSignals, const QMap<CanDbSignal*, BusInterfaceIdList>& signalInterfaces, double globalStartTime)
+void SignalDecoderWorker::updateActiveSignals(const QList<GraphSignal*>& activeSignals, const QMap<GraphSignal*, BusInterfaceIdList>& signalInterfaces, double globalStartTime)
 {
     QMutexLocker locker(&_mutex);
     _activeSignals = activeSignals;
     _signalInterfaces = signalInterfaces;
     _globalStartTime = globalStartTime;
+}
+
+void SignalDecoderWorker::clearActiveSignals()
+{
+    QMutexLocker locker(&_mutex);
+    _activeSignals.clear();
+    _signalInterfaces.clear();
 }
 
 void SignalDecoderWorker::reset()
@@ -92,14 +103,14 @@ void SignalDecoderWorker::onTraceAppended()
         return;
     }
 
-    QMap<CanDbSignal*, DecodedSignalData> newPoints;
+    QMap<GraphSignal*, DecodedSignalData> newPoints;
 
     for (int i = _lastProcessedIdx; i < currentSize; ++i) {
         BusMessage msg = _backend.getTrace()->getMessage(i);
         BusInterfaceId msgIfId = msg.getInterfaceId();
         double t = msg.getFloatTimestamp() - _globalStartTime;
 
-        for (CanDbSignal* signal : _activeSignals) {
+        for (GraphSignal* signal : _activeSignals) {
             if (signal->isPresentInMessage(msg)) {
                 if (_signalInterfaces.contains(signal) && !_signalInterfaces[signal].contains(msgIfId)) {
                     continue;
@@ -148,11 +159,11 @@ GraphWindow::GraphWindow(QWidget *parent, Backend &backend) :
     connect(_decoderThread, &QThread::finished, _decoderWorker, &QObject::deleteLater);
     connect(this, &GraphWindow::activeSignalsUpdated, _decoderWorker, &SignalDecoderWorker::updateActiveSignals);
     connect(this, &GraphWindow::requestDecoderReset, _decoderWorker, &SignalDecoderWorker::reset);
-    connect(_backend.getTrace(), SIGNAL(afterAppend()), _decoderWorker, SLOT(onTraceAppended()));
+    connect(_backend.getTrace(), &BusTrace::afterAppend, _decoderWorker, &SignalDecoderWorker::onTraceAppended);
     connect(_decoderWorker, &SignalDecoderWorker::dataDecoded, this, &GraphWindow::onDecodedDataReady);
 
-    connect(&_backend, SIGNAL(beginMeasurement()), this, SLOT(onResumeMeasurement()));
-    connect(&_backend, SIGNAL(endMeasurement()), this, SLOT(onPauseMeasurement()));
+    connect(&_backend, &Backend::beginMeasurement, this, &GraphWindow::onResumeMeasurement);
+    connect(&_backend, &Backend::endMeasurement, this, &GraphWindow::onPauseMeasurement);
 
     _decoderThread->start();
 
@@ -180,6 +191,7 @@ GraphWindow::GraphWindow(QWidget *parent, Backend &backend) :
 
     colLayout->addWidget(_columnLabel);
     colLayout->addWidget(_columnSelector);
+    connect(_columnSelector, &QComboBox::currentIndexChanged, this, &GraphWindow::onColumnSelectorChanged);
 
     // Insert into toolbar layout (on the far right using a spring/stretch)
     // We use a spring to push the following widgets to the absolute right
@@ -206,6 +218,7 @@ GraphWindow::~GraphWindow()
         _decoderThread->quit();
         _decoderThread->wait();
     }
+    qDeleteAll(_ownedSignals);
     delete ui;
 }
 
@@ -390,7 +403,7 @@ void GraphWindow::onLiveValuesUpdated(const QMap<CanDbSignal*, double>& values, 
     for (int r = 0; r < ui->conditionTable->rowCount(); ++r) {
         QTableWidgetItem *nameItem = ui->conditionTable->item(r, 0);
         if (!nameItem) continue;
-        CanDbSignal *sig = (CanDbSignal*)nameItem->data(Qt::UserRole).value<void*>();
+        auto *sig = static_cast<CanDbSignal*>(nameItem->data(Qt::UserRole).value<void*>());
 
         QLabel *liveLabel = qobject_cast<QLabel*>(ui->conditionTable->cellWidget(r, 3));
         if (liveLabel && sig) {
@@ -429,13 +442,21 @@ void GraphWindow::onAddToConditionClicked()
         if ((*it)->checkState(0) == Qt::Checked) {
             void* sigPtr = (*it)->data(0, Qt::UserRole).value<void*>();
             if (sigPtr) {
-                CanDbSignal *sig = (CanDbSignal*)sigPtr;
+                GraphSignal *gs = static_cast<GraphSignal*>(sigPtr);
+
+                // Condition table only supports CAN signals
+                if (gs->isLin()) {
+                    ++it;
+                    continue;
+                }
+
+                CanDbSignal *sig = gs->asCanSignal();
 
                 // Ensure it's not already in the table
                 bool alreadyAdded = false;
                 for (int r = 0; r < ui->conditionTable->rowCount(); ++r) {
                     QTableWidgetItem *existingItem = ui->conditionTable->item(r, 0);
-                    if (existingItem && existingItem->data(Qt::UserRole).value<void*>() == sigPtr) {
+                    if (existingItem && existingItem->data(Qt::UserRole).value<void*>() == static_cast<void*>(sig)) {
                         alreadyAdded = true;
                         break;
                     }
@@ -445,9 +466,10 @@ void GraphWindow::onAddToConditionClicked()
                     int row = ui->conditionTable->rowCount();
                     ui->conditionTable->insertRow(row);
 
-                    QString parentMsgName = sig->getParentMessage() ? sig->getParentMessage()->getName() : "MSG";
-                    QTableWidgetItem *nameItem = new QTableWidgetItem(QString("[%1] %2").arg(parentMsgName).arg(sig->name()));
-                    nameItem->setData(Qt::UserRole, QVariant::fromValue((void*)sig));
+                    QString parentMsgName = gs->parentName();
+                    if (parentMsgName.isEmpty()) parentMsgName = "MSG";
+                    QTableWidgetItem *nameItem = new QTableWidgetItem(QString("[%1] %2").arg(parentMsgName).arg(gs->name()));
+                    nameItem->setData(Qt::UserRole, QVariant::fromValue(static_cast<void*>(sig)));
 
                     BusInterfaceIdList ifaces = (*it)->data(0, Qt::UserRole + 1).value<BusInterfaceIdList>();
                     nameItem->setData(Qt::UserRole + 1, QVariant::fromValue(ifaces));
@@ -477,7 +499,7 @@ void GraphWindow::onAddToConditionClicked()
                     });
                     ui->conditionTable->setCellWidget(row, 4, removeBtn);
 
-                    connect(opCombo, SIGNAL(currentIndexChanged(int)), this, SLOT(buildConditionsFromTable()));
+                    connect(opCombo, &QComboBox::currentIndexChanged, this, [this]() { buildConditionsFromTable(); });
                     connect(valEdit, &QLineEdit::textChanged, this, [this]() { buildConditionsFromTable(); });
                 }
             }
@@ -497,7 +519,7 @@ void GraphWindow::buildConditionsFromTable()
     for (int r = 0; r < ui->conditionTable->rowCount(); ++r) {
         QTableWidgetItem *nameItem = ui->conditionTable->item(r, 0);
         if (!nameItem) continue;
-        CanDbSignal *sig = (CanDbSignal*)nameItem->data(Qt::UserRole).value<void*>();
+        auto *sig = static_cast<CanDbSignal*>(nameItem->data(Qt::UserRole).value<void*>());
         BusInterfaceIdList ifaces = nameItem->data(Qt::UserRole + 1).value<BusInterfaceIdList>();
 
         QComboBox *opCombo = qobject_cast<QComboBox*>(ui->conditionTable->cellWidget(r, 1));
@@ -538,18 +560,13 @@ void GraphWindow::buildConditionsFromTable()
 
 void GraphWindow::updateConditionalSignals()
 {
-    ConditionalLoggingManager *mgr = _backend.getConditionalLoggingManager();
-    QList<CanDbSignal*> signalList = mgr->getLogSignals();
-    QMap<CanDbSignal*, BusInterfaceIdList> interfaceMap = mgr->getSignalInterfaces();
     notifyWorkerActiveSignals();
 }
 
-
-
 void GraphWindow::notifyWorkerActiveSignals()
 {
-    QList<CanDbSignal*> allActive;
-    QMap<CanDbSignal*, BusInterfaceIdList> allInterfaces;
+    QList<GraphSignal*> allActive;
+    QMap<GraphSignal*, BusInterfaceIdList> allInterfaces;
 
     if (_activeVisualization) {
         allActive = _activeVisualization->getSignals();
@@ -558,29 +575,10 @@ void GraphWindow::notifyWorkerActiveSignals()
         }
     }
 
-    ConditionalLoggingManager *mgr = _backend.getConditionalLoggingManager();
-    QList<CanDbSignal*> condSignals = mgr->getLogSignals();
-    QMap<CanDbSignal*, BusInterfaceIdList> condInterfaces = mgr->getSignalInterfaces();
-
-    for (auto sig : condSignals) {
-        if (!allActive.contains(sig)) allActive.append(sig);
-        if (condInterfaces.contains(sig)) {
-            BusInterfaceIdList ifaces = condInterfaces[sig];
-            for (auto iface : ifaces) {
-                if (!allInterfaces[sig].contains(iface)) {
-                    allInterfaces[sig].append(iface);
-                }
-            }
-        }
-    }
-
-    // Do not force an arbitrary start time; let the worker discover the start natively
-    // if this is a fresh layout.
-
     emit activeSignalsUpdated(allActive, allInterfaces, _sessionStartTime);
 }
 
-void GraphWindow::onDecodedDataReady(const QMap<CanDbSignal*, DecodedSignalData>& newPoints, double globalStartTime)
+void GraphWindow::onDecodedDataReady(const QMap<GraphSignal*, DecodedSignalData>& newPoints, double globalStartTime)
 {
     if (_sessionStartTime < 0 && globalStartTime >= 0) {
         _sessionStartTime = globalStartTime;
@@ -645,7 +643,7 @@ void GraphWindow::onMouseMove(QMouseEvent *event)
     auto seriesMap = tsv->seriesMap();
     auto tracers = tsv->tracers();
     for (auto it = seriesMap.begin(); it != seriesMap.end(); ++it) {
-        CanDbSignal *sig = it.key();
+        GraphSignal *sig = it.key();
         QXYSeries *series = it.value();
         QGraphicsEllipseItem *tracer = tracers.value(sig);
 
@@ -666,7 +664,7 @@ void GraphWindow::onMouseMove(QMouseEvent *event)
         if (qAbs(points[nearestIdx].x() - t) < xRange * 0.1) {
             html += QString("<span style='color:%1; font-size: 14px;'>●</span> (Bus %2) %3: <b>%4</b> %5<br/>")
                     .arg(series->color().name()).arg(tsv->getBusId(sig)).arg(sig->name())
-                    .arg(points[nearestIdx].y(), 0, 'f', 2).arg(sig->getUnit());
+                    .arg(points[nearestIdx].y(), 0, 'f', 2).arg(sig->unit());
             foundAny = true;
             if (tracer) { tracer->setPos(chart->mapToPosition(points[nearestIdx])); tracer->show(); }
         } else { if (tracer) tracer->hide(); }
@@ -699,7 +697,7 @@ void GraphWindow::onLegendMarkerClicked()
     if (!series) return;
 
     // Find the signal associated with this series
-    CanDbSignal *targetSignal = nullptr;
+    GraphSignal *targetSignal = nullptr;
     for (auto v : _visualizations) {
         if (!v) continue;
         if (auto tsv = qobject_cast<TimeSeriesVisualization*>(v)) {
@@ -771,66 +769,127 @@ void GraphWindow::onPauseMeasurement()
 
 void GraphWindow::populateSignalTree()
 {
+    ui->signalTree->blockSignals(true);
     ui->signalTree->clear();
+
+    // Synchronously drain the worker's signal list before freeing GraphSignal objects.
+    // BlockingQueuedConnection ensures onTraceAppended cannot run with stale pointers.
+    QMetaObject::invokeMethod(_decoderWorker, "clearActiveSignals", Qt::BlockingQueuedConnection);
+
+    for (auto v : _visualizations) v->clearSignals();
+    qDeleteAll(_ownedSignals);
+    _ownedSignals.clear();
+
     MeasurementSetup &setup = _backend.getSetup();
-    QTreeWidgetItem *networksItem = new QTreeWidgetItem(ui->signalTree);
-    networksItem->setText(0, tr("CAN Networks"));
-    networksItem->setExpanded(true);
+
+    auto addSignalItem = [&](QTreeWidgetItem *parentItem, GraphSignal *gs,
+                              const QString &sigName, const QString &msgName,
+                              const QString &details, const QString &comment,
+                              const QVariant &interfaceData)
+    {
+        QTreeWidgetItem *sigItem = new QTreeWidgetItem(parentItem);
+        sigItem->setText(0, QString("[%1] %2").arg(msgName).arg(sigName));
+
+        sigItem->setText(1, details);
+        sigItem->setText(2, comment);
+        sigItem->setCheckState(0, Qt::Unchecked);
+        sigItem->setData(0, Qt::UserRole, QVariant::fromValue(static_cast<void*>(gs)));
+        sigItem->setData(0, Qt::UserRole + 1, interfaceData);
+
+        QPixmap pix(12, 12);
+        uint h = qHash(sigName);
+        QColor c = QColor::fromHsl(h % 360, 180, 150);
+        pix.fill(c);
+        sigItem->setIcon(0, QIcon(pix));
+    };
 
     for (MeasurementNetwork *network : setup.getNetworks()) {
-        QTreeWidgetItem *netItem = new QTreeWidgetItem(networksItem);
-        netItem->setText(0, network->name());
-
         BusInterfaceIdList interfaces = network->getReferencedBusInterfaces();
         QVariant interfaceData = QVariant::fromValue(interfaces);
 
-        for (pCanDb db : network->_canDbs) {
-            for (CanDbMessage *msg : db->getMessageList().values()) {
-                QTreeWidgetItem *msgItem = new QTreeWidgetItem(netItem);
+        // ── CAN signals ──────────────────────────────────────────────
+        if (!network->_canDbs.isEmpty()) {
+            QTreeWidgetItem *canRoot = new QTreeWidgetItem(ui->signalTree);
+            canRoot->setText(0, tr("CAN — %1").arg(network->name()));
+            canRoot->setExpanded(true);
 
-                QString msgName = msg->getName().trimmed();
-                if (msgName.isEmpty()) msgName = "MSG_" + QString::number(msg->getRaw_id(), 16).toUpper();
-                msgItem->setText(0, QString("%1 (0x%2)").arg(msgName).arg(msg->getRaw_id(), 0, 16));
+            for (pCanDb db : network->_canDbs) {
+                for (CanDbMessage *msg : db->getMessageList().values()) {
+                    QString msgName = msg->getName().trimmed();
+                    if (msgName.isEmpty())
+                        msgName = "MSG_" + QString::number(msg->getRaw_id(), 16).toUpper();
 
-                msgItem->setText(3, "MSG");
-                msgItem->setCheckState(0, Qt::Unchecked);
+                    QTreeWidgetItem *msgItem = new QTreeWidgetItem(canRoot);
+                    msgItem->setText(0, QString("%1 (0x%2)").arg(msgName).arg(msg->getRaw_id(), 0, 16));
+                    msgItem->setText(3, "MSG");
+                    msgItem->setCheckState(0, Qt::Unchecked);
 
-                QPixmap msgPix(12, 12);
-                msgPix.fill(QColor("#607d8b"));
-                msgItem->setIcon(0, QIcon(msgPix));
+                    QPixmap msgPix(12, 12);
+                    msgPix.fill(QColor("#607d8b"));
+                    msgItem->setIcon(0, QIcon(msgPix));
 
-                for (CanDbSignal *sig : msg->getSignals()) {
-                    QTreeWidgetItem *sigItem = new QTreeWidgetItem(msgItem);
+                    for (CanDbSignal *sig : msg->getSignals()) {
+                        auto *gs = new GraphSignal(sig);
+                        _ownedSignals.append(gs);
 
-                    QString sigName = sig->name().trimmed();
-                    if (sigName.isEmpty()) sigName = "Signal";
-                    sigItem->setText(0, QString("[%1] %2").arg(msgName).arg(sigName));
+                        QString sigName = sig->name().trimmed();
+                        if (sigName.isEmpty()) sigName = "Signal";
 
-                    QString tooltip = QString("Start Bit: %1\nLength: %2\nFactor: %3\nOffset: %4")
-                        .arg(sig->startBit()).arg(sig->length()).arg(sig->getFactor()).arg(sig->getOffset());
-                    sigItem->setToolTip(0, tooltip);
+                        QString details = QString("%1 | %2..%3 %4")
+                            .arg(sig->isUnsigned() ? tr("Unsigned") : tr("Signed"))
+                            .arg(sig->getMinimumValue())
+                            .arg(sig->getMaximumValue())
+                            .arg(sig->getUnit());
 
-                    QString details = QString("%1 | %2..%3 %4")
-                        .arg(sig->isUnsigned() ? tr("Unsigned") : tr("Signed"))
-                        .arg(sig->getMinimumValue())
-                        .arg(sig->getMaximumValue())
-                        .arg(sig->getUnit());
+                        addSignalItem(msgItem, gs, sigName, msgName,
+                                      details, sig->comment(), interfaceData);
+                    }
+                }
+            }
+        }
 
-                    sigItem->setText(1, details);
-                    sigItem->setText(2, sig->comment());
-                    sigItem->setCheckState(0, Qt::Unchecked);
-                    sigItem->setData(0, Qt::UserRole, QVariant::fromValue((void*)sig));
-                    sigItem->setData(0, Qt::UserRole + 1, interfaceData);
+        // ── LIN signals ──────────────────────────────────────────────
+        if (!network->_linDbs.isEmpty()) {
+            QTreeWidgetItem *linRoot = new QTreeWidgetItem(ui->signalTree);
+            linRoot->setText(0, tr("LIN — %1").arg(network->name()));
+            linRoot->setExpanded(true);
 
-                    QPixmap pix(12, 12);
-                    uint h = qHash(sig->name());
-                    QColor c = QColor::fromHsl(h % 360, 180, 150);
-                    pix.fill(c);
-                    sigItem->setIcon(0, QIcon(pix));
+            for (pLinDb db : network->_linDbs) {
+                for (LinFrame *frame : db->frames().values()) {
+                    QString frameName = frame->name().trimmed();
+                    if (frameName.isEmpty())
+                        frameName = "FRM_" + QString::number(frame->id(), 16).toUpper();
+
+                    QTreeWidgetItem *frmItem = new QTreeWidgetItem(linRoot);
+                    frmItem->setText(0, QString("%1 (0x%2)").arg(frameName).arg(frame->id(), 0, 16));
+                    frmItem->setText(3, "FRM");
+                    frmItem->setCheckState(0, Qt::Unchecked);
+
+                    QPixmap frmPix(12, 12);
+                    frmPix.fill(QColor("#8d6e63"));
+                    frmItem->setIcon(0, QIcon(frmPix));
+
+                    for (LinSignal *sig : frame->signalList()) {
+                        auto *gs = new GraphSignal(sig, frame);
+                        _ownedSignals.append(gs);
+
+                        QString sigName = sig->name().trimmed();
+                        if (sigName.isEmpty()) sigName = "Signal";
+
+                        QString details = QString("LIN | %1..%2 %3")
+                            .arg(sig->minValue())
+                            .arg(sig->maxValue())
+                            .arg(sig->unit());
+
+                        addSignalItem(frmItem, gs, sigName, frameName,
+                                      details, QString(), interfaceData);
+                    }
                 }
             }
         }
     }
+
+    ui->signalTree->blockSignals(false);
 }
 
 void GraphWindow::onSearchTextChanged(const QString &text)
@@ -941,7 +1000,7 @@ void GraphWindow::onAddGraphClicked()
         if ((*it)->checkState(0) == Qt::Checked) {
             void* sigPtr = (*it)->data(0, Qt::UserRole).value<void*>();
             if (sigPtr) {
-                CanDbSignal *sig = (CanDbSignal*)sigPtr;
+                GraphSignal *sig = static_cast<GraphSignal*>(sigPtr);
                 BusInterfaceIdList interfaces = (*it)->data(0, Qt::UserRole + 1).value<BusInterfaceIdList>();
 
                 QColor sigColor = (*it)->icon(0).pixmap(1,1).toImage().pixelColor(0,0);

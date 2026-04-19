@@ -106,10 +106,10 @@ TimeSeriesVisualization::~TimeSeriesVisualization()
 {
 }
 
-void TimeSeriesVisualization::addDecodedData(const QMap<CanDbSignal*, DecodedSignalData>& newPoints)
+void TimeSeriesVisualization::addDecodedData(const QMap<GraphSignal*, DecodedSignalData>& newPoints)
 {
     for (auto it = newPoints.begin(); it != newPoints.end(); ++it) {
-        CanDbSignal* signal = it.key();
+        GraphSignal* signal = it.key();
         if (!_signals.contains(signal)) continue;
 
         const DecodedSignalData &data = it.value();
@@ -138,7 +138,7 @@ void TimeSeriesVisualization::addMessage(const BusMessage &msg)
     double t = timestamp - _startTime;
     BusInterfaceId msgIfId = msg.getInterfaceId();
 
-    for (CanDbSignal *signal : _signals) {
+    for (GraphSignal *signal : _signals) {
         if (signal->isPresentInMessage(msg)) {
             // Network Context Filtering:
             if (_signalInterfaces.contains(signal)) {
@@ -174,7 +174,7 @@ void TimeSeriesVisualization::onActivated()
 
     // Synchronize series with buffers (Batch Update)
     for (auto it = _seriesMap.begin(); it != _seriesMap.end(); ++it) {
-        CanDbSignal *sig = it.key();
+        GraphSignal *sig = it.key();
         QLineSeries *series = it.value();
         const auto &buffer = _signalBuffers[sig];
         int syncIdx = _syncIndices.value(sig, 0);
@@ -217,7 +217,7 @@ void TimeSeriesVisualization::onActivated()
     updateYAxisRange();
 }
 
-void TimeSeriesVisualization::setSignalColor(CanDbSignal *signal, const QColor &color)
+void TimeSeriesVisualization::setSignalColor(GraphSignal *signal, const QColor &color)
 {
     VisualizationWidget::setSignalColor(signal, color);
     if (_seriesMap.contains(signal)) {
@@ -399,7 +399,7 @@ void TimeSeriesVisualization::setWindowDuration(int seconds)
     _autoScroll = true;
 }
 
-void TimeSeriesVisualization::addSignal(CanDbSignal *signal, const BusInterfaceIdList &interfaces)
+void TimeSeriesVisualization::addSignal(GraphSignal *signal, const BusInterfaceIdList &interfaces)
 {
     if (_seriesMap.contains(signal)) return;
 

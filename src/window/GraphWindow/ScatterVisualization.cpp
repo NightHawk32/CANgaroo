@@ -108,10 +108,10 @@ ScatterVisualization::~ScatterVisualization()
 {
 }
 
-void ScatterVisualization::addDecodedData(const QMap<CanDbSignal*, DecodedSignalData>& newPoints)
+void ScatterVisualization::addDecodedData(const QMap<GraphSignal*, DecodedSignalData>& newPoints)
 {
     for (auto it = newPoints.begin(); it != newPoints.end(); ++it) {
-        CanDbSignal* signal = it.key();
+        GraphSignal* signal = it.key();
         if (!_signals.contains(signal)) continue;
 
         const DecodedSignalData &data = it.value();
@@ -137,7 +137,7 @@ void ScatterVisualization::addMessage(const BusMessage &msg)
     double t = msg.getFloatTimestamp() - _startTime;
     BusInterfaceId msgIfId = msg.getInterfaceId();
 
-    for (CanDbSignal *signal : _signals) {
+    for (GraphSignal *signal : _signals) {
         if (signal->isPresentInMessage(msg)) {
             // Network Context Filtering
             if (_signalInterfaces.contains(signal)) {
@@ -147,7 +147,7 @@ void ScatterVisualization::addMessage(const BusMessage &msg)
             }
 
             double value = signal->extractPhysicalFromMessage(msg);
-            
+
             // Populate isolated buffer (Raw data only)
             _signalBuffers[signal].timestamps.append(t);
             _signalBuffers[signal].values.append(value);
@@ -174,7 +174,7 @@ void ScatterVisualization::onActivated()
 
     // Synchronize series with buffers (Batch Update)
     for (auto it = _seriesMap.begin(); it != _seriesMap.end(); ++it) {
-        CanDbSignal *sig = it.key();
+        GraphSignal *sig = it.key();
         QScatterSeries *series = it.value();
         const auto &buffer = _signalBuffers[sig];
         int syncIdx = _syncIndices.value(sig, 0);
@@ -218,7 +218,7 @@ void ScatterVisualization::onActivated()
     updateAxes(); // Trigger Y auto-fit
 }
 
-void ScatterVisualization::setSignalColor(CanDbSignal *signal, const QColor &color)
+void ScatterVisualization::setSignalColor(GraphSignal *signal, const QColor &color)
 {
     VisualizationWidget::setSignalColor(signal, color);
     if (_seriesMap.contains(signal)) {
@@ -395,7 +395,7 @@ void ScatterVisualization::handleHover(QPointF pos)
 
     bool hasAnyTracer = false;
 
-    for (CanDbSignal *signal : _signals) {
+    for (GraphSignal *signal : _signals) {
         if (!_tracers.contains(signal)) continue;
 
         if (!_signalBuffers.contains(signal) || _signalBuffers[signal].timestamps.isEmpty()) {
@@ -430,7 +430,7 @@ void ScatterVisualization::handleHover(QPointF pos)
                                 .arg(getBusId(signal))
                                 .arg(signal->name())
                                 .arg(actualY, 0, 'f', 2)
-                                .arg(signal->getUnit());
+                                .arg(signal->unit());
             }
             hasAnyTracer = true;
         } else {
@@ -477,13 +477,13 @@ void ScatterVisualization::exportToCsv()
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) return;
     
     QTextStream out(&file);
-    out << "Signal,Time[s],Value\\n";
-    
-    for (CanDbSignal *signal : _signals) {
+    out << "Signal,Time[s],Value\n";
+
+    for (GraphSignal *signal : _signals) {
         if (!_signalBuffers.contains(signal)) continue;
         const auto &buffer = _signalBuffers[signal];
         for (int i = 0; i < buffer.timestamps.size(); ++i) {
-            out << signal->name() << "," << buffer.timestamps[i] << "," << buffer.values[i] << "\\n";
+            out << signal->name() << "," << buffer.timestamps[i] << "," << buffer.values[i] << "\n";
         }
     }
 }
@@ -538,7 +538,7 @@ void ScatterVisualization::setWindowDuration(int seconds)
     _autoScroll = true;
 }
 
-void ScatterVisualization::addSignal(CanDbSignal *signal, const BusInterfaceIdList &interfaces)
+void ScatterVisualization::addSignal(GraphSignal *signal, const BusInterfaceIdList &interfaces)
 {
     if (_seriesMap.contains(signal)) return;
 

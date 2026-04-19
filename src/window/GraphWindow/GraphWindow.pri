@@ -1,5 +1,6 @@
-SOURCES += \     
+SOURCES += \
     $$PWD/GraphWindow.cpp \
+    $$PWD/GraphSignal.cpp \
     $$PWD/TimeSeriesVisualization.cpp \
     $$PWD/ScatterVisualization.cpp \
     $$PWD/TextVisualization.cpp \
@@ -8,6 +9,7 @@ SOURCES += \
 
 HEADERS  += \
     $$PWD/GraphWindow.h \
+    $$PWD/GraphSignal.h \
     $$PWD/VisualizationWidget.h \
     $$PWD/TimeSeriesVisualization.h \
     $$PWD/SignalSelectorDialog.h \

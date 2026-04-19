@@ -54,10 +54,10 @@ TextVisualization::~TextVisualization()
 {
 }
 
-void TextVisualization::addDecodedData(const QMap<CanDbSignal*, DecodedSignalData>& newPoints)
+void TextVisualization::addDecodedData(const QMap<GraphSignal*, DecodedSignalData>& newPoints)
 {
     for (auto it = newPoints.begin(); it != newPoints.end(); ++it) {
-        CanDbSignal* signal = it.key();
+        GraphSignal* signal = it.key();
         if (!_signals.contains(signal)) continue;
 
         const DecodedSignalData &data = it.value();
@@ -83,7 +83,7 @@ void TextVisualization::addMessage(const BusMessage &msg)
 {
     BusInterfaceId msgIfId = msg.getInterfaceId();
 
-    for (CanDbSignal *signal : _signals) {
+    for (GraphSignal *signal : _signals) {
         if (signal->isPresentInMessage(msg)) {
             // Network Context Filtering
             if (_signalInterfaces.contains(signal)) {
@@ -190,7 +190,7 @@ void TextVisualization::clearSignals()
     _updateTimer->start();
 }
 
-void TextVisualization::addSignal(CanDbSignal *signal, const BusInterfaceIdList &interfaces)
+void TextVisualization::addSignal(GraphSignal *signal, const BusInterfaceIdList &interfaces)
 {
     if (_signalDataMap.contains(signal)) return;
 
@@ -198,7 +198,7 @@ void TextVisualization::addSignal(CanDbSignal *signal, const BusInterfaceIdList 
     createSignalCard(signal);
 }
 
-void TextVisualization::createSignalCard(CanDbSignal *signal)
+void TextVisualization::createSignalCard(GraphSignal *signal)
 {
     QFrame *card = new QFrame(_container);
     card->setFrameStyle(QFrame::NoFrame);
@@ -255,7 +255,7 @@ void TextVisualization::createSignalCard(CanDbSignal *signal)
     layout->addWidget(valueLabel);
     
     // 4. Unit (Fixed Width)
-    QLabel *unitLabel = new QLabel(signal->getUnit(), card);
+    QLabel *unitLabel = new QLabel(signal->unit(), card);
     unitLabel->setFixedWidth(60);
     unitLabel->setStyleSheet("font-family: Arial; font-size: 12px; font-weight: bold;"); 
     unitLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
@@ -271,7 +271,7 @@ void TextVisualization::createSignalCard(CanDbSignal *signal)
     _signalDataMap[signal] = data;
 }
 
-void TextVisualization::setSignalColor(CanDbSignal *signal, const QColor &color)
+void TextVisualization::setSignalColor(GraphSignal *signal, const QColor &color)
 {
     VisualizationWidget::setSignalColor(signal, color);
     if (_signalDataMap.contains(signal)) {
@@ -294,7 +294,7 @@ void TextVisualization::resizeEvent(QResizeEvent *event)
     
     // Update elided names on resize
     for (auto it = _signalDataMap.begin(); it != _signalDataMap.end(); ++it) {
-        CanDbSignal *sig = it.key();
+        GraphSignal *sig = it.key();
         QFrame *card = qobject_cast<QFrame*>(it.value().card);
         if (card) {
             auto labels = card->findChildren<QLabel*>();
