@@ -54,19 +54,21 @@ CandleApiInterface::CandleApiInterface(CandleApiDriver *driver, candle_handle ha
         << CandleApiTiming(170000000,  500000, 875, 2,  147, 21)
         << CandleApiTiming(170000000, 1000000, 875, 1,  147, 21);
 
-    // Timings for 160MHz processors (CANable 2.5)
-    // total_TQ = 1(sync) + 1(prop) + phase_seg1 + phase_seg2
-    // bitrate  = 160MHz / (brp * total_TQ),  SP = (2 + phase_seg1) / total_TQ
+    // Timings for 160MHz processors (CANable 2.5 / Elmue firmware)
+    // The Elmue firmware expects the shorter 16 TQ nominal timing layout used
+    // by the working branch. Using the older long-segment table can bring the
+    // controller up with a nominal rate that looks close on paper but causes
+    // transmit errors and bus-off on real hardware.
     _timings
-        << CandleApiTiming(160000000,   10000, 875, 80, 173, 25)
-        << CandleApiTiming(160000000,   20000, 875, 40, 173, 25)
-        << CandleApiTiming(160000000,   50000, 875, 16, 173, 25)
-        << CandleApiTiming(160000000,   83333, 875,  8, 208, 30)
-        << CandleApiTiming(160000000,  100000, 875, 10, 138, 20)
-        << CandleApiTiming(160000000,  125000, 875,  8, 138, 20)
-        << CandleApiTiming(160000000,  250000, 875,  4, 138, 20)
-        << CandleApiTiming(160000000,  500000, 875,  2, 138, 20)
-        << CandleApiTiming(160000000, 1000000, 875,  1, 138, 20);
+        << CandleApiTiming(160000000,   10000, 875, 1000, 12, 2)
+        << CandleApiTiming(160000000,   20000, 875,  500, 12, 2)
+        << CandleApiTiming(160000000,   50000, 875,  200, 12, 2)
+        << CandleApiTiming(160000000,   83333, 875,  120, 12, 2)
+        << CandleApiTiming(160000000,  100000, 875,  100, 12, 2)
+        << CandleApiTiming(160000000,  125000, 875,   80, 12, 2)
+        << CandleApiTiming(160000000,  250000, 875,   40, 12, 2)
+        << CandleApiTiming(160000000,  500000, 875,   20, 12, 2)
+        << CandleApiTiming(160000000, 1000000, 875,   10, 12, 2);
 
     // Timings for 48MHz processors (CANable 0.X)
     _timings
@@ -173,29 +175,47 @@ CandleApiInterface::CandleApiInterface(CandleApiDriver *driver, candle_handle ha
 
     // 170 MHz (CANable 2.0 — STM32G0B1)
     _fdTimings
-        << CandleApiTiming(170000000,  1000000, 800, 2, 66, 17)  //  170M/(2*85)  = 1M,  SP=80.0%
-        << CandleApiTiming(170000000,  2000000, 800, 1, 66, 17)  //  170M/(1*85)  = 2M,  SP=80.0%
-        << CandleApiTiming(170000000,  5000000, 794, 1, 25,  7)  //  170M/(1*34)  = 5M,  SP=79.4%
-        << CandleApiTiming(170000000, 10000000, 706, 1, 10,  5); //  170M/(1*17)  = 10M, SP=70.6%
+        // 75% set
+        << CandleApiTiming(170000000,  1000000, 750, 17, 13,  5)  // 170M/(17*10) = 1M
+        << CandleApiTiming(170000000,  2000000, 750,  5, 15,  6)  // 170M/(5*17)  = 2M
+        << CandleApiTiming(170000000,  5000000, 750,  2, 11,  4)  // 170M/(2*17)  = 5M
+        << CandleApiTiming(170000000, 10000000, 750,  1, 11,  4)  // 170M/(1*17)  = 10M
+        // 80% set (where exact integer timing is available)
+        << CandleApiTiming(170000000,  1000000, 800,  2, 66, 17)  // 170M/(2*85)  = 1M
+        << CandleApiTiming(170000000,  2000000, 800,  1, 66, 17); // 170M/(1*85)  = 2M
 
     // 160 MHz (CANable 2.5 — STM32G4)
     _fdTimings
-        << CandleApiTiming(160000000,  1000000, 800, 2, 62, 16)  //  160M/(2*80)  = 1M,  SP=80.0%
-        << CandleApiTiming(160000000,  2000000, 800, 1, 62, 16)  //  160M/(1*80)  = 2M,  SP=80.0%
-        << CandleApiTiming(160000000,  4000000, 800, 1, 30,  8)  //  160M/(1*40)  = 4M,  SP=80.0%
-        << CandleApiTiming(160000000,  8000000, 800, 1, 14,  4); //  160M/(1*20)  = 8M,  SP=80.0%
+        // 75% set
+        << CandleApiTiming(160000000,  1000000, 750, 40, 13,  5)  // known-good Elmue timing
+        << CandleApiTiming(160000000,  2000000, 750,  4, 13,  5)  // 160M/(4*20)  = 2M
+        << CandleApiTiming(160000000,  4000000, 750,  2, 13,  5)  // 160M/(2*20)  = 4M
+        << CandleApiTiming(160000000,  5000000, 750,  2, 10,  4)  // 160M/(2*16)  = 5M
+        << CandleApiTiming(160000000,  8000000, 750,  1, 13,  5)  // 160M/(1*20)  = 8M
+        << CandleApiTiming(160000000, 10000000, 750,  1, 10,  4)  // 160M/(1*16)  = 10M
+        // 80% set (your known-good timings)
+        << CandleApiTiming(160000000,  1000000, 800,  2, 62, 16)  // 160M/(2*80)  = 1M, SP=80.0%
+        << CandleApiTiming(160000000,  2000000, 800,  1, 62, 16)  // 160M/(1*80)  = 2M, SP=80.0%
+        << CandleApiTiming(160000000,  4000000, 800,  1, 30,  8)  // 160M/(1*40)  = 4M, SP=80.0%
+        << CandleApiTiming(160000000,  8000000, 800,  1, 14,  4); // 160M/(1*20)  = 8M, SP=80.0%
 
     // 48 MHz (CANable 0.x — STM32F072)
     _fdTimings
-        << CandleApiTiming(48000000,   1000000, 792, 1, 36, 10)  //  48M/(1*48)   = 1M,  SP=79.2%
-        << CandleApiTiming(48000000,   2000000, 792, 1, 17,  5)  //  48M/(1*24)   = 2M,  SP=79.2%
-        << CandleApiTiming(48000000,   3000000, 813, 1, 11,  3)  //  48M/(1*16)   = 3M,  SP=81.3%
-        << CandleApiTiming(48000000,   4000000, 833, 1,  8,  2); //  48M/(1*12)   = 4M,  SP=83.3%
+        // 75% set
+        << CandleApiTiming(48000000,   1000000, 750,  3, 10,  4)  // 48M/(3*16)   = 1M
+        << CandleApiTiming(48000000,   2000000, 750,  2,  4,  2)  // 48M/(2*8)    = 2M
+        << CandleApiTiming(48000000,   3000000, 750,  1, 10,  4)  // 48M/(1*16)   = 3M
+        << CandleApiTiming(48000000,   4000000, 750,  1,  7,  2)  // 48M/(1*12)   = 4M
+        // 80% set (best known values)
+        << CandleApiTiming(48000000,   1000000, 792,  1, 36, 10)  // 48M/(1*48)   = 1M, SP=79.2%
+        << CandleApiTiming(48000000,   2000000, 792,  1, 17,  5)  // 48M/(1*24)   = 2M, SP=79.2%
+        << CandleApiTiming(48000000,   3000000, 813,  1, 11,  3)  // 48M/(1*16)   = 3M, SP=81.3%
+        << CandleApiTiming(48000000,   4000000, 833,  1,  8,  2); // 48M/(1*12)   = 4M, SP=83.3%
 
     // 16 MHz
     _fdTimings
-        << CandleApiTiming(16000000,   1000000, 750, 1, 10,  4)  //  16M/(1*16)   = 1M,  SP=75.0%
-        << CandleApiTiming(16000000,   2000000, 750, 1,  4,  2); //  16M/(1*8)    = 2M,  SP=75.0%
+        << CandleApiTiming(16000000,   1000000, 750,  1, 10,  4)  // 16M/(1*16)   = 1M, SP=75.0%
+        << CandleApiTiming(16000000,   2000000, 750,  1,  4,  2); // 16M/(1*8)    = 2M, SP=75.0%
 }
 
 CandleApiInterface::~CandleApiInterface()
@@ -350,6 +370,21 @@ bool CandleApiInterface::setDataBitTiming(uint32_t bitrate, uint32_t samplePoint
         }
     }
 
+    const uint32_t preferredSp = 800u;
+    const uint32_t fallbackSp = 750u;
+
+    if (samplePoint != preferredSp) {
+        log_info(tr("CandleApi::setDataBitTiming(): no exact match, trying SP=%1 for bitrate=%2")
+            .arg(preferredSp).arg(bitrate));
+        return setDataBitTiming(bitrate, preferredSp);
+    }
+
+    if (samplePoint != fallbackSp) {
+        log_info(tr("CandleApi::setDataBitTiming(): no exact match, trying SP=%1 for bitrate=%2")
+            .arg(fallbackSp).arg(bitrate));
+        return setDataBitTiming(bitrate, fallbackSp);
+    }
+
     log_info(tr("CandleApi::setDataBitTiming(): no matching FD timing entry found for bitrate=%1, samplePoint=%2, fclk_can=%3")
         .arg(bitrate).arg(samplePoint).arg(caps.fclk_can));
     return false;
@@ -357,7 +392,19 @@ bool CandleApiInterface::setDataBitTiming(uint32_t bitrate, uint32_t samplePoint
 
 void CandleApiInterface::open()
 {
+    if (_isOpen) {
+        close();
+    }
+
     _isFdEnabled = false;
+
+    const auto failOpen = [this](const QString &message) {
+        log_info(message);
+        candle_channel_stop(_handle, 0);
+        candle_dev_close(_handle);
+        _isFdEnabled = false;
+        _isOpen = false;
+    };
 
     if (!candle_dev_open(_handle)) {
         log_info(tr("CandleApi::open() failed!"));
@@ -365,9 +412,11 @@ void CandleApiInterface::open()
         return;
     }
 
+    // Force the adapter into reset mode before applying fresh timing settings.
+    candle_channel_stop(_handle, 0);
+
     if (!setBitTiming(_settings.bitrate(), _settings.samplePoint())) {
-        log_info(tr("CandleApi::Bitrate failed!"));
-        _isOpen = false;
+        failOpen(tr("CandleApi::open(): nominal bitrate setup failed, closing device"));
         return;
     }
 
@@ -409,7 +458,32 @@ void CandleApiInterface::open()
         _deviceTicksStart = t_dev;
     }
 
-    candle_channel_start(_handle, 0, flags);
+    if (!candle_channel_start(_handle, 0, flags)) {
+        const auto err = static_cast<int>(candle_dev_last_error(_handle));
+        const QString startFailure = tr("CandleApi::open(): channel start failed (flags=0x%1, err=%2), closing device")
+            .arg(QString::number(flags, 16))
+            .arg(err);
+
+        // Some firmware accepts nominal timing but rejects FD start flags.
+        // Retry once in classic CAN mode so RX/TX can still run.
+        if (flags & CANDLE_MODE_FD) {
+            const uint32_t retryFlags = flags & ~CANDLE_MODE_FD;
+            _isFdEnabled = false;
+
+            if (!candle_channel_start(_handle, 0, retryFlags)) {
+                failOpen(tr("CandleApi::open(): classic fallback start failed (flags=0x%1, err=%2)")
+                    .arg(QString::number(retryFlags, 16))
+                    .arg(static_cast<int>(candle_dev_last_error(_handle))));
+                return;
+            }
+
+            log_info(tr("CandleApi::open(): FD start failed, running in classic CAN mode"));
+        } else {
+            failOpen(startFailure);
+            return;
+        }
+    }
+
     _isOpen = true;
 }
 
@@ -422,6 +496,7 @@ void CandleApiInterface::close()
 {
     candle_channel_stop(_handle, 0);
     candle_dev_close(_handle);
+    _isFdEnabled = false;
     _isOpen = false;
 }
 

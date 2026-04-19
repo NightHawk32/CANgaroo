@@ -1,3 +1,86 @@
+#ifdef CANGAROO_DISABLE_PYTHON
+
+#include "PythonEngine.h"
+
+#include "core/Backend.h"
+
+struct PythonEngine::PyInterpreterHolder {};
+
+PythonEngine::PythonEngine(Backend &backend, QObject *parent)
+    : QObject(parent),
+      _backend(backend)
+{
+}
+
+PythonEngine::~PythonEngine()
+{
+    stopScript();
+}
+
+void PythonEngine::runScript(const QString &)
+{
+    emit scriptError(QStringLiteral("Python support is disabled in this build."));
+    emit scriptFinished();
+}
+
+void PythonEngine::stopScript()
+{
+    _stopRequested = true;
+    _running = false;
+    _msgQueueCondition.wakeAll();
+}
+
+bool PythonEngine::isRunning() const
+{
+    return false;
+}
+
+void PythonEngine::enqueueMessage(const CanMessage &msg)
+{
+    QMutexLocker lck(&_msgQueueMutex);
+    _msgQueue.enqueue(msg);
+    _msgQueueCondition.wakeAll();
+}
+
+void PythonEngine::setRxFilter(uint32_t id, uint32_t mask, std::optional<bool> extended)
+{
+    QMutexLocker lck(&_rxFilterMutex);
+    _rxFilter.id = id;
+    _rxFilter.mask = mask;
+    _rxFilter.extended = extended;
+    _rxFilter.active = true;
+}
+
+void PythonEngine::clearRxFilter()
+{
+    QMutexLocker lck(&_rxFilterMutex);
+    _rxFilter.active = false;
+}
+
+bool PythonEngine::passesRxFilter(const CanMessage &) const
+{
+    return true;
+}
+
+int PythonEngine::startPeriodicTask(CanMessage, unsigned, uint16_t)
+{
+    return -1;
+}
+
+void PythonEngine::stopPeriodicTask(int)
+{
+}
+
+void PythonEngine::stopAllPeriodicTasks()
+{
+}
+
+void PythonEngine::workerFunc(std::string)
+{
+}
+
+#else
+
 // pybind11/Python must come before Qt headers to avoid "slots" macro clash
 #undef slots
 #include <pybind11/embed.h>
@@ -972,3 +1055,5 @@ sys.settrace(_cangaroo_trace)
     _running = false;
     emit scriptFinished();
 }
+
+    #endif
