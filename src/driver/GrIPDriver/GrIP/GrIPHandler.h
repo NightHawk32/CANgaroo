@@ -205,6 +205,8 @@ public:
      */
     bool CanTransmit(uint8_t ch, const BusMessage &msg);
 
+    bool LinSendData(uint8_t ch, const BusMessage &msg);
+
     /**
      * @brief Low-level send — transmits a pre-built GrIP PDU.
      * @param ProtType    GrIP protocol type.

@@ -352,8 +352,10 @@ void GrIPInterface::open()
                 _settings.linTimebaseMs(),
                 _settings.linJitterUs()
             );
+            QThread::msleep(2);
 
             m_GrIPHandler->LinSetScheduleTable(_channel_idx, _settings.linScheduleTableIndex());
+            QThread::msleep(1);
 
             LinDb ldb;
             if (ldb.loadFile(_settings.linLdfPath()))
@@ -368,8 +370,7 @@ void GrIPInterface::open()
                         continue;
 
                     // TX when this node is the publisher of the frame, RX otherwise.
-                    const bool isTX = isMaster ? entry.isMasterPublisher : (entry.publisherName == slaveNode);
-                    const bool isRX = !isTX;
+                    const bool isRX = isMaster ? entry.isMasterPublisher : (entry.publisherName == slaveNode);
                     qDebug() << "[LIN]" << (isMaster ? "Master" : "Slave")
                              << "AddFrame:" << entry.frameName
                              << "ID:" << Qt::hex << entry.frameId
@@ -385,6 +386,7 @@ void GrIPInterface::open()
                     m_GrIPHandler->LinAddFrame(_channel_idx, msg, entry.delayMs);
                 }
             }
+            QThread::msleep(1);
 
             m_GrIPHandler->LinEnableChannel(_channel_idx, true);
         }
@@ -477,7 +479,10 @@ void GrIPInterface::sendMessage(const BusMessage &msg)
     }
     else if (_manufacturer == CANIL_LIN)
     {
-
+        if (!m_GrIPHandler->LinSendData(_channel_idx, msg))
+        {
+            _status.tx_errors++;
+        }
     }
 }
 

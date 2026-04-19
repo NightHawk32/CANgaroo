@@ -23,7 +23,9 @@
 #define SYSTEM_CAN_MODE         26u // Set CAN channel operating mode
 #define SYSTEM_CAN_TXECHO       27u // Enable/disable TX echo
 #define SYSTEM_LIN_SET_TABLE    28u
+
 #define SYSTEM_SEND_CAN_FRAME   30u // Transmit a CAN frame immediately
+#define SYSTEM_SET_LIN_DATA     31u
 
 // ---------------------------------------------------------------------------
 // CAN frame flag bits — stored in Protocol_CanFrame_t::Flags
@@ -150,12 +152,21 @@ typedef struct __attribute__((packed))
     uint8_t  Channel;   // Zero-based LIN channel index
     uint8_t  ID;        // LIN frame identifier (0-63)
     uint8_t  DLC;       // Number of data bytes
-    uint8_t  Direction; // 0 = subscriber, 1 = publisher
+    uint8_t  Direction; // SYSTEM_ADD_LIN_FRAME:  0 = subscriber, 1 = publisher
+                        // DATA_REPORT_LIN_MSG:  0 = publisher echo (TX), 1 = subscriber response (RX)
     uint8_t  Delay;     // Inter-frame delay in ms
     uint8_t  Flags;     // Bit 0: alive, bit 1: valid checksum
     uint32_t Time;      // Device timestamp (µs, wraps around)
     uint8_t  Data[8];   // LIN payload bytes
 } Protocol_LinFrame_t;
+
+typedef struct __attribute__((packed))
+{
+    Protocol_SystemHeader_t Header;
+    uint8_t Channel;
+    uint8_t ID;
+    uint8_t Data[8];
+} Protocol_LinData_t;
 
 
 // ---------------------------------------------------------------------------
@@ -667,6 +678,27 @@ bool GrIPHandler::CanTransmit(uint8_t ch, const BusMessage &msg)
     return GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p) == 0;
 }
 
+bool GrIPHandler::LinSendData(uint8_t ch, const BusMessage &msg)
+{
+    Protocol_LinData_t frame = {};
+
+    frame.Header.Version = GRIP_HEADER_VERSION;
+    frame.Header.Command = SYSTEM_SET_LIN_DATA;
+    frame.Header.Length = sizeof(Protocol_LinData_t) - sizeof(Protocol_SystemHeader_t);
+    frame.Header.Data = 0;
+
+    frame.Channel = ch;
+    frame.ID = msg.getId();
+
+    std::memcpy(frame.Data, msg.getData(), msg.getLength());
+
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&frame), sizeof(Protocol_LinConfig_t)};
+
+    std::unique_lock<std::mutex> lck(m_MutexSerial);
+
+    return GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p) == 0;
+}
+
 // ---------------------------------------------------------------------------
 // Packet dispatcher (called from WorkerThread, holds m_MutexData)
 // ---------------------------------------------------------------------------
@@ -794,7 +826,7 @@ void GrIPHandler::ProcessData(GrIP_Packet_t &packet, qint64 rxTimestamp_ms)
             msg.setBusType(BusType::LIN);
             msg.setErrorFrame(frame.Flags != 0x03);
             msg.setLength(frame.DLC);
-            msg.setRX(frame.Direction == 1); // 1 = subscriber (we received it), 0 = publisher (we sent it)
+            msg.setRX(frame.Direction == 1); // 1 = subscriber response (RX), 0 = publisher echo (TX)
             msg.setTimestamp_ms(rxTimestamp_ms);
 
             for (int i = 0; i < frame.DLC; i++)

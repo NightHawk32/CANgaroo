@@ -22,6 +22,9 @@
 #include "core/DBC/CanDb.h"
 #include "core/DBC/CanDbMessage.h"
 #include "core/DBC/CanDbSignal.h"
+#include "core/DBC/LinDb.h"
+#include "core/DBC/LinFrame.h"
+#include "core/DBC/LinSignal.h"
 #include "core/MeasurementSetup.h"
 #include "core/MeasurementNetwork.h"
 #include "core/Log.h"
@@ -182,13 +185,31 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
                 msg.setByte(i, static_cast<uint8_t>(s[i]));
             }
         })
+        .def_property("bustype",
+            [](const BusMessage &msg) -> std::string
+            {
+                return msg.busType() == BusType::LIN ? "LIN" : "CAN";
+            },
+            [](BusMessage &msg, const std::string &s)
+            {
+                msg.setBusType(s == "LIN" ? BusType::LIN : BusType::CAN);
+            })
         .def("__repr__", [](const BusMessage &msg) -> std::string
         {
-            return "<cangaroo.Message id=0x"
+            const std::string type = msg.busType() == BusType::LIN ? "LinMessage" : "Message";
+            return "<cangaroo." + type + " id=0x"
                    + msg.getIdString().toStdString()
                    + " dlc=" + std::to_string(msg.getLength())
                    + " data=" + msg.getDataHexString().toStdString() + ">";
         });
+
+    m.def("make_lin_message", [](uint8_t id, uint8_t dlc) -> BusMessage
+    {
+        BusMessage msg(id);
+        msg.setBusType(BusType::LIN);
+        msg.setLength(dlc);
+        return msg;
+    }, py::arg("id"), py::arg("dlc") = 0);
 
     // --- send / receive ---
 
@@ -615,6 +636,140 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
 
         return msg;
     }, py::arg("name_or_id"), py::arg("values"));
+
+    // --- LIN database access ---
+
+    // Build a signal-info dict for a LinSignal
+    auto buildLinSignalDict = [](LinSignal *sig) -> py::dict
+    {
+        py::dict s;
+        s["name"]       = sig->name().toStdString();
+        s["bit_offset"] = sig->bitOffset();
+        s["bit_length"] = sig->bitLength();
+        s["factor"]     = sig->factor();
+        s["offset"]     = sig->offset();
+        s["min"]        = sig->minValue();
+        s["max"]        = sig->maxValue();
+        s["unit"]       = sig->unit().toStdString();
+        s["publisher"]  = sig->publisher().toStdString();
+        s["init_value"] = sig->initValue();
+        return s;
+    };
+
+    // Build a frame-info dict for a LinFrame
+    auto buildLinFrameDict = [&buildLinSignalDict](LinFrame *frame) -> py::dict
+    {
+        py::dict d;
+        d["id"]        = frame->id();
+        d["name"]      = frame->name().toStdString();
+        d["publisher"] = frame->publisher().toStdString();
+        d["length"]    = frame->length();
+
+        py::list sigs;
+        for (LinSignal *sig : frame->signalList())
+        {
+            sigs.append(buildLinSignalDict(sig));
+        }
+        d["signals"] = sigs;
+        return d;
+    };
+
+    // List all loaded LDF databases with their frames.
+    m.def("lin_databases", [buildLinFrameDict]() -> py::list
+    {
+        py::list result;
+        if (!g_activeEngine) { return result; }
+
+        MeasurementSetup &setup = g_activeEngine->backend().getSetup();
+        for (MeasurementNetwork *net : setup.getNetworks())
+        {
+            for (const pLinDb &db : std::as_const(net->_linDbs))
+            {
+                py::dict dbInfo;
+                dbInfo["file"]    = db->fileName().toStdString();
+                dbInfo["path"]    = db->path().toStdString();
+                dbInfo["network"] = net->name().toStdString();
+                dbInfo["speed"]   = db->speedBps();
+                dbInfo["master"]  = db->masterNode().toStdString();
+
+                py::list frames;
+                for (LinFrame *frame : db->frames())
+                {
+                    frames.append(buildLinFrameDict(frame));
+                }
+                dbInfo["frames"] = frames;
+                result.append(dbInfo);
+            }
+        }
+        return result;
+    });
+
+    // Look up a LIN frame definition by name (str) or ID (int).
+    // Returns a frame-info dict, or None if not found.
+    m.def("find_lin_frame", [buildLinFrameDict](py::object name_or_id) -> py::object
+    {
+        if (!g_activeEngine) { return py::none(); }
+
+        MeasurementSetup &setup = g_activeEngine->backend().getSetup();
+        for (MeasurementNetwork *net : setup.getNetworks())
+        {
+            for (const pLinDb &db : std::as_const(net->_linDbs))
+            {
+                LinFrame *frame = nullptr;
+                if (py::isinstance<py::str>(name_or_id))
+                {
+                    frame = db->frameByName(QString::fromStdString(name_or_id.cast<std::string>()));
+                }
+                else
+                {
+                    frame = db->frameById(static_cast<uint8_t>(name_or_id.cast<int>()));
+                }
+                if (frame) { return buildLinFrameDict(frame); }
+            }
+        }
+        return py::none();
+    }, py::arg("name_or_id"));
+
+    // Decode a received LIN BusMessage using loaded LDF databases.
+    // Returns { "frame": str, "id": int, "signals": { name: { "value", "raw", "unit" } } }
+    // or None if no LDF definition is found.
+    m.def("decode_lin", [buildLinFrameDict](const BusMessage &msg) -> py::object
+    {
+        if (!g_activeEngine) { return py::none(); }
+
+        LinFrame *frame = g_activeEngine->backend().findLinFrame(msg);
+        if (!frame) { return py::none(); }
+
+        const uint8_t *data = msg.getData();
+        const uint8_t  len  = msg.getLength();
+        std::span<const uint8_t> payload{data, len};
+
+        py::dict sigDict;
+        for (LinSignal *sig : frame->signalList())
+        {
+            const uint64_t raw  = sig->extractRawValue(payload);
+            const double   phys = sig->convertToPhysical(raw);
+
+            py::dict sigInfo;
+            sigInfo["value"]  = phys;
+            sigInfo["raw"]    = raw;
+            sigInfo["unit"]   = sig->unit().toStdString();
+
+            const QString valueName = sig->getValueName(raw);
+            if (!valueName.isEmpty())
+            {
+                sigInfo["value_name"] = valueName.toStdString();
+            }
+
+            sigDict[py::cast(sig->name().toStdString())] = sigInfo;
+        }
+
+        py::dict result;
+        result["frame"]   = frame->name().toStdString();
+        result["id"]      = frame->id();
+        result["signals"] = sigDict;
+        return result;
+    }, py::arg("msg"));
 }
 
 

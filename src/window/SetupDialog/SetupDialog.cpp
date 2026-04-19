@@ -400,6 +400,36 @@ void SetupDialog::on_btAddDatabase_clicked()
 
 void SetupDialog::addLinDb(const QModelIndex &parent, const QString &filename)
 {
+    // After adding an LDF, auto-configure any LIN interfaces in the network
+    // that have no LDF path set yet — avoids requiring the user to click each
+    // interface item before starting measurement.
+    auto applyLdfToUnassignedInterfaces = [this](const pLinDb &lindb)
+    {
+        if (!_currentNetwork)
+            return;
+
+        static const QHash<QString, LinProtocolVersion> versionMap = {
+            {QStringLiteral("1.3"),  LinProtocolVersion::V1_3},
+            {QStringLiteral("2.0"),  LinProtocolVersion::V2_0},
+            {QStringLiteral("2.1"),  LinProtocolVersion::V2_1},
+            {QStringLiteral("2.2"),  LinProtocolVersion::V2_2},
+            {QStringLiteral("2.2A"), LinProtocolVersion::V2_2A},
+        };
+
+        for (MeasurementInterface *intf : _currentNetwork->interfaces())
+        {
+            if (intf->busType() != BusType::LIN || !intf->linLdfPath().isEmpty())
+                continue;
+
+            intf->setLinLdfPath(lindb->path());
+            intf->setLinBaudRate(static_cast<unsigned>(lindb->speedBps()));
+            intf->setLinTimebaseMs(static_cast<uint8_t>(qBound(0.0, lindb->masterTimebaseMs(), 255.0)));
+            intf->setLinJitterUs(static_cast<uint16_t>(qBound(0.0, lindb->masterJitterMs() * 1000.0, 65535.0)));
+            if (const auto it = versionMap.constFind(lindb->protocolVersion()); it != versionMap.constEnd())
+                intf->setLinProtocolVersion(it.value());
+        }
+    };
+
     if (_currentNetwork) {
         for (const auto &existingDb : _currentNetwork->_linDbs) {
             if (existingDb->path() == filename) {
@@ -424,6 +454,7 @@ void SetupDialog::addLinDb(const QModelIndex &parent, const QString &filename)
                     pLinDb lindb = _backend->loadLdf(filename, &errorMsg);
                     if (lindb) {
                         model->addLinDb(parent, lindb);
+                        applyLdfToUnassignedInterfaces(lindb);
                     } else {
                         QMessageBox::critical(this, tr("Reload Failed"),
                             tr("Failed to reload LDF:\n%1\n\nReason: %2").arg(filename, errorMsg));
@@ -438,6 +469,7 @@ void SetupDialog::addLinDb(const QModelIndex &parent, const QString &filename)
     pLinDb lindb = _backend->loadLdf(filename, &errorMsg);
     if (lindb) {
         model->addLinDb(parent, lindb);
+        applyLdfToUnassignedInterfaces(lindb);
         if (!errorMsg.isEmpty()) {
             QMessageBox::warning(this, tr("LDF Warning"), errorMsg);
         }
