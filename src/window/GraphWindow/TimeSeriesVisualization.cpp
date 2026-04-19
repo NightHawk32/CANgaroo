@@ -406,7 +406,6 @@ void TimeSeriesVisualization::addSignal(GraphSignal *signal, const BusInterfaceI
     VisualizationWidget::addSignal(signal, interfaces);
 
     QLineSeries *series = new QLineSeries();
-    series->setUseOpenGL(true); // QtCharts GPU Optimization
     series->setName(signal->name());
     _chart->addSeries(series);
     

@@ -1095,12 +1095,15 @@ sys.stderr = _SignalWriter(True)
 )");
 
         py::exec(R"(
+import threading as _threading
+
 def _cangaroo_trace(frame, event, arg):
     if _cangaroo_stop_check():
         raise KeyboardInterrupt("Script stopped by user")
     return _cangaroo_trace
 
 sys.settrace(_cangaroo_trace)
+_threading.settrace(_cangaroo_trace)
 )");
 
         try

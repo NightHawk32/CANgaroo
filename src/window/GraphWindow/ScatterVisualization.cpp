@@ -545,7 +545,6 @@ void ScatterVisualization::addSignal(GraphSignal *signal, const BusInterfaceIdLi
     VisualizationWidget::addSignal(signal, interfaces);
 
     QScatterSeries *series = new QScatterSeries();
-    series->setUseOpenGL(true);
     QString label = signal->name();
     series->setName(label);
     series->setMarkerShape(QScatterSeries::MarkerShapeCircle);

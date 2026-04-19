@@ -55,6 +55,7 @@ public:
     virtual void zoomOut() {}
     virtual void resetZoom() {}
     virtual void setWindowDuration(int seconds) { Q_UNUSED(seconds); }
+    virtual int getWindowDuration() const { return 0; }
     virtual void addSignal(GraphSignal *signal, const BusInterfaceIdList &interfaces = {}) {
         if (!_signals.contains(signal)) {
             _signals.append(signal);

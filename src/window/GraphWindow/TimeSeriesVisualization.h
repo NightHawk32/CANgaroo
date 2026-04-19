@@ -52,6 +52,7 @@ public:
     virtual void zoomOut() override;
     virtual void resetZoom() override;
     virtual void setWindowDuration(int seconds) override;
+    int getWindowDuration() const override { return _windowDuration; }
 public slots:
     virtual void onActivated() override;
     virtual void setActive(bool active) override;

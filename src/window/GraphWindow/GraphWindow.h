@@ -50,6 +50,7 @@ public slots:
     void updateActiveSignals(const QList<GraphSignal*>& activeSignals, const QMap<GraphSignal*, BusInterfaceIdList>& signalInterfaces, double globalStartTime);
     void clearActiveSignals();
     void reset();
+    void rewindForWindow(int windowSeconds);
     void onTraceAppended();
 
 signals:
@@ -108,6 +109,7 @@ private slots:
 signals:
     void activeSignalsUpdated(const QList<GraphSignal*>& activeSignals, const QMap<GraphSignal*, BusInterfaceIdList>& signalInterfaces, double globalStartTime);
     void requestDecoderReset();
+    void requestDecoderRewindForWindow(int windowSeconds);
 
 private:
     void connectLegendMarkers(VisualizationWidget* v);

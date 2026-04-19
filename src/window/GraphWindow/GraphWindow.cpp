@@ -82,6 +82,40 @@ void SignalDecoderWorker::reset()
     _globalStartTime = -1.0;
 }
 
+void SignalDecoderWorker::rewindForWindow(int windowSeconds)
+{
+    QMutexLocker locker(&_mutex);
+    const int size = static_cast<int>(_backend.getTrace()->size());
+    if (size == 0)
+    {
+        _lastProcessedIdx = 0;
+        _globalStartTime = -1.0;
+        return;
+    }
+
+    if (windowSeconds <= 0)
+    {
+        _lastProcessedIdx = 0;
+    }
+    else
+    {
+        double latestTs = _backend.getTrace()->getMessage(size - 1).getFloatTimestamp();
+        double cutoff = latestTs - static_cast<double>(windowSeconds);
+
+        int lo = 0, hi = size - 1;
+        while (lo < hi)
+        {
+            int mid = (lo + hi) / 2;
+            if (_backend.getTrace()->getMessage(mid).getFloatTimestamp() < cutoff)
+                lo = mid + 1;
+            else
+                hi = mid;
+        }
+        _lastProcessedIdx = lo;
+    }
+    _globalStartTime = -1.0;
+}
+
 void SignalDecoderWorker::onTraceAppended()
 {
     QMutexLocker locker(&_mutex);
@@ -145,6 +179,7 @@ GraphWindow::GraphWindow(QWidget *parent, Backend &backend) :
 
     connect(ui->viewSelector, &QComboBox::currentIndexChanged, this, &GraphWindow::onViewTypeChanged);
     connect(ui->durationSelector, &QComboBox::currentIndexChanged, this, &GraphWindow::onDurationChanged);
+    onDurationChanged(ui->durationSelector->currentIndex());
     connect(ui->clearButton, &QPushButton::clicked, this, &GraphWindow::onClearClicked);
     connect(ui->btnFullReset, &QPushButton::clicked, this, &GraphWindow::onFullResetClicked);
     connect(ui->zoomInButton, &QPushButton::clicked, this, &GraphWindow::onZoomInClicked);
@@ -159,6 +194,7 @@ GraphWindow::GraphWindow(QWidget *parent, Backend &backend) :
     connect(_decoderThread, &QThread::finished, _decoderWorker, &QObject::deleteLater);
     connect(this, &GraphWindow::activeSignalsUpdated, _decoderWorker, &SignalDecoderWorker::updateActiveSignals);
     connect(this, &GraphWindow::requestDecoderReset, _decoderWorker, &SignalDecoderWorker::reset);
+    connect(this, &GraphWindow::requestDecoderRewindForWindow, _decoderWorker, &SignalDecoderWorker::rewindForWindow);
     connect(_backend.getTrace(), &BusTrace::afterAppend, _decoderWorker, &SignalDecoderWorker::onTraceAppended);
     connect(_decoderWorker, &SignalDecoderWorker::dataDecoded, this, &GraphWindow::onDecodedDataReady);
 
@@ -759,6 +795,7 @@ bool GraphWindow::loadXML(Backend &backend, QDomElement &el)
 
 void GraphWindow::onResumeMeasurement()
 {
+    clearGraphData();
     for (auto v : _visualizations) v->setActive(true);
 }
 
@@ -1013,5 +1050,8 @@ void GraphWindow::onAddGraphClicked()
         }
         ++it;
     }
+    int windowSeconds = _activeVisualization ? _activeVisualization->getWindowDuration() : 0;
+    _sessionStartTime = -1.0;
+    emit requestDecoderRewindForWindow(windowSeconds);
     notifyWorkerActiveSignals();
 }
