@@ -113,9 +113,9 @@ QVariant UnifiedTraceViewModel::data(const QModelIndex &index, int role) const
 
     switch (role) {
         case Qt::DisplayRole:
-            return data_DisplayRole(index);
+            return data_DisplayRole(index, role);
         case Qt::ForegroundRole:
-            return data_TextColorRole(index);
+            return data_TextColorRole(index, role);
         case Qt::TextAlignmentRole:
             return static_cast<int>(Qt::AlignLeft | Qt::AlignVCenter);
         default:
@@ -322,7 +322,7 @@ uint32_t UnifiedTraceViewModel::getJ1939Key(const ProtocolMessage& pmsg) const
     return (pgn << 8) | (sa & 0xFF);
 }
 
-QVariant UnifiedTraceViewModel::data_DisplayRole(const QModelIndex &index) const
+QVariant UnifiedTraceViewModel::data_DisplayRole(const QModelIndex &index, [[maybe_unused]] int role) const
 {
     UnifiedTraceItem *item = static_cast<UnifiedTraceItem*>(index.internalPointer());
 
@@ -449,7 +449,7 @@ QVariant UnifiedTraceViewModel::data_DisplayRole(const QModelIndex &index) const
     }
 }
 
-QVariant UnifiedTraceViewModel::data_TextColorRole(const QModelIndex &index) const
+QVariant UnifiedTraceViewModel::data_TextColorRole(const QModelIndex &index, [[maybe_unused]] int role) const
 {
     UnifiedTraceItem *item = static_cast<UnifiedTraceItem*>(index.internalPointer());
     bool isDark = ThemeManager::instance().isDarkMode();

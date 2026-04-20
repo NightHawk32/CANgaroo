@@ -245,7 +245,7 @@ void GrIPHandler::SetStatus(bool open)
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
-    GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
+    std::ignore = GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 }
 
 void GrIPHandler::SetEchoTx(bool enable)
@@ -261,7 +261,7 @@ void GrIPHandler::SetEchoTx(bool enable)
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
-    GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
+    std::ignore = GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 }
 
 void GrIPHandler::RequestVersion()
@@ -283,7 +283,7 @@ void GrIPHandler::RequestVersion()
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
-    GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
+    std::ignore = GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 
     // Brief wait for the reply to arrive and be processed before returning,
     // so the caller can read GetVersion() immediately afterwards.
@@ -325,7 +325,7 @@ int GrIPHandler::Channels_LIN() const
 void GrIPHandler::Send(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType, GrIP_ReturnType_e ReturnCode, const GrIP_Pdu_t *pdu)
 {
     std::unique_lock<std::mutex> lck(m_MutexSerial);
-    GrIP_Transmit(ProtType, MsgType, ReturnCode, pdu);
+    std::ignore = GrIP_Transmit(ProtType, MsgType, ReturnCode, pdu);
 }
 
 void GrIPHandler::Send(GrIP_ProtocolType_e ProtType, GrIP_MessageType_e MsgType, GrIP_ReturnType_e ReturnCode, const uint8_t *data, uint16_t len)
@@ -362,7 +362,7 @@ void GrIPHandler::CanEnableChannel(uint8_t ch, bool enable)
 
         std::unique_lock<std::mutex> lck(m_MutexSerial);
 
-        GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
+        std::ignore = GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
     }
 }
 
@@ -388,7 +388,7 @@ void GrIPHandler::LinEnableChannel(uint8_t ch, bool enable)
 
         std::unique_lock<std::mutex> lck(m_MutexSerial);
 
-        GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
+        std::ignore = GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
     }
 }
 
@@ -408,7 +408,7 @@ void GrIPHandler::CanSetMode(uint8_t ch, bool listen_only)
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
-    GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
+    std::ignore = GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 }
 
 void GrIPHandler::LinSetScheduleTable(uint8_t ch, uint8_t table_idx)
@@ -427,7 +427,7 @@ void GrIPHandler::LinSetScheduleTable(uint8_t ch, uint8_t table_idx)
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
-    GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
+    std::ignore = GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 }
 
 void GrIPHandler::CanSetBaudrate(uint8_t ch, uint32_t baud)
@@ -446,11 +446,11 @@ void GrIPHandler::CanSetBaudrate(uint8_t ch, uint32_t baud)
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
-    GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
+    std::ignore = GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 
     // Allow the device time to reconfigure its CAN hardware before the next
     // command arrives.
-    QThread::msleep(5);
+    QThread::msleep(4);
 }
 
 void GrIPHandler::CanSetConfig(uint8_t ch, uint32_t baud, bool listen, bool echoTx, bool abom)
@@ -472,7 +472,7 @@ void GrIPHandler::CanSetConfig(uint8_t ch, uint32_t baud, bool listen, bool echo
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
-    GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
+    std::ignore = GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 }
 
 void GrIPHandler::LinSetConfig(uint8_t ch, uint32_t baud, bool master, uint8_t protocol, uint8_t timebase, uint16_t jitter_us)
@@ -495,7 +495,7 @@ void GrIPHandler::LinSetConfig(uint8_t ch, uint32_t baud, bool master, uint8_t p
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
-    GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
+    std::ignore = GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 }
 
 void GrIPHandler::LinAddFrame(uint8_t ch, const BusMessage &msg, uint8_t frame_time)
@@ -519,7 +519,7 @@ void GrIPHandler::LinAddFrame(uint8_t ch, const BusMessage &msg, uint8_t frame_t
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 
-    GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
+    std::ignore = GrIP_Transmit(PROT_GrIP, MSG_SYSTEM_CMD, RET_OK, &p);
 }
 
 // ---------------------------------------------------------------------------
