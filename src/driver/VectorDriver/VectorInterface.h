@@ -31,7 +31,7 @@ class VectorDriver;
 class VectorInterface : public BusInterface {
 public:
     VectorInterface(VectorDriver *driver, QString deviceName, QString description);
-    virtual ~VectorInterface();
+    ~VectorInterface() override;
 
     QString getName() const override;
     void setName(QString name);

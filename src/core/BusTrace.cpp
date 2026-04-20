@@ -30,7 +30,7 @@
 #include "core/BusMessage.h"
 #include "core/DBC/CanDbMessage.h"
 #include "core/DBC/CanDbSignal.h"
-#include "driver/BusInterface.h"
+
 
 BusTrace::BusTrace(Backend &backend, QObject *parent, int flushInterval)
   : QObject(parent),
@@ -352,6 +352,7 @@ void BusTrace::saveVectorMdf(QFile &file)
     quint64 oDt         = off;
 
     (void)oId; // suppress unused
+    (void)oHd;
 
     // --- Helpers ---
     auto writeBlockHeader = [&ds](const char *id, quint64 length, quint64 linkCount) {
@@ -532,6 +533,7 @@ void BusTrace::savePcap(QFile &file)
 
     static const quint8  CANFD_BRS = 0x01;
     static const quint8  CANFD_ESI = 0x02;
+    Q_UNUSED(CANFD_ESI);
 
     QMutexLocker locker(&_mutex);
 

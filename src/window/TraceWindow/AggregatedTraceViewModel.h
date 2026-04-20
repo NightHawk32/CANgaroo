@@ -47,11 +47,11 @@ public:
 public:
     AggregatedTraceViewModel(Backend &backend);
 
-    virtual QModelIndex index(int row, int column, const QModelIndex &parent) const;
-    virtual QModelIndex parent(const QModelIndex &child) const;
-    virtual int rowCount(const QModelIndex &parent) const;
+    QModelIndex index(int row, int column, const QModelIndex &parent) const override;
+    QModelIndex parent(const QModelIndex &child) const override;
+    int rowCount(const QModelIndex &parent) const override;
 
-    virtual BusMessage getMessage(const QModelIndex &index) const override;
+    BusMessage getMessage(const QModelIndex &index) const override;
 
 private:
     CanIdMap _map;
@@ -64,8 +64,8 @@ private:
     unique_key_t makeUniqueKey(const BusMessage &msg) const;
     void createItem(const BusMessage &msg, AggregatedTraceViewItem *item, unique_key_t key);
 protected:
-    virtual QVariant data_DisplayRole(const QModelIndex &index, int role) const;
-    virtual QVariant data_TextColorRole(const QModelIndex &index, int role) const;
+    QVariant data_DisplayRole(const QModelIndex &index, int role) const override;
+    QVariant data_TextColorRole(const QModelIndex &index, int role) const override;
 
 private slots:
     void createItem(const BusMessage &msg);

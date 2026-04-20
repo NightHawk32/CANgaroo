@@ -35,7 +35,7 @@ class KvaserDriver;
 class KvaserInterface : public BusInterface {
 public:
     KvaserInterface(KvaserDriver *driver, int channel, QString name);
-    virtual ~KvaserInterface();
+    ~KvaserInterface() override;
 
     QString getName() const override;
     void setName(QString name);

@@ -31,10 +31,10 @@ class GenericCanSetupPage;
 class PeakCanDriver : public CanDriver {
 public:
     PeakCanDriver(Backend &backend);
-    virtual ~PeakCanDriver();
+    ~PeakCanDriver() override;
 
-    virtual QString getName();
-    virtual bool update();
+    QString getName() const override;
+    bool update() override;
 
 private:
     PeakCanInterface *createOrUpdateInterface(uint16_t channel, QString name);

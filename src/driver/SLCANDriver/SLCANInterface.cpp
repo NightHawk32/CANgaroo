@@ -774,7 +774,7 @@ bool SLCANInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeou
     }
 
     // Don't saturate the thread. Read the buffer every 1ms.
-    QThread().msleep(1);
+    QThread::msleep(1);
 
     if(_isOffline == true)
     {

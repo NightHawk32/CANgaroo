@@ -55,7 +55,7 @@ class CANBlasterInterface: public BusInterface {
     Q_OBJECT
 public:
     CANBlasterInterface(CANBlasterDriver *driver, int index, QString name, bool fd_support);
-    virtual ~CANBlasterInterface();
+    ~CANBlasterInterface() override;
 
     QString getDetailsStr() const override;
     QString getName() const override;

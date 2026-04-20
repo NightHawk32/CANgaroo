@@ -37,10 +37,10 @@ class GrIPDriver: public CanDriver
 {
 public:
     GrIPDriver(Backend &backend);
-    virtual ~GrIPDriver();
+    ~GrIPDriver() override;
 
-    virtual QString getName();
-    virtual bool update();
+    QString getName() const override;
+    bool update() override;
 
 private:
     GrIPInterface *createOrUpdateInterface(int index, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer);

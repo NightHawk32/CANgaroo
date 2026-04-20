@@ -38,7 +38,7 @@ PeakCanDriver::~PeakCanDriver()
 {
 }
 
-QString PeakCanDriver::getName()
+QString PeakCanDriver::getName() const
 {
     return "PEAK PCAN";
 }

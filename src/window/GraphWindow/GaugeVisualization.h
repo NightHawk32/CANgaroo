@@ -55,15 +55,15 @@ class GaugeVisualization : public VisualizationWidget
     Q_OBJECT
 public:
     explicit GaugeVisualization(QWidget *parent, Backend &backend);
-    virtual ~GaugeVisualization();
+    ~GaugeVisualization() override;
 
-    virtual void addMessage(const BusMessage &msg) override;
-    virtual void addDecodedData(const QMap<GraphSignal*, DecodedSignalData>& newPoints) override;
-    virtual void clear() override;
-    virtual void onActivated() override;
-    virtual void addSignal(GraphSignal *signal, const BusInterfaceIdList &interfaces = {}) override;
-    virtual void clearSignals() override;
-    virtual void setSignalColor(GraphSignal *signal, const QColor &color) override;
+void addMessage(const BusMessage &msg) override;
+void addDecodedData(const QMap<GraphSignal*, DecodedSignalData>& newPoints) override;
+void clear() override;
+void onActivated() override;
+void addSignal(GraphSignal *signal, const BusInterfaceIdList &interfaces = {}) override;
+void clearSignals() override;
+void setSignalColor(GraphSignal *signal, const QColor &color) override;
 
     void setColumnCount(int count);
 

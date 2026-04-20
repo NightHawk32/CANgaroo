@@ -31,7 +31,7 @@ class TinyCanDriver;
 class TinyCanInterface : public BusInterface {
 public:
     TinyCanInterface(TinyCanDriver *driver, QString deviceName, QString description);
-    virtual ~TinyCanInterface();
+    ~TinyCanInterface() override;
 
     QString getName() const override;
     void setName(QString name);

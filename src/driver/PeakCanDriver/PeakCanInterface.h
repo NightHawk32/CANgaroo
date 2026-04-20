@@ -34,7 +34,7 @@ class PeakCanDriver;
 class PeakCanInterface : public BusInterface {
 public:
     PeakCanInterface(PeakCanDriver *driver, TPCANHandle channel, QString name);
-    virtual ~PeakCanInterface();
+    ~PeakCanInterface() override;
 
     QString getName() const override;
     void setName(QString name);

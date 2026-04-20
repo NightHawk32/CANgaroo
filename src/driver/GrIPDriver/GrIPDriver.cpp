@@ -104,7 +104,7 @@ bool GrIPDriver::update()
     return true;
 }
 
-QString GrIPDriver::getName()
+QString GrIPDriver::getName() const
 {
     return "GrIP-CANIL";
 }

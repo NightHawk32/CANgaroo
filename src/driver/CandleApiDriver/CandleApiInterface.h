@@ -21,7 +21,7 @@ class CandleApiInterface : public BusInterface
     Q_OBJECT
 public:
     CandleApiInterface(CandleApiDriver *driver, candle_handle handle);
-    virtual ~CandleApiInterface();
+    ~CandleApiInterface() override;
 
     QString getName() const override;
     QString getDetailsStr() const override;

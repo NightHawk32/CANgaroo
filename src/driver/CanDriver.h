@@ -42,7 +42,7 @@ public:
 
     int id();
 
-    virtual QString getName() = 0;
+    virtual QString getName() const = 0;
     virtual bool update() = 0;
 
     BusInterfaceIdList getInterfaceIds() const;

@@ -61,7 +61,7 @@ class SocketCanInterface : public BusInterface
 {
 public:
     SocketCanInterface(SocketCanDriver *driver, int index, QString name);
-    virtual ~SocketCanInterface();
+    ~SocketCanInterface() override;
 
     QString getName() const override;
     void setName(QString name);

@@ -79,6 +79,14 @@ bool LinearTraceViewModel::hasChildren(const QModelIndex &parent) const
     return rowCount(parent)>0;
 }
 
+BusMessage LinearTraceViewModel::getMessage(const QModelIndex &index) const
+{
+    if (!index.isValid()) return BusMessage();
+    quintptr id = index.internalId();
+    int msg_id = static_cast<int>(id & ~0x80000000u) - 1;
+    return trace()->getMessage(msg_id);
+}
+
 void LinearTraceViewModel::beforeAppend(int num_messages)
 {
     beginInsertRows(QModelIndex(), trace()->size(), trace()->size()+num_messages-1);

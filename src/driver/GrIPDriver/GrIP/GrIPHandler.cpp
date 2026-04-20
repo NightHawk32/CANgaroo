@@ -194,7 +194,8 @@ bool GrIPHandler::Start()
     m_Exit = false;
     m_WorkerReady = false;
 
-    m_pWorkerThread = std::make_unique<std::thread>(&GrIPHandler::WorkerThread, this);
+    m_pWorkerThread = QThread::create([this]() { WorkerThread(); });
+    m_pWorkerThread->start();
 
     // Block until the worker thread signals that the port open attempt has completed.
     {
@@ -211,11 +212,12 @@ void GrIPHandler::Stop()
     // Signal the worker loop to exit, then block until it does.
     m_Exit = true;
 
-    if (m_pWorkerThread && m_pWorkerThread->joinable())
+    if (m_pWorkerThread)
     {
-        m_pWorkerThread->join();
+        m_pWorkerThread->wait();
+        delete m_pWorkerThread;
+        m_pWorkerThread = nullptr;
     }
-    m_pWorkerThread.reset();
 
     // The worker thread has exited — it is now safe to close the port.
     std::unique_lock<std::mutex> lck(m_MutexSerial);

@@ -51,9 +51,9 @@ public:
 
 public:
     BaseTraceViewModel(Backend &backend);
-    virtual int columnCount(const QModelIndex &parent) const;
-    virtual QVariant headerData(int section, Qt::Orientation orientation, int role) const;
-    virtual QVariant data(const QModelIndex &index, int role) const;
+    int columnCount(const QModelIndex &parent) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
+    QVariant data(const QModelIndex &index, int role) const override;
 
     virtual BusMessage getMessage(const QModelIndex &index) const = 0;
 

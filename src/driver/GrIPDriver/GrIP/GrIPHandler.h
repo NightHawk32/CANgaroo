@@ -3,7 +3,6 @@
 
 
 #include "GrIP.h"
-#include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <vector>
@@ -15,6 +14,7 @@
 #include <string>
 #include "core/BusMessage.h"
 #include <QSerialPort>
+#include <QThread>
 
 
 enum CANIL_CAN_State
@@ -270,7 +270,7 @@ private:
     mutable std::mutex m_MutexSerial;    ///< Guards all access to m_SerialPort and GrIP TX calls.
 
     // --- Worker thread ---
-    std::unique_ptr<std::thread> m_pWorkerThread;
+    QThread *m_pWorkerThread = nullptr;
     std::atomic<bool> m_Exit;          ///< Set to true by Stop() to signal the worker loop to exit.
 
     // Signalled by the worker thread once the serial port open attempt completes

@@ -236,7 +236,7 @@ void CANBlasterInterface::sendMessage(const BusMessage &msg)
 bool CANBlasterInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms)
 {
     // Don't saturate the thread
-    QThread().usleep(250);
+    QThread::usleep(250);
 
     Q_UNUSED(timeout_ms);
 

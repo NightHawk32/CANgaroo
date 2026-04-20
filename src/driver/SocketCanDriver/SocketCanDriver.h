@@ -32,10 +32,10 @@ class GenericCanSetupPage;
 class SocketCanDriver: public CanDriver {
 public:
     SocketCanDriver(Backend &backend);
-    virtual ~SocketCanDriver();
+    ~SocketCanDriver() override;
 
-    virtual QString getName();
-    virtual bool update();
+    QString getName() const override;
+    bool update() override;
 
 private:
     SocketCanInterface *createOrUpdateInterface(int index, QString name);

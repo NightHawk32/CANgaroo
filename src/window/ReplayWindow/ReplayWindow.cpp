@@ -642,6 +642,7 @@ bool ReplayWindow::parsePcapNg(QFile &file)
     static const quint32 BT_IDB = 0x00000001;
     static const quint32 BT_EPB = 0x00000006;
     static const quint32 BT_SPB = 0x00000003;
+    Q_UNUSED(BT_SPB);
 
     static const quint32 BYTE_ORDER_MAGIC = 0x1A2B3C4D;
     static const quint32 LINKTYPE_CAN_SOCKETCAN = 227;
@@ -702,6 +703,7 @@ bool ReplayWindow::parsePcapNg(QFile &file)
 
             // Parse options for if_name (code 2) and if_tsresol (code 9)
             qint64 optStart = file.pos();
+            Q_UNUSED(optStart);
             qint64 optEnd = blockStart + blockTotalLen - 4; // exclude trailing total_length
             while (file.pos() + 4 <= optEnd)
             {

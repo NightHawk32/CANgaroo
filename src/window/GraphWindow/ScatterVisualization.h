@@ -36,22 +36,22 @@ class ScatterVisualization : public VisualizationWidget
     Q_OBJECT
 public:
     explicit ScatterVisualization(QWidget *parent, Backend &backend);
-    virtual ~ScatterVisualization();
+    ~ScatterVisualization() override;
 
-    virtual void addMessage(const BusMessage &msg) override;
-    virtual void addDecodedData(const QMap<GraphSignal*, DecodedSignalData>& newPoints) override;
-    virtual void clear() override;
-    virtual void addSignal(GraphSignal *signal, const BusInterfaceIdList &interfaces = {}) override;
-    virtual void clearSignals() override;
-    virtual void setSignalColor(GraphSignal *signal, const QColor &color) override;
-    virtual void zoomIn() override;
-    virtual void zoomOut() override;
-    virtual void resetZoom() override;
-    virtual void setWindowDuration(int seconds) override;
+void addMessage(const BusMessage &msg) override;
+void addDecodedData(const QMap<GraphSignal*, DecodedSignalData>& newPoints) override;
+void clear() override;
+void addSignal(GraphSignal *signal, const BusInterfaceIdList &interfaces = {}) override;
+void clearSignals() override;
+void setSignalColor(GraphSignal *signal, const QColor &color) override;
+void zoomIn() override;
+void zoomOut() override;
+void resetZoom() override;
+void setWindowDuration(int seconds) override;
 public slots:
-    virtual void onActivated() override;
-    virtual void applyTheme(ThemeManager::Theme theme) override;
-    virtual void setActive(bool active) override;
+void onActivated() override;
+void applyTheme(ThemeManager::Theme theme) override;
+void setActive(bool active) override;
 
     // Exposed for GraphWindow management
     QChartView* chartView() const { return _chartView; }
@@ -67,9 +67,9 @@ signals:
     void mouseMoved(QMouseEvent *event);
 
 protected:
-    virtual void wheelEvent(QWheelEvent *event) override;
-    virtual bool eventFilter(QObject *watched, QEvent *event) override;
-    virtual void contextMenuEvent(QContextMenuEvent *event) override;
+void wheelEvent(QWheelEvent *event) override;
+bool eventFilter(QObject *watched, QEvent *event) override;
+void contextMenuEvent(QContextMenuEvent *event) override;
 
 private slots:
     void onAxisRangeChanged(qreal min, qreal max);

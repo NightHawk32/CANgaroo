@@ -74,7 +74,7 @@ public:
     };
 public:
     SLCANInterface(SLCANDriver *driver, int index, QString name, bool fd_support, uint32_t manufacturer);
-    virtual ~SLCANInterface();
+    ~SLCANInterface() override;
 
     QString getDetailsStr() const override;
     QString getName() const override;
