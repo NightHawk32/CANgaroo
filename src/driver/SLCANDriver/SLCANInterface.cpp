@@ -307,7 +307,7 @@ void SLCANInterface::open()
         delete _serport;
     }
 
-    _serport = new QSerialPort();
+    _serport = new QSerialPort(this);
 
     _serport_mutex.lock();
     _serport->setPortName(_name);
