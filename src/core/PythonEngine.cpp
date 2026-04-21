@@ -281,6 +281,13 @@ PYBIND11_EMBEDDED_MODULE(cangaroo, m)
         if (g_activeEngine) { g_activeEngine->clearRxFilter(); }
     });
 
+    // By default TX frames (echo-back of sent messages) are excluded from receive().
+    // Call enable_tx_echo(True) to include them.
+    m.def("enable_tx_echo", [](bool enabled)
+    {
+        if (g_activeEngine) { g_activeEngine->setTxEchoEnabled(enabled); }
+    }, py::arg("enabled") = true);
+
     // --- Periodic TX ---
 
     m.def("send_periodic", [](BusMessage msg, unsigned interval_ms, uint16_t interface_id) -> int
@@ -937,6 +944,7 @@ bool PythonEngine::isRunning() const
 void PythonEngine::enqueueMessage(const BusMessage &msg)
 {
     if (!_running) { return; }
+    if (msg.busType() == BusType::CAN && !msg.isRX() && !_echoTxEnabled.load()) { return; }
     if (!passesRxFilter(msg)) { return; }
 
     QMutexLocker lck(&_msgQueueMutex);

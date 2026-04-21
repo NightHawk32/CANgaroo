@@ -40,6 +40,9 @@ public:
     void setRxFilter(uint32_t id, uint32_t mask, std::optional<bool> extended);
     void clearRxFilter();
 
+    // TX echo — when disabled (default), sent frames are not fed back into receive()
+    void setTxEchoEnabled(bool enabled) { _echoTxEnabled = enabled; }
+
     // Periodic TX tasks — each runs on its own std::thread
     int  startPeriodicTask(BusMessage msg, unsigned interval_ms, uint16_t interface_id);
     void stopPeriodicTask(int handle);
@@ -61,6 +64,7 @@ private:
     std::unique_ptr<std::thread> _workerThread;
     std::atomic<bool> _running{false};
     std::atomic<bool> _stopRequested{false};
+    std::atomic<bool> _echoTxEnabled{false};
 
     QMutex _msgQueueMutex;
     QWaitCondition _msgQueueCondition;
