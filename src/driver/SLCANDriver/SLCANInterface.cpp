@@ -63,13 +63,13 @@ SLCANInterface::SLCANInterface(SLCANDriver *driver, int index, QString name, boo
         _settings.setFdSamplePoint(750);
     }
 
-    _status.can_state = state_bus_off;
-    _status.rx_count = 0;
-    _status.rx_errors = 0;
-    _status.rx_overruns = 0;
-    _status.tx_count = 0;
-    _status.tx_errors = 0;
-    _status.tx_dropped = 0;
+    _status.can_state.store(state_bus_off);
+    _status.rx_count.store(0);
+    _status.rx_errors.store(0);
+    _status.rx_overruns.store(0);
+    _status.tx_count.store(0);
+    _status.tx_errors.store(0);
+    _status.tx_dropped.store(0);
 
     _readMessage_ms.store(QDateTime::currentMSecsSinceEpoch());
     _readMessage_run_ms.store(QDateTime::currentMSecsSinceEpoch());
@@ -257,37 +257,37 @@ bool SLCANInterface::updateStatistics()
 
 uint32_t SLCANInterface::getState()
 {
-    return _status.can_state;
+    return _status.can_state.load();
 }
 
 int SLCANInterface::getNumRxFrames()
 {
-    return _status.rx_count;
+    return static_cast<int>(_status.rx_count.load());
 }
 
 int SLCANInterface::getNumRxErrors()
 {
-    return _status.rx_errors;
+    return _status.rx_errors.load();
 }
 
 int SLCANInterface::getNumTxFrames()
 {
-    return _status.tx_count;
+    return static_cast<int>(_status.tx_count.load());
 }
 
 int SLCANInterface::getNumTxErrors()
 {
-    return _status.tx_errors;
+    return _status.tx_errors.load();
 }
 
 int SLCANInterface::getNumRxOverruns()
 {
-    return _status.rx_overruns;
+    return static_cast<int>(_status.rx_overruns.load());
 }
 
 int SLCANInterface::getNumTxDropped()
 {
-    return _status.tx_dropped;
+    return static_cast<int>(_status.tx_dropped.load());
 }
 
 int SLCANInterface::getIfIndex()
@@ -533,13 +533,13 @@ void SLCANInterface::open()
 
     _isOpen = true;
     _isOffline = false;
-    _status.can_state = state_ok;
-    _status.rx_count = 0;
-    _status.rx_errors = 0;
-    _status.rx_overruns = 0;
-    _status.tx_count = 0;
-    _status.tx_errors = 0;
-    _status.tx_dropped = 0;
+    _status.can_state.store(state_ok);
+    _status.rx_count.store(0);
+    _status.rx_errors.store(0);
+    _status.rx_overruns.store(0);
+    _status.tx_count.store(0);
+    _status.tx_errors.store(0);
+    _status.tx_dropped.store(0);
 
     // Release port mutex
     _serport_mutex.unlock();
@@ -610,7 +610,7 @@ void SLCANInterface::close()
     _serport_mutex.lock();
 
     _isOpen = false;
-    _status.can_state = state_bus_off;
+    _status.can_state.store(state_bus_off);
 
     if (_serport && _serport->isOpen())
     {
@@ -798,7 +798,7 @@ bool SLCANInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeou
             qint64 now_ms = QDateTime::currentMSecsSinceEpoch();
             if (now_ms - _readMessage_ms.load() > 3000)
             {
-                _status.can_state = state_ok;
+                _status.can_state.store(state_ok);
                 _send_wait_respond.store(0);
             }
         }
@@ -822,7 +822,7 @@ bool SLCANInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeou
         }
         else
         {
-            _status.tx_errors ++;
+            _status.tx_errors.fetch_add(1);
 
             if(_can_msg_tx_queue.empty() == false)
             {
@@ -871,8 +871,8 @@ bool SLCANInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeou
     {
         while (_can_msg_tx_queue.empty() == false)
         {
-            _status.tx_count++;
-            _status.can_state = state_tx_success;
+            _status.tx_count.fetch_add(1);
+            _status.can_state.store(state_tx_success);
 
             msgtx = _can_msg_tx_queue.front();
             msgtx.setRX(false);
@@ -908,7 +908,7 @@ bool SLCANInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeou
                     if(ret == true)
                     {
                          msglist.append(msg);
-                        _status.rx_count ++;
+                        _status.rx_count.fetch_add(1);
                     }
                 }
                 else
@@ -918,14 +918,14 @@ bool SLCANInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeou
                         qint64 now_ms = QDateTime::currentMSecsSinceEpoch();
                         if(now_ms - _readMessage_ms.load() < 200)
                         {
-                            _status.tx_count ++;
-                            _status.can_state = state_tx_success;
+                            _status.tx_count.fetch_add(1);
+                            _status.can_state.store(state_tx_success);
                         }
                         _send_wait_respond.fetch_sub(1);
 
                         if(_can_msg_tx_queue.empty() == false)
                         {
-                            if(_status.can_state == state_tx_success)
+                            if(_status.can_state.load() == state_tx_success)
                             {
                                 msgtx = _can_msg_tx_queue.front();
                                 msgtx.setRX(false);
@@ -947,7 +947,7 @@ bool SLCANInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeou
                         qint64 now_ms = QDateTime::currentMSecsSinceEpoch();
                         if(now_ms - _readMessage_ms.load() < 200)
                         {
-                            _status.tx_errors ++;
+                            _status.tx_errors.fetch_add(1);
                             _status.can_state = state_tx_fail;
                         }
                         _send_wait_respond.fetch_sub(1);

@@ -67,13 +67,13 @@ GrIPInterface::GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QS
         _settings.setFdSamplePoint(750);
     }
 
-    _status.can_state = state_bus_off;
-    _status.rx_count = 0;
-    _status.rx_errors = 0;
-    _status.rx_overruns = 0;
-    _status.tx_count = 0;
-    _status.tx_errors = 0;
-    _status.tx_dropped = 0;
+    _status.can_state.store(state_bus_off);
+    _status.rx_count.store(0);
+    _status.rx_errors.store(0);
+    _status.rx_overruns.store(0);
+    _status.tx_count.store(0);
+    _status.tx_errors.store(0);
+    _status.tx_dropped.store(0);
 
     _lastStateMsec = QDateTime::currentMSecsSinceEpoch();
     _lastReadMsec = QDateTime::currentMSecsSinceEpoch();
@@ -151,11 +151,11 @@ bool GrIPInterface::updateStatus()
 {
     if (_manufacturer == CANIL_CAN)
     {
-        _status.can_state = m_GrIPHandler->CanGetState(_channel_idx);
+        _status.can_state.store(m_GrIPHandler->CanGetState(_channel_idx));
     }
     else if (_manufacturer == CANIL_LIN)
     {
-        _status.can_state = m_GrIPHandler->LinGetState(_channel_idx);
+        _status.can_state.store(m_GrIPHandler->LinGetState(_channel_idx));
     }
     return true;
 }
@@ -230,19 +230,19 @@ bool GrIPInterface::updateStatistics()
 
 void GrIPInterface::resetStatistics()
 {
-    _status.rx_count = 0;
-    _status.rx_errors = 0;
-    _status.rx_overruns = 0;
-    _status.tx_count = 0;
-    _status.tx_errors = 0;
-    _status.tx_dropped = 0;
+    _status.rx_count.store(0);
+    _status.rx_errors.store(0);
+    _status.rx_overruns.store(0);
+    _status.tx_count.store(0);
+    _status.tx_errors.store(0);
+    _status.tx_dropped.store(0);
 
     BusInterface::resetStatistics();
 }
 
 uint32_t GrIPInterface::getState()
 {
-    switch (_status.can_state)
+    switch (_status.can_state.load())
     {
     case CANIL_CAN_State::CAN_Active:
         return state_ok;
@@ -262,32 +262,32 @@ uint32_t GrIPInterface::getState()
 
 int GrIPInterface::getNumRxFrames()
 {
-    return _status.rx_count;
+    return static_cast<int>(_status.rx_count.load());
 }
 
 int GrIPInterface::getNumRxErrors()
 {
-    return _status.rx_errors;
+    return _status.rx_errors.load();
 }
 
 int GrIPInterface::getNumTxFrames()
 {
-    return _status.tx_count;
+    return static_cast<int>(_status.tx_count.load());
 }
 
 int GrIPInterface::getNumTxErrors()
 {
-    return _status.tx_errors;
+    return _status.tx_errors.load();
 }
 
 int GrIPInterface::getNumRxOverruns()
 {
-    return _status.rx_overruns;
+    return static_cast<int>(_status.rx_overruns.load());
 }
 
 int GrIPInterface::getNumTxDropped()
 {
-    return _status.tx_dropped;
+    return static_cast<int>(_status.tx_dropped.load());
 }
 
 int GrIPInterface::getIfIndex()
@@ -394,12 +394,12 @@ void GrIPInterface::open()
 
     _isOpen = true;
     _isOffline = false;
-    _status.rx_count = 0;
-    _status.rx_errors = 0;
-    _status.rx_overruns = 0;
-    _status.tx_count = 0;
-    _status.tx_errors = 0;
-    _status.tx_dropped = 0;
+    _status.rx_count.store(0);
+    _status.rx_errors.store(0);
+    _status.rx_overruns.store(0);
+    _status.tx_count.store(0);
+    _status.tx_errors.store(0);
+    _status.tx_dropped.store(0);
 }
 
 void GrIPInterface::handleSerialError(QSerialPort::SerialPortError error)
@@ -474,14 +474,14 @@ void GrIPInterface::sendMessage(const BusMessage &msg)
     {
         if (!m_GrIPHandler->CanTransmit(_channel_idx, msg))
         {
-            _status.tx_errors++;
+            _status.tx_errors.fetch_add(1);
         }
     }
     else if (_manufacturer == CANIL_LIN)
     {
         if (!m_GrIPHandler->LinSendData(_channel_idx, msg))
         {
-            _status.tx_errors++;
+            _status.tx_errors.fetch_add(1);
         }
     }
 }
@@ -502,19 +502,19 @@ bool GrIPInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout
                 // TX echo frame
                 if (!msg.isErrorFrame())
                 {
-                    _status.tx_count++;
+                    _status.tx_count.fetch_add(1);
                     addFrameBits(msg);
                 }
                 else
                 {
-                    _status.tx_errors++;
+                    _status.tx_errors.fetch_add(1);
                 }
                 msglist.append(msg);
             }
             else
             {
                 msglist.append(msg);
-                _status.rx_count++;
+                _status.rx_count.fetch_add(1);
                 addFrameBits(msg);
             }
         }
@@ -528,11 +528,11 @@ bool GrIPInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout
 
             if (msg.isRX())
             {
-                _status.rx_count++;
+                _status.rx_count.fetch_add(1);
             }
             else
             {
-                _status.tx_count++;
+                _status.tx_count.fetch_add(1);
             }
             msglist.append(msg);
         }

@@ -357,10 +357,14 @@ void GrIPHandler::CanEnableChannel(uint8_t ch, bool enable)
     {
         // Update local shadow and rebuild the full channel state word.
         // The firmware expects the enable state of all channels at once,
-        // not just the one being changed.
-        m_Channel_StatusCAN[ch] = enable;
-        status.Channel1 = m_Channel_StatusCAN[0];
-        status.Channel2 = m_Channel_StatusCAN[1];
+        // not just the one being changed. Protect the channel vector with
+        // m_MutexData which guards receive queues and channel state.
+        {
+            std::unique_lock<std::mutex> dataLck(m_MutexData);
+            m_Channel_StatusCAN[ch] = enable;
+            status.Channel1 = m_Channel_StatusCAN.size() > 0 ? m_Channel_StatusCAN[0] : 0;
+            status.Channel2 = m_Channel_StatusCAN.size() > 1 ? m_Channel_StatusCAN[1] : 0;
+        }
 
         std::unique_lock<std::mutex> lck(m_MutexSerial);
 
@@ -383,10 +387,14 @@ void GrIPHandler::LinEnableChannel(uint8_t ch, bool enable)
     {
         // Update local shadow and rebuild the full channel state word.
         // The firmware expects the enable state of all channels at once,
-        // not just the one being changed.
-        m_Channel_StatusLIN[ch] = enable;
-        status.Channel1 = m_Channel_StatusLIN[0];
-        status.Channel2 = m_Channel_StatusLIN[1];
+        // not just the one being changed. Protect the channel vector with
+        // m_MutexData.
+        {
+            std::unique_lock<std::mutex> dataLck(m_MutexData);
+            m_Channel_StatusLIN[ch] = enable;
+            status.Channel1 = m_Channel_StatusLIN.size() > 0 ? m_Channel_StatusLIN[0] : 0;
+            status.Channel2 = m_Channel_StatusLIN.size() > 1 ? m_Channel_StatusLIN[1] : 0;
+        }
 
         std::unique_lock<std::mutex> lck(m_MutexSerial);
 
@@ -542,6 +550,7 @@ bool GrIPHandler::CanAvailable(uint8_t ch) const
 
 uint8_t GrIPHandler::CanGetState(uint8_t ch) const
 {
+    std::unique_lock<std::mutex> lck(m_MutexData);
     if (ch < m_CanBusStatus.size())
     {
         return m_CanBusStatus[ch];
@@ -555,6 +564,7 @@ uint8_t GrIPHandler::CanGetState(uint8_t ch) const
 
 uint8_t GrIPHandler::LinGetState(uint8_t ch) const
 {
+    std::unique_lock<std::mutex> lck(m_MutexData);
     if (ch < m_LinBusStatus.size())
     {
         return m_LinBusStatus[ch];

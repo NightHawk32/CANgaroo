@@ -50,15 +50,15 @@ struct can_config_t {
 };
 
 struct can_status_t {
-    uint32_t can_state;
+    std::atomic<uint32_t> can_state{0};
 
-    uint64_t rx_count;
-    int rx_errors;
-    uint64_t rx_overruns;
+    std::atomic<uint64_t> rx_count{0};
+    std::atomic<int> rx_errors{0};
+    std::atomic<uint64_t> rx_overruns{0};
 
-    uint64_t tx_count;
-    int tx_errors;
-    uint64_t tx_dropped;
+    std::atomic<uint64_t> tx_count{0};
+    std::atomic<int> tx_errors{0};
+    std::atomic<uint64_t> tx_dropped{0};
 };
 
 struct can_msg_t {
@@ -128,7 +128,6 @@ private:
     int _idx;
     bool _isOpen;
     bool _isOffline;
-    bool _no_confirm;
     QSerialPort* _serport;
     QList<can_msg_t> _can_msg_queue;
     QList<BusMessage> _can_msg_tx_queue;
