@@ -7,7 +7,7 @@
 
 class LinFrame;
 
-using LinValueTable = QMap<uint64_t, QString>;
+using LinSignalValueTable = QMap<uint64_t, QString>;
 
 class LinSignal
 {
@@ -64,5 +64,5 @@ private:
     double    _max       {0.0};
     QString   _unit;
     uint64_t  _initValue {0};
-    LinValueTable _valueTable;
+    LinSignalValueTable _valueTable;
 };

@@ -26,6 +26,7 @@
 #include <QDateTime>
 #include <QMutex>
 #include <QtSerialPort/QSerialPort>
+#include <atomic>
 
 #include "core/MeasurementInterface.h"
 
@@ -147,9 +148,11 @@ private:
     can_status_t _status;
     ts_mode_t _ts_mode;
 
-    QDateTime  _readMessage_datetime;
-    uint32_t _send_wait_respond;
-    QDateTime  _readMessage_datetime_run;
+    // timestamps stored as ms since epoch to avoid data races on QDateTime
+    std::atomic<qint64> _readMessage_ms{0};
+    std::atomic<uint32_t> _send_wait_respond{0};
+    std::atomic<qint64> _readMessage_run_ms{0};
+    std::atomic<bool> _no_confirm{false};
 
     bool updateStatus();
     bool parseMessage(BusMessage &msg);
