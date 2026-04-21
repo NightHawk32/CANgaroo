@@ -117,7 +117,7 @@ QVariant UnifiedTraceViewModel::data(const QModelIndex &index, int role) const
         case Qt::ForegroundRole:
             return data_TextColorRole(index, role);
         case Qt::TextAlignmentRole:
-            return static_cast<int>(Qt::AlignLeft | Qt::AlignVCenter);
+            return BaseTraceViewModel::data_TextAlignmentRole(index, role);
         default:
             return BaseTraceViewModel::data(index, role);
     }

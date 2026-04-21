@@ -342,8 +342,8 @@ QVariant BaseTraceViewModel::data_TextAlignmentRole(const QModelIndex &index, in
         case column_channel: return static_cast<int>(Qt::AlignCenter) + static_cast<int>(Qt::AlignVCenter);
         case column_direction: return static_cast<int>(Qt::AlignCenter) + static_cast<int>(Qt::AlignVCenter);
         case column_type: return static_cast<int>(Qt::AlignCenter) + static_cast<int>(Qt::AlignVCenter);
-        case column_canid: return static_cast<int>(Qt::AlignRight) + static_cast<int>(Qt::AlignVCenter);
-        case column_sender: return static_cast<int>(Qt::AlignLeft) + static_cast<int>(Qt::AlignVCenter);
+        case column_canid: return static_cast<int>(Qt::AlignCenter) + static_cast<int>(Qt::AlignVCenter);
+        case column_sender: return static_cast<int>(Qt::AlignCenter) + static_cast<int>(Qt::AlignVCenter);
         case column_name: return static_cast<int>(Qt::AlignLeft) + static_cast<int>(Qt::AlignVCenter);
         case column_dlc: return static_cast<int>(Qt::AlignCenter) + static_cast<int>(Qt::AlignVCenter);
         case column_data: return static_cast<int>(Qt::AlignLeft) + static_cast<int>(Qt::AlignVCenter);

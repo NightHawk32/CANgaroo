@@ -41,6 +41,11 @@ void TraceFilterModel::setHiddenMessageIds(const QSet<uint32_t> &ids)
     _hiddenMessageIds = ids;
 }
 
+void TraceFilterModel::setHiddenLinFrameIds(const QSet<uint8_t> &ids)
+{
+    _hiddenLinFrameIds = ids;
+}
+
 void TraceFilterModel::setHiddenInterfaces(const QSet<BusInterfaceId> &ids)
 {
     _hiddenInterfaces = ids;
@@ -82,7 +87,14 @@ bool TraceFilterModel::filterAcceptsRow(int source_row, const QModelIndex &sourc
         {
             return false;
         }
-        if (_hiddenMessageIds.contains(msg.getId()))
+        if (msg.busType() == BusType::LIN)
+        {
+            if (_hiddenLinFrameIds.contains(static_cast<uint8_t>(msg.getId())))
+            {
+                return false;
+            }
+        }
+        else if (_hiddenMessageIds.contains(msg.getId()))
         {
             return false;
         }

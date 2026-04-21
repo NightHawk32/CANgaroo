@@ -221,6 +221,16 @@ bool TraceWindow::saveXML(Backend &backend, QDomDocument &xml, QDomElement &root
         filterEl.setAttribute("hiddenMessages", hiddenMsgs.join(","));
     }
 
+    QStringList hiddenLinFrames;
+    for (uint8_t id : _filterHiddenLinFrameIds)
+    {
+        hiddenLinFrames.append(QString::number(id));
+    }
+    if (!hiddenLinFrames.isEmpty())
+    {
+        filterEl.setAttribute("hiddenLinFrames", hiddenLinFrames.join(","));
+    }
+
     QStringList hiddenIfs;
     for (BusInterfaceId id : _filterHiddenInterfaces)
     {
@@ -264,6 +274,15 @@ bool TraceWindow::loadXML(Backend &backend, QDomElement &el)
             for (const QString &s : hiddenMsgsStr.split(","))
             {
                 _filterHiddenMessageIds.insert(s.toUInt());
+            }
+        }
+
+        QString hiddenLinStr = filterEl.attribute("hiddenLinFrames");
+        if (!hiddenLinStr.isEmpty())
+        {
+            for (const QString &s : hiddenLinStr.split(","))
+            {
+                _filterHiddenLinFrameIds.insert(static_cast<uint8_t>(s.toUInt()));
             }
         }
 
@@ -360,6 +379,7 @@ void TraceWindow::openFilterDialog()
     dlg.setShowTx(_filterShowTx);
     dlg.setShowRx(_filterShowRx);
     dlg.setHiddenMessageIds(_filterHiddenMessageIds);
+    dlg.setHiddenLinFrameIds(_filterHiddenLinFrameIds);
     dlg.setHiddenInterfaces(_filterHiddenInterfaces);
 
     if (dlg.exec() == QDialog::Accepted)
@@ -367,6 +387,7 @@ void TraceWindow::openFilterDialog()
         _filterShowTx = dlg.showTx();
         _filterShowRx = dlg.showRx();
         _filterHiddenMessageIds = dlg.hiddenMessageIds();
+        _filterHiddenLinFrameIds = dlg.hiddenLinFrameIds();
         _filterHiddenInterfaces = dlg.hiddenInterfaces();
 
         applyDialogFilters();
@@ -381,6 +402,7 @@ void TraceWindow::applyDialogFilters()
         model->setShowTx(_filterShowTx);
         model->setShowRx(_filterShowRx);
         model->setHiddenMessageIds(_filterHiddenMessageIds);
+        model->setHiddenLinFrameIds(_filterHiddenLinFrameIds);
         model->setHiddenInterfaces(_filterHiddenInterfaces);
         model->invalidate();
     };

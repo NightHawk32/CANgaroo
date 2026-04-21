@@ -11,6 +11,8 @@
 
 #include "core/Backend.h"
 #include "core/DBC/CanDb.h"
+#include "core/DBC/LinDb.h"
+#include "core/DBC/LinFrame.h"
 #include "core/MeasurementNetwork.h"
 #include "core/MeasurementSetup.h"
 
@@ -37,8 +39,8 @@ TraceFilterDialog::TraceFilterDialog(Backend &backend, QWidget *parent)
     // --- Content area: messages and interfaces side by side ---
     auto *contentLayout = new QHBoxLayout;
 
-    // --- DBC Messages ---
-    auto *msgGroup = new QGroupBox(tr("DBC Messages"), this);
+    // --- Messages (CAN + LIN) ---
+    auto *msgGroup = new QGroupBox(tr("Messages"), this);
     auto *msgLayout = new QVBoxLayout(msgGroup);
 
     auto *msgBtnLayout = new QHBoxLayout;
@@ -80,8 +82,13 @@ TraceFilterDialog::TraceFilterDialog(Backend &backend, QWidget *parent)
     mainLayout->addLayout(buttonLayout);
 }
 
+static constexpr int BusTypeRole = Qt::UserRole + 1;
+static constexpr int BusTypeCAN = 0;
+static constexpr int BusTypeLIN = 1;
+
 void TraceFilterDialog::populateMessages(Backend &backend)
 {
+    // CAN messages from DBC databases
     for (auto *network : backend.getSetup().getNetworks())
     {
         for (const auto &db : network->_canDbs)
@@ -93,13 +100,37 @@ void TraceFilterDialog::populateMessages(Backend &backend)
                 item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
                 item->setCheckState(Qt::Checked);
                 item->setData(Qt::UserRole, it.key());
+                item->setData(BusTypeRole, BusTypeCAN);
+            }
+        }
+    }
+
+    // LIN frames from LDF databases — deduplicate by frame ID so that loading
+    // the same LDF on multiple channels produces a single entry per frame.
+    QSet<uint8_t> seenLinIds;
+    for (auto *network : backend.getSetup().getNetworks())
+    {
+        for (const auto &db : network->_linDbs)
+        {
+            for (auto it = db->frames().constBegin(); it != db->frames().constEnd(); ++it)
+            {
+                LinFrame *frame = it.value();
+                if (seenLinIds.contains(frame->id())) { continue; }
+                seenLinIds.insert(frame->id());
+
+                const QString label = tr("[LIN] %1").arg(frame->name());
+                auto *item = new QListWidgetItem(label, m_messageList);
+                item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+                item->setCheckState(Qt::Checked);
+                item->setData(Qt::UserRole, static_cast<uint32_t>(frame->id()));
+                item->setData(BusTypeRole, BusTypeLIN);
             }
         }
     }
 
     if (m_messageList->count() == 0)
     {
-        auto *item = new QListWidgetItem(tr("(no DBC loaded)"), m_messageList);
+        auto *item = new QListWidgetItem(tr("(no databases loaded)"), m_messageList);
         item->setFlags(item->flags() & ~Qt::ItemIsUserCheckable);
         item->setForeground(Qt::gray);
     }
@@ -140,9 +171,27 @@ QSet<uint32_t> TraceFilterDialog::hiddenMessageIds() const
     for (int i = 0; i < m_messageList->count(); ++i)
     {
         auto *item = m_messageList->item(i);
-        if ((item->flags() & Qt::ItemIsUserCheckable) && item->checkState() == Qt::Unchecked)
+        if ((item->flags() & Qt::ItemIsUserCheckable)
+            && item->checkState() == Qt::Unchecked
+            && item->data(BusTypeRole).toInt() == BusTypeCAN)
         {
             hidden.insert(item->data(Qt::UserRole).toUInt());
+        }
+    }
+    return hidden;
+}
+
+QSet<uint8_t> TraceFilterDialog::hiddenLinFrameIds() const
+{
+    QSet<uint8_t> hidden;
+    for (int i = 0; i < m_messageList->count(); ++i)
+    {
+        auto *item = m_messageList->item(i);
+        if ((item->flags() & Qt::ItemIsUserCheckable)
+            && item->checkState() == Qt::Unchecked
+            && item->data(BusTypeRole).toInt() == BusTypeLIN)
+        {
+            hidden.insert(static_cast<uint8_t>(item->data(Qt::UserRole).toUInt()));
         }
     }
     return hidden;
@@ -177,10 +226,25 @@ void TraceFilterDialog::setHiddenMessageIds(const QSet<uint32_t> &ids)
     for (int i = 0; i < m_messageList->count(); ++i)
     {
         auto *item = m_messageList->item(i);
-        if (item->flags() & Qt::ItemIsUserCheckable)
+        if ((item->flags() & Qt::ItemIsUserCheckable)
+            && item->data(BusTypeRole).toInt() == BusTypeCAN)
         {
             uint32_t msgId = item->data(Qt::UserRole).toUInt();
             item->setCheckState(ids.contains(msgId) ? Qt::Unchecked : Qt::Checked);
+        }
+    }
+}
+
+void TraceFilterDialog::setHiddenLinFrameIds(const QSet<uint8_t> &ids)
+{
+    for (int i = 0; i < m_messageList->count(); ++i)
+    {
+        auto *item = m_messageList->item(i);
+        if ((item->flags() & Qt::ItemIsUserCheckable)
+            && item->data(BusTypeRole).toInt() == BusTypeLIN)
+        {
+            auto frameId = static_cast<uint8_t>(item->data(Qt::UserRole).toUInt());
+            item->setCheckState(ids.contains(frameId) ? Qt::Unchecked : Qt::Checked);
         }
     }
 }
@@ -263,6 +327,16 @@ bool TraceFilterDialog::saveXML(QDomDocument &xml, QDomElement &root) const
         el.setAttribute("hiddenMessages", hiddenMsgs.join(","));
     }
 
+    QStringList hiddenLinFrames;
+    for (uint8_t id : hiddenLinFrameIds())
+    {
+        hiddenLinFrames.append(QString::number(id));
+    }
+    if (!hiddenLinFrames.isEmpty())
+    {
+        el.setAttribute("hiddenLinFrames", hiddenLinFrames.join(","));
+    }
+
     QStringList hiddenIfs;
     for (BusInterfaceId id : hiddenInterfaces())
     {
@@ -297,6 +371,17 @@ bool TraceFilterDialog::loadXML(QDomElement &el)
             ids.insert(s.toUInt());
         }
         setHiddenMessageIds(ids);
+    }
+
+    QString hiddenLinStr = filterEl.attribute("hiddenLinFrames");
+    if (!hiddenLinStr.isEmpty())
+    {
+        QSet<uint8_t> ids;
+        for (const QString &s : hiddenLinStr.split(","))
+        {
+            ids.insert(static_cast<uint8_t>(s.toUInt()));
+        }
+        setHiddenLinFrameIds(ids);
     }
 
     QString hiddenIfsStr = filterEl.attribute("hiddenInterfaces");

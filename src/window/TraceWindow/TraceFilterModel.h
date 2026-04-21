@@ -16,6 +16,7 @@ public:
     void setShowTx(bool show);
     void setShowRx(bool show);
     void setHiddenMessageIds(const QSet<uint32_t> &ids);
+    void setHiddenLinFrameIds(const QSet<uint8_t> &ids);
     void setHiddenInterfaces(const QSet<BusInterfaceId> &ids);
 
 public slots:
@@ -29,6 +30,7 @@ private:
     bool _showTx = true;
     bool _showRx = true;
     QSet<uint32_t> _hiddenMessageIds;
+    QSet<uint8_t>  _hiddenLinFrameIds;
     QSet<BusInterfaceId> _hiddenInterfaces;
 
 protected:
