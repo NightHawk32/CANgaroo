@@ -386,6 +386,44 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
             continue;
         }
 
+        // LIN frame: timestamp channel LIN id dir d DLC byte0 ... checksum = XX ...
+        //            timestamp channel LIN id dir LIN_ChecksumError
+        if (parts.size() >= 6 && parts[2].compare("LIN", Qt::CaseInsensitive) == 0)
+        {
+            uint8_t linId = static_cast<uint8_t>(parts[3].toUInt(nullptr, 16) & 0x3Fu);
+            QString linDir = parts[4];
+
+            BusMessage msg;
+            msg.setTimestamp(timestamp);
+            msg.setBusType(BusType::LIN);
+            msg.setId(linId);
+            msg.setRX(linDir.compare("Rx", Qt::CaseInsensitive) == 0);
+
+            if (parts[5].startsWith("LIN_", Qt::CaseInsensitive))
+            {
+                msg.setErrorFrame(true);
+                msg.setLength(0);
+            }
+            else if (parts[5].compare("d", Qt::CaseInsensitive) == 0 && parts.size() >= 8)
+            {
+                int dlc = parts[6].toInt(&ok);
+                if (ok)
+                {
+                    msg.setLength(static_cast<uint8_t>(dlc));
+                    for (int i = 0; i < dlc && (7 + i) < parts.size(); i++)
+                    {
+                        if (parts[7 + i].compare("checksum", Qt::CaseInsensitive) == 0)
+                            break;
+                        msg.setByte(i, static_cast<uint8_t>(parts[7 + i].toUInt(nullptr, 16)));
+                    }
+                }
+            }
+
+            _messages.append(msg);
+            _messageInterfaces.append(tr("CH %1").arg(channel));
+            continue;
+        }
+
         if (parts.size() < 6)
         {
             continue;
@@ -819,8 +857,9 @@ void ReplayWindow::buildFilterTree()
         bool hasTx = false;
     };
 
-    // Collect interface -> (id -> info)
+    // Collect interface -> (id -> info), and which interfaces carry LIN
     QMap<QString, QMap<uint32_t, IdInfo>> ifaceIds;
+    QSet<QString> linChannels;
     for (int i = 0; i < _messages.size(); i++)
     {
         const QString &iface = _messageInterfaces[i];
@@ -831,6 +870,8 @@ void ReplayWindow::buildFilterTree()
             info.hasRx = true;
         else
             info.hasTx = true;
+        if (_messages[i].busType() == BusType::LIN)
+            linChannels.insert(iface);
     }
 
     // Collect available CAN interfaces for the combo boxes
@@ -842,18 +883,30 @@ void ReplayWindow::buildFilterTree()
         const QString &iface = ifaceIt.key();
         const QMap<uint32_t, IdInfo> &ids = ifaceIt.value();
 
+        const bool isLin = linChannels.contains(iface);
+
         auto *ifaceItem = new QTreeWidgetItem(_filterTree);
-        ifaceItem->setText(0, iface);
+        ifaceItem->setText(0, isLin ? tr("%1 (LIN)").arg(iface) : tr("%1 (CAN)").arg(iface));
         ifaceItem->setFlags(ifaceItem->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate);
         ifaceItem->setCheckState(0, Qt::Checked);
 
-        // Output interface combo box
+        // Output interface combo box — LIN channels are locked to trace-only
         auto *combo = new QComboBox(_filterTree);
         combo->addItem(tr("Trace only"), QVariant(static_cast<int>(-1)));
-        for (BusInterfaceId id : availableInterfaces)
+        if (!isLin)
         {
-            QString name = _backend->getInterfaceName(id);
-            combo->addItem(name, QVariant(static_cast<int>(id)));
+            for (BusInterfaceId id : availableInterfaces)
+            {
+                BusInterface *intf = _backend->getInterfaceById(id);
+                if (intf && intf->busType() == BusType::LIN)
+                    continue;
+                combo->addItem(_backend->getInterfaceName(id), QVariant(static_cast<int>(id)));
+            }
+        }
+        else
+        {
+            combo->setEnabled(false);
+            combo->setToolTip(tr("LIN frames can only be replayed to the trace"));
         }
         _channelCombos[iface] = combo;
 
@@ -1179,7 +1232,7 @@ void ReplayWindow::onTimerTick()
             BusInterface *intf = (mappedInt >= 0) ? _backend->getInterfaceById(static_cast<BusInterfaceId>(mappedInt)) : nullptr;
 
             bool sentOnInterface = false;
-            if (intf && intf->isOpen() && !msg.isErrorFrame())
+            if (intf && intf->isOpen() && !msg.isErrorFrame() && msg.busType() != BusType::LIN)
             {
                 msg.setInterfaceId(static_cast<BusInterfaceId>(mappedInt));
                 msg.setRX(false);

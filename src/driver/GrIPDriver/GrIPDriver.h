@@ -43,7 +43,7 @@ public:
     bool update() override;
 
 private:
-    GrIPInterface *createOrUpdateInterface(int index, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer);
+    GrIPInterface *createOrUpdateInterface(int index, int channel_idx, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer);
     GenericCanSetupPage *setupPage;
     GenericLinSetupPage *linSetupPage;
 

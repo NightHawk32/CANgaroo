@@ -125,16 +125,18 @@ void TinyCanInterface::open()
         return;
     }
 
+    _isOpen.store(true);
     log_info(QString("TinyCanInterface %1: opened").arg(_name));
 }
 
 bool TinyCanInterface::isOpen()
 {
-    return _device && _device->state() == QCanBusDevice::ConnectedState;
+    return _isOpen.load();
 }
 
 void TinyCanInterface::close()
 {
+    _isOpen.store(false);
     if (_device) {
         _device->disconnectDevice();
         delete _device;

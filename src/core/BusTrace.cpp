@@ -234,11 +234,56 @@ void BusTrace::saveVectorAsc(QFile &file)
         }
     }
 
+    // Enhanced LIN checksum (LIN 2.x): sum of PID + data bytes, carry-folded, inverted
+    auto linEnhancedChecksum = [](uint8_t frameId, const BusMessage &m) -> uint8_t
+    {
+        uint8_t id = frameId & 0x3Fu;
+        uint8_t p0 = ((id >> 0) ^ (id >> 1) ^ (id >> 2) ^ (id >> 4)) & 1u;
+        uint8_t p1 = (~((id >> 1) ^ (id >> 3) ^ (id >> 4) ^ (id >> 5))) & 1u;
+        uint16_t sum = id | (p0 << 6u) | (p1 << 7u);
+        for (int i = 0; i < m.getLength(); ++i)
+        {
+            sum += m.getByte(i);
+            if (sum > 255) sum -= 255;
+        }
+        return static_cast<uint8_t>(~sum & 0xFFu);
+    };
+
     for (unsigned int i=0; i<size(); i++) {
         BusMessage &msg = _data[i];
 
         double t_current = msg.getFloatTimestamp();
         int channel = channelMap.value(msg.getInterfaceId(), 1);
+        QString dir = msg.isRX() ? QStringLiteral("Rx") : QStringLiteral("Tx");
+
+        if (msg.busType() == BusType::LIN)
+        {
+            uint8_t linId = static_cast<uint8_t>(msg.getId() & 0x3Fu);
+            QString idHex = QString::number(linId, 16).rightJustified(2, QLatin1Char('0'));
+            QString line;
+            if (msg.isErrorFrame())
+            {
+                line = QStringLiteral("%1 %2  LIN %3 %4   LIN_ChecksumError")
+                    .arg(t_current - t_start, 11, 'f', 6)
+                    .arg(channel)
+                    .arg(idHex)
+                    .arg(dir);
+            }
+            else
+            {
+                uint8_t cs = linEnhancedChecksum(linId, msg);
+                line = QStringLiteral("%1 %2  LIN %3 %4  d %5 %6checksum = %7 header_time = 0 full_time = 0")
+                    .arg(t_current - t_start, 11, 'f', 6)
+                    .arg(channel)
+                    .arg(idHex)
+                    .arg(dir)
+                    .arg(msg.getLength())
+                    .arg(msg.getDataHexString())
+                    .arg(cs, 2, 16, QLatin1Char('0'));
+            }
+            stream << line << Qt::endl;
+            continue;
+        }
 
         if (msg.isErrorFrame()) {
             QString line = QStringLiteral("%1 %2  ErrorFrame")
@@ -255,7 +300,6 @@ void BusTrace::saveVectorAsc(QFile &file)
             id_dec_str.append(QLatin1Char('x'));
         }
 
-        QString dir = msg.isRX() ? QStringLiteral("Rx") : QStringLiteral("Tx");
         QString dataHex = msg.getDataHexString();
 
         QString line;

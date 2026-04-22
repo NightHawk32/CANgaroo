@@ -41,8 +41,6 @@ SLCANInterface::SLCANInterface(SLCANDriver *driver, int index, QString name, boo
   : BusInterface(reinterpret_cast<CanDriver*>(driver)),
     _manufacturer(manufacturer),
     _idx(index),
-    _isOpen(false),
-    _isOffline(false),
     _serport(nullptr),
     _name(name),
     _rx_linbuf_ctr(0),
@@ -869,6 +867,7 @@ bool SLCANInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeou
 
     if (_no_confirm.load())
     {
+        QMutexLocker locker(&_serport_mutex);
         while (_can_msg_tx_queue.empty() == false)
         {
             _status.tx_count.fetch_add(1);

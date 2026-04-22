@@ -33,16 +33,13 @@
 #include "GrIP/GrIPHandler.h"
 
 
-int GrIPInterface::_CanCounter = 0, GrIPInterface::_LinCounter = 0;
 
 
-GrIPInterface::GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer)
+GrIPInterface::GrIPInterface(GrIPDriver *driver, int index, int channel_idx, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer)
     : BusInterface(reinterpret_cast<CanDriver *>(driver)),
       _manufacturer(manufacturer),
       _idx(index),
-      _channel_idx(0),
-      _isOpen(false),
-      _isOffline(false),
+      _channel_idx(channel_idx),
       _isLin(manufacturer == CANIL_LIN),
       _name(name),
       m_GrIPHandler(hdl)
@@ -52,8 +49,6 @@ GrIPInterface::GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QS
 
     _config.supports_canfd = fd_support;
     _config.supports_timing = false;
-
-    _channel_idx = (manufacturer == CANIL_CAN) ? _CanCounter++ : _LinCounter++;
     //qDebug() << (_isLin ? "LIN IDX: " : "CAN IDX: ") << _channel_idx;
 
     if (_isLin)
@@ -81,8 +76,6 @@ GrIPInterface::GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QS
 
 GrIPInterface::~GrIPInterface()
 {
-    _CanCounter = 0;
-    _LinCounter = 0;
 }
 
 QString GrIPInterface::getDetailsStr() const
@@ -468,8 +461,6 @@ bool GrIPInterface::isOpen()
 
 void GrIPInterface::sendMessage(const BusMessage &msg)
 {
-    QMutexLocker locker(&_serport_mutex);
-
     if (_manufacturer == CANIL_CAN)
     {
         if (!m_GrIPHandler->CanTransmit(_channel_idx, msg))

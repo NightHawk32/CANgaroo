@@ -81,17 +81,17 @@ bool GrIPDriver::update()
 
             for (int i = 0; i < m_GrIPHandler->Channels_CAN(); i++)
             {
-                createOrUpdateInterface(interface_cnt, m_GrIPHandler, "CANIL-CAN" + QString::number(interface_cnt), false, GrIPInterface::CANIL_CAN);
+                createOrUpdateInterface(interface_cnt, i, m_GrIPHandler, "CANIL-CAN" + QString::number(interface_cnt), false, GrIPInterface::CANIL_CAN);
                 interface_cnt++;
             }
             for (int i = 0; i < m_GrIPHandler->Channels_CANFD(); i++)
             {
-                createOrUpdateInterface(interface_cnt, m_GrIPHandler, "CANIL-CANFD" + QString::number(interface_cnt), true, GrIPInterface::CANIL_CAN);
+                createOrUpdateInterface(interface_cnt, i, m_GrIPHandler, "CANIL-CANFD" + QString::number(interface_cnt), true, GrIPInterface::CANIL_CAN);
                 interface_cnt++;
             }
             for (int i = 0; i < m_GrIPHandler->Channels_LIN(); i++)
             {
-                createOrUpdateInterface(interface_cnt, m_GrIPHandler, "CANIL-LIN" + QString::number(i), false, GrIPInterface::CANIL_LIN);
+                createOrUpdateInterface(interface_cnt, i, m_GrIPHandler, "CANIL-LIN" + QString::number(i), false, GrIPInterface::CANIL_LIN);
                 interface_cnt++;
             }
         }
@@ -109,7 +109,7 @@ QString GrIPDriver::getName() const
     return "GrIP-CANIL";
 }
 
-GrIPInterface *GrIPDriver::createOrUpdateInterface(int index, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer)
+GrIPInterface *GrIPDriver::createOrUpdateInterface(int index, int channel_idx, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer)
 {
     for (auto *intf : getInterfaces())
     {
@@ -121,7 +121,7 @@ GrIPInterface *GrIPDriver::createOrUpdateInterface(int index, GrIPHandler *hdl, 
         }
     }
 
-    GrIPInterface *scif = new GrIPInterface(this, index, hdl, name, fd_support, manufacturer);
+    GrIPInterface *scif = new GrIPInterface(this, index, channel_idx, hdl, name, fd_support, manufacturer);
     addInterface(scif);
 
     return scif;

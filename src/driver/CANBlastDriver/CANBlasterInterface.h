@@ -23,6 +23,8 @@
 
 #include "../BusInterface.h"
 
+#include <atomic>
+
 #include <QTimer>
 #include <QtNetwork/QUdpSocket>
 
@@ -40,15 +42,15 @@ struct can_config_t {
 };
 
 struct can_status_t {
-    uint32_t can_state;
+    std::atomic<uint32_t> can_state{0};
 
-    uint64_t rx_count;
-    int rx_errors;
-    uint64_t rx_overruns;
+    std::atomic<uint64_t> rx_count{0};
+    std::atomic<int>      rx_errors{0};
+    std::atomic<uint64_t> rx_overruns{0};
 
-    uint64_t tx_count;
-    int tx_errors;
-    uint64_t tx_dropped;
+    std::atomic<uint64_t> tx_count{0};
+    std::atomic<int>      tx_errors{0};
+    std::atomic<uint64_t> tx_dropped{0};
 };
 
 class CANBlasterInterface: public BusInterface {
@@ -100,7 +102,7 @@ private:
     };
 
     int _idx;
-    bool _isOpen;
+    std::atomic<bool> _isOpen{false};
     QString _name;
 
     MeasurementInterface _settings;

@@ -583,10 +583,10 @@ void SocketCanInterface::open()
 
     strncpy(ifr.ifr_name, _name.toStdString().c_str(), IFNAMSIZ - 1);
     ifr.ifr_name[IFNAMSIZ - 1] = '\0';
-    if (ioctl(_fd, SIOCGIFINDEX, &ifr) < 0)
+    if (ioctl(local_fd, SIOCGIFINDEX, &ifr) < 0)
     {
         log_error(QString("SocketCanInterface: Error getting interface index for %1: %2").arg(_name, strerror(errno)));
-        ::close(_fd);
+        ::close(local_fd);
         return;
     }
 
@@ -795,7 +795,7 @@ bool SocketCanInterface::readMessage(QList<BusMessage> &msglist, unsigned int ti
 
         if (_ts_mode == ts_mode_SIOCGSTAMPNS)
         {
-            if (ioctl(_fd, SIOCGSTAMPNS, &ts_rcv) == 0)
+            if (ioctl(local_fd, SIOCGSTAMPNS, &ts_rcv) == 0)
             {
                 msg.setTimestamp(ts_rcv.tv_sec, ts_rcv.tv_nsec / 1000);
             }
@@ -807,7 +807,7 @@ bool SocketCanInterface::readMessage(QList<BusMessage> &msglist, unsigned int ti
 
         if (_ts_mode == ts_mode_SIOCGSTAMP)
         {
-            if (ioctl(_fd, SIOCGSTAMP, &tv_rcv) == 0)
+            if (ioctl(local_fd, SIOCGSTAMP, &tv_rcv) == 0)
             {
                 msg.setTimestamp(tv_rcv.tv_sec, tv_rcv.tv_usec);
             }
@@ -840,7 +840,7 @@ bool SocketCanInterface::readMessage(QList<BusMessage> &msglist, unsigned int ti
         timeout.tv_sec = 0;
         timeout.tv_usec = 0;
         FD_ZERO(&fdset);
-        FD_SET(_fd, &fdset);
+        FD_SET(local_fd, &fdset);
     }
 
     return !msglist.empty();

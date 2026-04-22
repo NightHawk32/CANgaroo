@@ -37,7 +37,6 @@
 CANBlasterInterface::CANBlasterInterface(CANBlasterDriver *driver, int index, QString name, bool fd_support)
   : BusInterface(reinterpret_cast<CanDriver*>(driver)),
     _idx(index),
-    _isOpen(false),
     _name(name),
     _ts_mode(ts_mode_SIOCSHWTSTAMP),
     _socket(nullptr)
@@ -156,32 +155,32 @@ uint32_t CANBlasterInterface::getState()
 
 int CANBlasterInterface::getNumRxFrames()
 {
-    return _status.rx_count;
+    return static_cast<int>(_status.rx_count.load());
 }
 
 int CANBlasterInterface::getNumRxErrors()
 {
-    return _status.rx_errors;
+    return _status.rx_errors.load();
 }
 
 int CANBlasterInterface::getNumTxFrames()
 {
-    return _status.tx_count;
+    return static_cast<int>(_status.tx_count.load());
 }
 
 int CANBlasterInterface::getNumTxErrors()
 {
-    return _status.tx_errors;
+    return _status.tx_errors.load();
 }
 
 int CANBlasterInterface::getNumRxOverruns()
 {
-    return _status.rx_overruns;
+    return static_cast<int>(_status.rx_overruns.load());
 }
 
 int CANBlasterInterface::getNumTxDropped()
 {
-    return _status.tx_dropped;
+    return static_cast<int>(_status.tx_dropped.load());
 }
 
 int CANBlasterInterface::getIfIndex() {

@@ -147,16 +147,18 @@ void VectorInterface::open()
         return;
     }
 
+    _isOpen.store(true);
     log_info(QString("VectorInterface %1: opened").arg(_name));
 }
 
 bool VectorInterface::isOpen()
 {
-    return _device && _device->state() == QCanBusDevice::ConnectedState;
+    return _isOpen.load();
 }
 
 void VectorInterface::close()
 {
+    _isOpen.store(false);
     if (_device) {
         _device->disconnectDevice();
         delete _device;

@@ -23,9 +23,9 @@
 
 #include "../BusInterface.h"
 
-#include <QMutex>
-#include <QtSerialPort/QSerialPort>
 #include <atomic>
+
+#include <QtSerialPort/QSerialPort>
 
 #include "core/MeasurementInterface.h"
 
@@ -69,7 +69,7 @@ public:
         CANIL_LIN
     };
 
-    GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer);
+    GrIPInterface(GrIPDriver *driver, int index, int channel_idx, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer);
     ~GrIPInterface() override;
 
     QString getDetailsStr() const override;
@@ -123,10 +123,9 @@ private:
 
     int _idx;
     int _channel_idx;
-    bool _isOpen;
-    bool _isOffline;
+    std::atomic<bool> _isOpen{false};
+    std::atomic<bool> _isOffline{false};
     bool _isLin;
-    QMutex _serport_mutex;
     QString _name;
 
     MeasurementInterface _settings;
@@ -138,7 +137,4 @@ private:
     qint64 _lastReadMsec;  ///< Timestamp of last readMessage() execution; used for rate-limiting.
 
     GrIPHandler *m_GrIPHandler;
-
-    static int _CanCounter, _LinCounter;
-
 };

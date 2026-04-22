@@ -126,8 +126,8 @@ private:
     QString _version;
 
     int _idx;
-    bool _isOpen;
-    bool _isOffline;
+    std::atomic<bool> _isOpen{false};
+    std::atomic<bool> _isOffline{false};
     QSerialPort* _serport;
     QList<can_msg_t> _can_msg_queue;
     QList<BusMessage> _can_msg_tx_queue;

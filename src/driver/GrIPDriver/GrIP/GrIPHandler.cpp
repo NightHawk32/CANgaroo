@@ -277,11 +277,14 @@ void GrIPHandler::RequestVersion()
 
     GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&header), sizeof(Protocol_SystemHeader_t)};
 
-    // Reset cached state — it will be repopulated when the reply arrives in
-    // ProcessData() (MSG_SYSTEM_CMD / sub-command 0).
-    m_Version.clear();
-    m_ChannelsCAN = 0;
-    m_ChannelsCANFD = 0;
+    // Reset cached state under m_MutexData — GetVersion() / Channels_*() read
+    // these fields under the same lock, so the clear must also hold it.
+    {
+        std::unique_lock<std::mutex> dataLck(m_MutexData);
+        m_Version.clear();
+        m_ChannelsCAN = 0;
+        m_ChannelsCANFD = 0;
+    }
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 

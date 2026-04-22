@@ -23,6 +23,8 @@
 
 #include "../BusInterface.h"
 
+#include <atomic>
+
 #include <QMutex>
 
 class QCanBusDevice;
@@ -63,11 +65,12 @@ public:
     QString getDeviceName() const;
 
 private:
-    QString        _deviceName;
-    QString        _name;
-    QCanBusDevice *_device;
-    unsigned       _bitrate;
-    bool           _listenOnly;
+    QString           _deviceName;
+    QString           _name;
+    QCanBusDevice    *_device;
+    unsigned          _bitrate;
+    bool              _listenOnly;
+    std::atomic<bool> _isOpen{false};
 
     struct {
         uint64_t rx_count;
