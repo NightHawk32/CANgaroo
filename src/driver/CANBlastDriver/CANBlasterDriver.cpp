@@ -115,7 +115,7 @@ bool CANBlasterDriver::update() {
     return true;
 }
 
-QString CANBlasterDriver::getName() {
+QString CANBlasterDriver::getName() const {
     return "CANblaster";
 }
 

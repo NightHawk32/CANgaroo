@@ -33,7 +33,7 @@
 
 #include "core/PythonEngine.h"
 #include "core/Backend.h"
-#include "core/CanTrace.h"
+#include "core/BusTrace.h"
 
 
 ScriptWindow::ScriptWindow(QWidget *parent, Backend &backend)
@@ -115,8 +115,8 @@ ScriptWindow::ScriptWindow(QWidget *parent, Backend &backend)
     connect(&backend, &Backend::endMeasurement,   this, &ScriptWindow::onMeasurementStopped);
 
     // Forward incoming CAN messages to the Python engine's receive queue
-    CanTrace *trace = backend.getTrace();
-    connect(trace, &CanTrace::messageEnqueued, this, [this, trace](int idx)
+    BusTrace *trace = backend.getTrace();
+    connect(trace, &BusTrace::messageEnqueued, this, [this, trace](int idx)
     {
         if (_engine->isRunning())
         {

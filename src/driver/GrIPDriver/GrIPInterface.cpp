@@ -1,5 +1,4 @@
 /*
-
   Copyright (c) 2025-2026 Schildkroet
 
   This file is part of cangaroo.
@@ -18,7 +17,6 @@
   along with cangaroo.  If not, see <http://www.gnu.org/licenses/>.
 
 */
-
 #include "GrIPInterface.h"
 
 #include <QDateTime>
@@ -28,17 +26,21 @@
 #include <QThread>
 
 #include "core/Backend.h"
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
+#include "core/DBC/LinDb.h"
 #include "core/MeasurementInterface.h"
 
 #include "GrIP/GrIPHandler.h"
 
-GrIPInterface::GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer)
-    : CanInterface(reinterpret_cast<CanDriver *>(driver)),
+
+
+
+GrIPInterface::GrIPInterface(GrIPDriver *driver, int index, int channel_idx, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer)
+    : BusInterface(reinterpret_cast<CanDriver *>(driver)),
       _manufacturer(manufacturer),
       _idx(index),
-      _isOpen(false),
-      _isOffline(false),
+      _channel_idx(channel_idx),
+      _isLin(manufacturer == CANIL_LIN),
       _name(name),
       m_GrIPHandler(hdl)
 {
@@ -47,20 +49,26 @@ GrIPInterface::GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QS
 
     _config.supports_canfd = fd_support;
     _config.supports_timing = false;
+    //qDebug() << (_isLin ? "LIN IDX: " : "CAN IDX: ") << _channel_idx;
 
-    if (fd_support)
+    if (_isLin)
+    {
+        _settings.setBusType(BusType::LIN);
+        _settings.setLinBaudRate(19200);
+    }
+    else if (fd_support)
     {
         _settings.setFdBitrate(2000000);
         _settings.setFdSamplePoint(750);
     }
 
-    _status.can_state = state_bus_off;
-    _status.rx_count = 0;
-    _status.rx_errors = 0;
-    _status.rx_overruns = 0;
-    _status.tx_count = 0;
-    _status.tx_errors = 0;
-    _status.tx_dropped = 0;
+    _status.can_state.store(state_bus_off);
+    _status.rx_count.store(0);
+    _status.rx_errors.store(0);
+    _status.rx_overruns.store(0);
+    _status.tx_count.store(0);
+    _status.tx_errors.store(0);
+    _status.tx_dropped.store(0);
 
     _lastStateMsec = QDateTime::currentMSecsSinceEpoch();
     _lastReadMsec = QDateTime::currentMSecsSinceEpoch();
@@ -72,7 +80,11 @@ GrIPInterface::~GrIPInterface()
 
 QString GrIPInterface::getDetailsStr() const
 {
-    if (_manufacturer == CANIL)
+    if (_manufacturer == CANIL_LIN)
+    {
+        return tr("CANIL with LIN support");
+    }
+    if (_manufacturer == CANIL_CAN)
     {
         return _config.supports_canfd
                    ? tr("CANIL with CANFD support")
@@ -95,7 +107,7 @@ QList<CanTiming> GrIPInterface::getAvailableBitrates()
 {
     QList<CanTiming> retval;
 
-    if (_manufacturer != GrIPInterface::CANIL)
+    if (_manufacturer != GrIPInterface::CANIL_CAN)
     {
         return retval;
     }
@@ -130,7 +142,14 @@ void GrIPInterface::applyConfig(const MeasurementInterface &mi)
 
 bool GrIPInterface::updateStatus()
 {
-    _status.can_state = m_GrIPHandler->CanGetState(_idx);
+    if (_manufacturer == CANIL_CAN)
+    {
+        _status.can_state.store(m_GrIPHandler->CanGetState(_channel_idx));
+    }
+    else if (_manufacturer == CANIL_LIN)
+    {
+        _status.can_state.store(m_GrIPHandler->LinGetState(_channel_idx));
+    }
     return true;
 }
 
@@ -165,25 +184,33 @@ unsigned GrIPInterface::getBitrate()
     return _settings.bitrate();
 }
 
+BusType GrIPInterface::busType() const
+{
+    return _isLin ? BusType::LIN : BusType::CAN;
+}
+
 uint32_t GrIPInterface::getCapabilities()
 {
     uint32_t retval = 0;
 
-    if (_manufacturer == GrIPInterface::CANIL)
+    if (_isLin)
+        return 0;
+
+    if (_manufacturer == GrIPInterface::CANIL_CAN)
     {
         retval =
-            CanInterface::capability_auto_restart |
-            CanInterface::capability_listen_only;
+            BusInterface::capability_auto_restart |
+            BusInterface::capability_listen_only;
     }
 
     if (supportsCanFD())
     {
-        retval |= CanInterface::capability_canfd;
+        retval |= BusInterface::capability_canfd;
     }
 
     if (supportsTripleSampling())
     {
-        retval |= CanInterface::capability_triple_sampling;
+        retval |= BusInterface::capability_triple_sampling;
     }
 
     return retval;
@@ -196,19 +223,19 @@ bool GrIPInterface::updateStatistics()
 
 void GrIPInterface::resetStatistics()
 {
-    _status.rx_count = 0;
-    _status.rx_errors = 0;
-    _status.rx_overruns = 0;
-    _status.tx_count = 0;
-    _status.tx_errors = 0;
-    _status.tx_dropped = 0;
+    _status.rx_count.store(0);
+    _status.rx_errors.store(0);
+    _status.rx_overruns.store(0);
+    _status.tx_count.store(0);
+    _status.tx_errors.store(0);
+    _status.tx_dropped.store(0);
 
-    CanInterface::resetStatistics();
+    BusInterface::resetStatistics();
 }
 
 uint32_t GrIPInterface::getState()
 {
-    switch (_status.can_state)
+    switch (_status.can_state.load())
     {
     case CANIL_CAN_State::CAN_Active:
         return state_ok;
@@ -228,32 +255,32 @@ uint32_t GrIPInterface::getState()
 
 int GrIPInterface::getNumRxFrames()
 {
-    return _status.rx_count;
+    return static_cast<int>(_status.rx_count.load());
 }
 
 int GrIPInterface::getNumRxErrors()
 {
-    return _status.rx_errors;
+    return _status.rx_errors.load();
 }
 
 int GrIPInterface::getNumTxFrames()
 {
-    return _status.tx_count;
+    return static_cast<int>(_status.tx_count.load());
 }
 
 int GrIPInterface::getNumTxErrors()
 {
-    return _status.tx_errors;
+    return _status.tx_errors.load();
 }
 
 int GrIPInterface::getNumRxOverruns()
 {
-    return _status.rx_overruns;
+    return static_cast<int>(_status.rx_overruns.load());
 }
 
 int GrIPInterface::getNumTxDropped()
 {
-    return _status.tx_dropped;
+    return static_cast<int>(_status.tx_dropped.load());
 }
 
 int GrIPInterface::getIfIndex()
@@ -287,26 +314,85 @@ void GrIPInterface::open()
         QThread::msleep(2);
     }
 
-    // Disable the channel before reconfiguring to avoid spurious traffic.
-    m_GrIPHandler->CanEnableChannel(_idx, false);
-    QThread::msleep(2);
-
-    // Apply bit rate — use custom value if set, otherwise use the selected preset.
-    const uint32_t baud = _settings.isCustomBitrate() ? _settings.customBitrate() : _settings.bitrate();
-
     m_GrIPHandler->SetStatus(true);
 
-    m_GrIPHandler->CanSetConfig(_idx, baud > 0 ? baud : 500000, _settings.isListenOnlyMode(), true, _settings.doAutoRestart());
-    m_GrIPHandler->CanEnableChannel(_idx, true);
+    if (_manufacturer == CANIL_CAN)
+    {
+        // Disable the channel before reconfiguring to avoid spurious traffic.
+        m_GrIPHandler->CanEnableChannel(_channel_idx, false);
+        QThread::msleep(2);
+
+        // Apply bit rate — use custom value if set, otherwise use the selected preset.
+        const uint32_t baud = _settings.isCustomBitrate() ? _settings.customBitrate() : _settings.bitrate();
+
+        m_GrIPHandler->CanSetConfig(_channel_idx, baud > 0 ? baud : 500000, _settings.isListenOnlyMode(), true, _settings.doAutoRestart());
+        m_GrIPHandler->CanEnableChannel(_channel_idx, true);
+    }
+    else if (_manufacturer == CANIL_LIN)
+    {
+        // Disable the channel before reconfiguring to avoid spurious traffic.
+        m_GrIPHandler->LinEnableChannel(_channel_idx, false);
+        QThread::msleep(2);
+
+        // LIN only enabled if valid LDF is loaded
+        if (!_settings.linLdfPath().isEmpty())
+        {
+            m_GrIPHandler->LinSetConfig(
+                _channel_idx,
+                _settings.linBaudRate(),
+                _settings.linNodeMode() == LinNodeMode::Master,
+                static_cast<uint8_t>(_settings.linProtocolVersion()),
+                _settings.linTimebaseMs(),
+                _settings.linJitterUs()
+            );
+            QThread::msleep(2);
+
+            m_GrIPHandler->LinSetScheduleTable(_channel_idx, _settings.linScheduleTableIndex());
+            QThread::msleep(1);
+
+            LinDb ldb;
+            if (ldb.loadFile(_settings.linLdfPath()))
+            {
+                const bool isMaster  = _settings.linNodeMode() == LinNodeMode::Master;
+                const QString slaveNode = _settings.linSlaveNode();
+                const auto entries = ldb.scheduleTableEntries(_settings.linScheduleTableIndex());
+
+                for (const LinScheduleEntry &entry : entries)
+                {
+                    if (!isMaster && entry.publisherName != slaveNode)
+                        continue;
+
+                    // TX when this node is the publisher of the frame, RX otherwise.
+                    const bool isRX = isMaster ? entry.isMasterPublisher : (entry.publisherName == slaveNode);
+                    qDebug() << "[LIN]" << (isMaster ? "Master" : "Slave")
+                             << "AddFrame:" << entry.frameName
+                             << "ID:" << Qt::hex << entry.frameId
+                             << "DLC:" << Qt::dec << entry.dlc
+                             << "Publisher:" << entry.publisherName
+                             << "Direction:" << (isRX ? "RX" : "TX")
+                             << "Delay:" << entry.delayMs << "ms";
+
+                    BusMessage msg;
+                    msg.setId(entry.frameId);
+                    msg.setLength(entry.dlc);
+                    msg.setRX(isRX);
+                    m_GrIPHandler->LinAddFrame(_channel_idx, msg, entry.delayMs);
+                }
+            }
+            QThread::msleep(1);
+
+            m_GrIPHandler->LinEnableChannel(_channel_idx, true);
+        }
+    }
 
     _isOpen = true;
     _isOffline = false;
-    _status.rx_count = 0;
-    _status.rx_errors = 0;
-    _status.rx_overruns = 0;
-    _status.tx_count = 0;
-    _status.tx_errors = 0;
-    _status.tx_dropped = 0;
+    _status.rx_count.store(0);
+    _status.rx_errors.store(0);
+    _status.rx_overruns.store(0);
+    _status.tx_count.store(0);
+    _status.tx_errors.store(0);
+    _status.tx_dropped.store(0);
 }
 
 void GrIPInterface::handleSerialError(QSerialPort::SerialPortError error)
@@ -355,10 +441,17 @@ void GrIPInterface::handleSerialError(QSerialPort::SerialPortError error)
 void GrIPInterface::close()
 {
     _isOpen = false;
-    //_status.can_state = state_bus_off;
 
-    m_GrIPHandler->CanEnableChannel(_idx, false);
     m_GrIPHandler->SetStatus(false);
+
+    if (_manufacturer == CANIL_CAN)
+    {
+        m_GrIPHandler->CanEnableChannel(_channel_idx, false);
+    }
+    else if (_manufacturer == CANIL_LIN)
+    {
+        m_GrIPHandler->LinEnableChannel(_channel_idx, false);
+    }
 }
 
 bool GrIPInterface::isOpen()
@@ -366,34 +459,33 @@ bool GrIPInterface::isOpen()
     return _isOpen;
 }
 
-void GrIPInterface::sendMessage(const CanMessage &msg)
+void GrIPInterface::sendMessage(const BusMessage &msg)
 {
-    QMutexLocker locker(&_serport_mutex);
-
-    if (!m_GrIPHandler->CanTransmit(_idx, msg))
+    if (_manufacturer == CANIL_CAN)
     {
-        _status.tx_errors++;
-        //_status.can_state = state_tx_fail;
+        if (!m_GrIPHandler->CanTransmit(_channel_idx, msg))
+        {
+            _status.tx_errors.fetch_add(1);
+        }
+    }
+    else if (_manufacturer == CANIL_LIN)
+    {
+        if (!m_GrIPHandler->LinSendData(_channel_idx, msg))
+        {
+            _status.tx_errors.fetch_add(1);
+        }
     }
 }
 
-bool GrIPInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
+bool GrIPInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms)
 {
     Q_UNUSED(timeout_ms);
 
-    // Rate-limit processing to roughly once every 2 ms.
-    const qint64 now = QDateTime::currentMSecsSinceEpoch();
-    if (now - _lastReadMsec < 1)
+    if (_manufacturer == CANIL_CAN)
     {
-        return false;
-    }
-    _lastReadMsec = now + 1;
-
-    while (m_GrIPHandler->CanAvailable(_idx))
-    {
-        auto msg = m_GrIPHandler->CanReceive(_idx);
-        if (msg.getId() != 0)
+        while (m_GrIPHandler->CanAvailable(_channel_idx))
         {
+            auto msg = m_GrIPHandler->CanReceive(_channel_idx);
             msg.setInterfaceId(getId());
 
             if (!msg.isRX())
@@ -401,25 +493,39 @@ bool GrIPInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout
                 // TX echo frame
                 if (!msg.isErrorFrame())
                 {
-                    _status.tx_count++;
+                    _status.tx_count.fetch_add(1);
                     addFrameBits(msg);
                 }
                 else
                 {
-                    _status.tx_errors++;
+                    _status.tx_errors.fetch_add(1);
                 }
-
-                //if (msg.isShow())
-                {
-                    msglist.append(msg);
-                }
+                msglist.append(msg);
             }
             else
             {
                 msglist.append(msg);
-                _status.rx_count++;
+                _status.rx_count.fetch_add(1);
                 addFrameBits(msg);
             }
+        }
+    }
+    else if (_manufacturer == CANIL_LIN)
+    {
+        while (m_GrIPHandler->LinAvailable(_channel_idx))
+        {
+            auto msg = m_GrIPHandler->LinReceive(_channel_idx);
+            msg.setInterfaceId(getId());
+
+            if (msg.isRX())
+            {
+                _status.rx_count.fetch_add(1);
+            }
+            else
+            {
+                _status.tx_count.fetch_add(1);
+            }
+            msglist.append(msg);
         }
     }
 

@@ -38,7 +38,7 @@ TinyCanDriver::~TinyCanDriver()
 {
 }
 
-QString TinyCanDriver::getName()
+QString TinyCanDriver::getName() const
 {
     return "TinyCAN";
 }

@@ -19,34 +19,34 @@
 
 */
 
-#include "CanInterface.h"
-#include "core/CanMessage.h"
+#include "BusInterface.h"
+#include "core/BusMessage.h"
 
 #include <QList>
 
-CanInterface::CanInterface(CanDriver *driver)
+BusInterface::BusInterface(CanDriver *driver)
   :QObject(0), _id(-1), _driver(driver), _totalBits(0)
 {
 }
 
-CanInterface::~CanInterface() {
+BusInterface::~BusInterface() {
 }
 
-CanDriver* CanInterface::getDriver() {
+CanDriver* BusInterface::getDriver() {
     return _driver;
 }
 
-QString CanInterface::getDetailsStr() const
+QString BusInterface::getDetailsStr() const
 {
     return "";
 }
 
-uint32_t CanInterface::getCapabilities()
+uint32_t BusInterface::getCapabilities()
 {
     return 0;
 }
 
-QList<CanTiming> CanInterface::getAvailableBitrates()
+QList<CanTiming> BusInterface::getAvailableBitrates()
 {
     QList<CanTiming> retval;
     retval << CanTiming(0,   10000, 0, 875) \
@@ -62,23 +62,23 @@ QList<CanTiming> CanInterface::getAvailableBitrates()
     return retval;
 }
 
-void CanInterface::open() {
+void BusInterface::open() {
 }
 
-void CanInterface::close() {
+void BusInterface::close() {
 }
 
-bool CanInterface::isOpen()
+bool BusInterface::isOpen()
 {
     return false;
 }
 
-bool CanInterface::updateStatistics()
+bool BusInterface::updateStatistics()
 {
     return false;
 }
 
-QString CanInterface::getStateText()
+QString BusInterface::getStateText()
 {
     switch (getState()) {
     case state_ok: return tr("ready");
@@ -93,22 +93,22 @@ QString CanInterface::getStateText()
     }
 }
 
-CanInterfaceId CanInterface::getId() const
+BusInterfaceId BusInterface::getId() const
 {
     return _id;
 }
 
-void CanInterface::setId(CanInterfaceId id)
+void BusInterface::setId(BusInterfaceId id)
 {
     _id = id;
 }
 
-uint64_t CanInterface::getNumBits()
+uint64_t BusInterface::getNumBits()
 {
     return _totalBits;
 }
 
-void CanInterface::addFrameBits(const CanMessage &msg)
+void BusInterface::addFrameBits(const BusMessage &msg)
 {
     uint32_t dlc = msg.getLength();
     uint32_t bits = 47 + (dlc * 8); // Std CAN overhead + data bits
@@ -129,7 +129,7 @@ void CanInterface::addFrameBits(const CanMessage &msg)
     _totalBits += bits;
 }
 
-QString CanInterface::getVersion()
+QString BusInterface::getVersion()
 {
     return "UnKnown";
 }

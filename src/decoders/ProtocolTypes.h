@@ -3,7 +3,7 @@
 #include <QString>
 #include <QByteArray>
 #include <QVector>
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 
 #include <QVariantMap>
 
@@ -19,7 +19,7 @@ struct ProtocolMessage {
     QString description;   // Details or NRC info
     uint64_t timestamp;
     QByteArray payload;    // Reassembled data
-    QVector<CanMessage> rawFrames; // The frames that made this up
+    QVector<BusMessage> rawFrames; // The frames that made this up
     QString protocol;      // "UDS", "J1939"
     MessageType type = MessageType::Unknown;
     uint32_t id;           // SID or PGN

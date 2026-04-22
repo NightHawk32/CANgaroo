@@ -1,6 +1,6 @@
 #include "UnifiedTraceItem.h"
 
-UnifiedTraceItem::UnifiedTraceItem(const CanMessage& frame, UnifiedTraceItem* parent)
+UnifiedTraceItem::UnifiedTraceItem(const BusMessage& frame, UnifiedTraceItem* parent)
     : m_parentItem(parent), m_isProtocol(false), m_rawFrame(frame), m_globalIndex(0), m_row(-1)
 {
     m_timestamp = static_cast<uint64_t>(frame.getFloatTimestamp() * 1000000.0);

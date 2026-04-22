@@ -24,7 +24,7 @@
 #include <QDialog>
 #include <QList>
 #include "driver/CanDriver.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 
 class Backend;
 
@@ -40,7 +40,7 @@ public:
     explicit SelectCanInterfacesDialog(QWidget *parent = 0);
     ~SelectCanInterfacesDialog();
 
-    bool selectInterfaces(Backend &backend, CanInterfaceIdList &selectedInterfaces, const CanInterfaceIdList &excludeInterfaces);
+    bool selectInterfaces(Backend &backend, BusInterfaceIdList &selectedInterfaces, const BusInterfaceIdList &excludeInterfaces);
 
 private:
     Ui::SelectCanInterfacesDialog *ui;

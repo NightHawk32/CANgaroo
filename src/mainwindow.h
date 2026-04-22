@@ -55,7 +55,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0);
+    explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
     bool isMaximizedWindow();
@@ -63,19 +63,19 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
-    virtual void changeEvent(QEvent *event) override;
+    void changeEvent(QEvent *event) override;
 
 public slots:
-    QMainWindow *createTraceWindow(QString title=QString());
-    QMainWindow *createGraphWindow(QString title=QString());
+    QMainWindow *createTraceWindow(const QString &title = QString());
+    QMainWindow *createGraphWindow(const QString &title = QString());
     void createStandaloneGraphWindow();
-    QDockWidget *addGraphWidget(QMainWindow *parent=0);
-    QDockWidget *addRawTxWidget(QMainWindow *parent=0);
-    QDockWidget *addLogWidget(QMainWindow *parent=0);
-    QDockWidget *addStatusWidget(QMainWindow *parent=0);
-    QDockWidget *addTxGeneratorWidget(QMainWindow *parent=0);
-    QDockWidget *addScriptWidget(QMainWindow *parent=0);
-    QDockWidget *addReplayWidget(QMainWindow *parent=0);
+    QDockWidget *addGraphWidget(QMainWindow *parent = nullptr);
+    QDockWidget *addRawTxWidget(QMainWindow *parent = nullptr);
+    QDockWidget *addLogWidget(QMainWindow *parent = nullptr);
+    QDockWidget *addStatusWidget(QMainWindow *parent = nullptr);
+    QDockWidget *addTxGeneratorWidget(QMainWindow *parent = nullptr);
+    QDockWidget *addScriptWidget(QMainWindow *parent = nullptr);
+    QDockWidget *addReplayWidget(QMainWindow *parent = nullptr);
 
     bool showSetupDialog();
     void showAboutDialog();
@@ -93,9 +93,6 @@ private slots:
     void on_action_WorkspaceSaveAs_triggered();
     void on_action_TraceClear_triggered();
     void on_actionCan_Status_View_triggered();
-    void on_actionGenerator_View_triggered();
-    void on_actionScript_View_triggered();
-    void on_actionReplay_View_triggered();
     void showSettingsDialog();
 
     void switchLanguage(QAction *action);
@@ -105,27 +102,39 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
-    SetupDialog *_setupDlg;
+    SetupDialog *_setupDlg = nullptr;
     QSettings settings;
 
-    bool _workspaceModified;
+    bool _workspaceModified = false;
     QString _workspaceFileName;
     QString _baseWindowTitle;
+    bool _hasConfirmedSetup = false;
 
     Backend &backend();
 
-    QMainWindow *createTab(QString title);
+    QMainWindow *createTab(const QString &title);
     QMainWindow *currentTab();
 
-    bool _showSetupDialog_first;
+    // Constructor init helpers
+    void initVersion();
+    void initActions();
+    void initDrivers();
+    void initGeometry();
+    void initWorkspace();
+    void initAppearance();
+
+    // Dock factory helper: creates dock, sets widget, adds to parent, wires float/reparent.
+    // Returns nullptr if parent is null (no active tab).
+    QDockWidget *makeDock(const QString &title, const QString &objectName,
+                          QWidget *content, QMainWindow *parent);
 
     void stopAndClearMeasurement();
 
     void clearWorkspace();
     bool loadWorkspaceTab(QDomElement el);
     bool loadWorkspaceSetup(QDomElement el);
-    void loadWorkspaceFromFile(QString filename);
-    bool saveWorkspaceToFile(QString filename);
+    void loadWorkspaceFromFile(const QString &filename);
+    bool saveWorkspaceToFile(const QString &filename);
 
     void newWorkspace();
     void loadWorkspace();
@@ -148,5 +157,4 @@ private:
     void applyFontSize(int pointSize);
     QTranslator m_translator;
     QActionGroup *m_languageActionGroup = nullptr;
-
 };

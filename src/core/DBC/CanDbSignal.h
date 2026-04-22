@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "CanMessage.h"
+#include "BusMessage.h"
 #include "CanDbMessage.h"
 #include <QString>
 #include <QMap>
@@ -39,11 +39,11 @@ public:
     
     CanDbMessage* getParentMessage() const { return _parent; }
 
-    uint8_t startBit() const;
-    void setStartBit(uint8_t startBit);
+    uint16_t startBit() const;
+    void setStartBit(uint16_t startBit);
 
-    uint8_t length() const;
-    void setLength(uint8_t length);
+    uint16_t length() const;
+    void setLength(uint16_t length);
 
     QString comment() const;
     void setComment(const QString &comment);
@@ -81,18 +81,18 @@ public:
     uint32_t getMuxValue() const;
     void setMuxValue(const uint32_t &muxValue);
 
-    bool isPresentInMessage(const CanMessage &msg) const;
-    uint64_t extractRawDataFromMessage(const CanMessage &msg) const;
+    bool isPresentInMessage(const BusMessage &msg) const;
+    uint64_t extractRawDataFromMessage(const BusMessage &msg) const;
 
     double convertRawValueToPhysical(const uint64_t rawValue) const;
-    double extractPhysicalFromMessage(const CanMessage &msg) const;
+    double extractPhysicalFromMessage(const BusMessage &msg) const;
 
 
 private:
     CanDbMessage *_parent;
     QString _name;
-    uint8_t _startBit;
-    uint8_t _length;
+    uint16_t _startBit;
+    uint16_t _length;
     bool _isUnsigned;
     bool _isBigEndian;
     double _factor;

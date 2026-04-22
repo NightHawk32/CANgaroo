@@ -17,7 +17,7 @@ public:
      * @brief Processes a CAN frame through all registered decoders.
      * @return The status of the decoding process.
      */
-    DecodeStatus processFrame(const CanMessage& frame, ProtocolMessage& outMsg);
+    DecodeStatus processFrame(const BusMessage& frame, ProtocolMessage& outMsg);
 
     void reset();
     

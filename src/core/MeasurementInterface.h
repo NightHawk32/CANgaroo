@@ -22,18 +22,63 @@
 #pragma once
 
 #include <QDomDocument>
+
 #include "driver/CanDriver.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
+#include "core/BusMessage.h"
 
 class Backend;
+
+enum class LinProtocolVersion { V1_3, V2_0, V2_1, V2_2, V2_2A };
+enum class LinNodeMode       { Monitor, Master, Slave };
 
 class MeasurementInterface
 {
 public:
     MeasurementInterface();
 
-    CanInterfaceId canInterface() const;
-    void setCanInterface(CanInterfaceId canif);
+    BusType busType() const;
+    void setBusType(BusType type);
+
+    BusInterfaceId busInterface() const;
+    void setBusInterface(BusInterfaceId busif);
+
+    // LIN-specific configuration
+    unsigned linBaudRate() const;
+    void setLinBaudRate(unsigned baud);
+
+    LinProtocolVersion linProtocolVersion() const;
+    void setLinProtocolVersion(LinProtocolVersion ver);
+
+    LinNodeMode linNodeMode() const;
+    void setLinNodeMode(LinNodeMode mode);
+
+    bool linListenOnly() const;
+    void setLinListenOnly(bool val);
+
+    bool linChecksumClassic() const;
+    void setLinChecksumClassic(bool val);
+
+    bool linWakeupOnBus() const;
+    void setLinWakeupOnBus(bool val);
+
+    QString linLdfPath() const;
+    void setLinLdfPath(const QString &path);
+
+    QString linScheduleTable() const;
+    void setLinScheduleTable(const QString &table);
+
+    uint8_t linScheduleTableIndex() const;
+    void setLinScheduleTableIndex(uint8_t idx);
+
+    QString linSlaveNode() const;
+    void setLinSlaveNode(const QString &node);
+
+    uint8_t linTimebaseMs() const;
+    void setLinTimebaseMs(uint8_t ms);
+
+    uint16_t linJitterUs() const;
+    void setLinJitterUs(uint16_t us);
 
     void cloneFrom(MeasurementInterface &origin);
     bool loadXML(Backend &backend, QDomElement &el);
@@ -78,15 +123,20 @@ public:
     bool isCustomFdBitrate() const;
     void setCustomFdBitrateEn(bool customFdBitrate);
 
+    bool isEnabled() const noexcept;
+    void setEnabled(bool enabled) noexcept;
+
     uint32_t customBitrate() const;
     void setCustomBitrate(uint32_t customBitrate);
 
     uint32_t customFdBitrate() const;
     void setCustomFdBitrate(uint32_t customFdBitrate);
 private:
-    CanInterfaceId _canif;
+    BusType        _busType;
+    BusInterfaceId _busif;
 
     bool _doConfigure;
+    bool _enabled;
 
     unsigned _bitrate;
     unsigned _samplePoint;
@@ -106,4 +156,18 @@ private:
 
     uint32_t _CustomBitrate;
     uint32_t _CustomFdBitrate;
+
+    // LIN
+    unsigned           _linBaudRate;
+    LinProtocolVersion _linProtocolVersion;
+    LinNodeMode        _linNodeMode;
+    bool               _linListenOnly;
+    bool               _linChecksumClassic;
+    bool               _linWakeupOnBus;
+    QString            _linLdfPath;
+    QString            _linScheduleTable;
+    uint8_t            _linScheduleTableIndex {0};
+    QString            _linSlaveNode;
+    uint8_t            _linTimebaseMs {5};
+    uint16_t           _linJitterUs   {0};
 };

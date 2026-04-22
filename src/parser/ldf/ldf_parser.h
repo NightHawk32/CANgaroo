@@ -478,7 +478,9 @@ private:
             if (!at_end() && (peek() == '+' || peek() == '-')) s += advance();
             while (!at_end() && is_digit(peek())) s += advance();
         }
-        return std::stod(s);
+        double v = 0.0;
+        std::from_chars(s.data(), s.data() + s.size(), v);
+        return v;
     }
 
     // Multiplier suffix:  k/K → 1e3,  M → 1e6,  (none) → 1

@@ -28,13 +28,13 @@
 #include <sys/time.h>
 
 #include "BaseTraceViewModel.h"
-#include "core/CanMessage.h"
-#include "driver/CanInterface.h"
+#include "core/BusMessage.h"
+#include "driver/BusInterface.h"
 
 #include "AggregatedTraceViewItem.h"
 
 
-class CanTrace;
+class BusTrace;
 
 class AggregatedTraceViewModel : public BaseTraceViewModel
 {
@@ -47,29 +47,29 @@ public:
 public:
     AggregatedTraceViewModel(Backend &backend);
 
-    virtual QModelIndex index(int row, int column, const QModelIndex &parent) const;
-    virtual QModelIndex parent(const QModelIndex &child) const;
-    virtual int rowCount(const QModelIndex &parent) const;
+    QModelIndex index(int row, int column, const QModelIndex &parent) const override;
+    QModelIndex parent(const QModelIndex &child) const override;
+    int rowCount(const QModelIndex &parent) const override;
 
-    virtual CanMessage getMessage(const QModelIndex &index) const override;
+    BusMessage getMessage(const QModelIndex &index) const override;
 
 private:
     CanIdMap _map;
     AggregatedTraceViewItem *_rootItem;
     QTimer _fadeTimer;
     qint64 _fadeNowMs = 0;
-    QList<CanMessage> _pendingMessageUpdates;
-    QMap<unique_key_t, CanMessage> _pendingMessageInserts;
+    QList<BusMessage> _pendingMessageUpdates;
+    QMap<unique_key_t, BusMessage> _pendingMessageInserts;
 
-    unique_key_t makeUniqueKey(const CanMessage &msg) const;
-    void createItem(const CanMessage &msg, AggregatedTraceViewItem *item, unique_key_t key);
+    unique_key_t makeUniqueKey(const BusMessage &msg) const;
+    void createItem(const BusMessage &msg, AggregatedTraceViewItem *item, unique_key_t key);
 protected:
-    virtual QVariant data_DisplayRole(const QModelIndex &index, int role) const;
-    virtual QVariant data_TextColorRole(const QModelIndex &index, int role) const;
+    QVariant data_DisplayRole(const QModelIndex &index, int role) const override;
+    QVariant data_TextColorRole(const QModelIndex &index, int role) const override;
 
 private slots:
-    void createItem(const CanMessage &msg);
-    void updateItem(const CanMessage &msg);
+    void createItem(const BusMessage &msg);
+    void updateItem(const BusMessage &msg);
     void onUpdateModel();
     void onSetupChanged();
 

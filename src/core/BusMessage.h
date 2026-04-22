@@ -26,59 +26,70 @@
 
 #include <QString>
 #include <QDateTime>
+
 #include "driver/CanDriver.h"
 
+enum class BusType : uint8_t
+{
+    CAN = 0,
+    LIN = 1,
+};
 
-class CanMessage
+class BusMessage
 {
 public:
-    CanMessage();
-    CanMessage(uint32_t can_id);
-    CanMessage(const CanMessage &msg);
-    CanMessage& operator=(const CanMessage&) = default;
+    static constexpr int k_maxDataBytes = 64; // CAN-FD maximum payload
 
-    void cloneFrom(const CanMessage &msg);
+    BusMessage();
+    BusMessage(uint32_t can_id);
+    BusMessage(const BusMessage &) = default;
+    BusMessage& operator=(const BusMessage&) = default;
 
-    uint32_t getRawId() const;
+    [[nodiscard]] BusType busType() const;
+    void setBusType(BusType type);
+
+    [[nodiscard]] uint32_t getRawId() const;
     void setRawId(const uint32_t raw_id);
 
-    uint32_t getId() const;
+    [[nodiscard]] uint32_t getId() const;
     void setId(const uint32_t id);
 
-    bool isExtended() const;
+    [[nodiscard]] bool isExtended() const;
     void setExtended(const bool isExtended);
 
-    bool isRTR() const;
+    [[nodiscard]] bool isRTR() const;
     void setRTR(const bool isRTR);
 
-    bool isFD() const;
+    [[nodiscard]] bool isFD() const;
     void setFD(const bool isFD);
 
-    bool isBRS() const;
-    void setBRS(const bool isFD);
+    [[nodiscard]] bool isBRS() const;
+    void setBRS(const bool isBRS);
 
-    bool isErrorFrame() const;
+    [[nodiscard]] bool isErrorFrame() const;
     void setErrorFrame(const bool isErrorFrame);
 
-    CanInterfaceId getInterfaceId() const;
-    void setInterfaceId(CanInterfaceId id);
+    [[nodiscard]] BusInterfaceId getInterfaceId() const;
+    void setInterfaceId(BusInterfaceId id);
 
-    uint8_t getLength() const;
+    [[nodiscard]] uint8_t getLength() const;
     void setLength(const uint8_t dlc);
 
-    bool isRX() const;
+    [[nodiscard]] bool isRX() const;
     void setRX(const bool isRX);
 
-    bool isShow() const;
+    [[nodiscard]] bool isShow() const;
     void setShow(const bool enable);
 
-    uint8_t getFlags() const;
+    [[nodiscard]] uint8_t getFlags() const;
     void setFlags(uint8_t flags);
 
-    uint8_t getByte(const uint8_t index) const;
+    [[nodiscard]] uint8_t getByte(const uint8_t index) const;
     void setByte(const uint8_t index, const uint8_t value);
 
-    uint64_t extractRawSignal(uint8_t start_bit, const uint8_t length, const bool isBigEndian) const;
+    [[nodiscard]] const uint8_t *getData() const;
+
+    [[nodiscard]] uint64_t extractRawSignal(uint16_t start_bit, uint16_t length, bool isBigEndian) const;
 
     void setDataAt(uint8_t position, uint8_t data);
     void setData(const uint8_t d0);
@@ -90,18 +101,18 @@ public:
     void setData(const uint8_t d0, const uint8_t d1, const uint8_t d2, const uint8_t d3, const uint8_t d4, const uint8_t d5, const uint8_t d6);
     void setData(const uint8_t d0, const uint8_t d1, const uint8_t d2, const uint8_t d3, const uint8_t d4, const uint8_t d5, const uint8_t d6, const uint8_t d7);
 
-    int64_t getTimestamp_us() const;
-    int64_t getTimestamp_ms() const;
-    double getFloatTimestamp() const;
-    QDateTime getDateTime() const;
+    [[nodiscard]] int64_t getTimestamp_us() const;
+    [[nodiscard]] int64_t getTimestamp_ms() const;
+    [[nodiscard]] double getFloatTimestamp() const;
+    [[nodiscard]] QDateTime getDateTime() const;
 
     void setTimestamp_us(int64_t us);
     void setTimestamp_ms(int64_t ms);
     void setTimestamp(double seconds);
     void setTimestamp(uint64_t seconds, uint32_t micro_seconds);
 
-    QString getIdString() const;
-    QString getDataHexString() const;
+    [[nodiscard]] QString getIdString() const;
+    [[nodiscard]] QString getDataHexString() const;
 
 private:
     uint32_t _raw_id;
@@ -111,12 +122,13 @@ private:
     bool _isBRS;
     bool _isRX;
     bool _isShow;
-    CanInterfaceId _interface;
+    BusType _busType;
+    BusInterfaceId _interface;
     union {
-        uint8_t _u8[8*8];
-        uint16_t _u16[4*8];
-        uint32_t _u32[2*8];
-        uint64_t _u64[8];
+        uint8_t  _u8[k_maxDataBytes];
+        uint16_t _u16[k_maxDataBytes / 2];
+        uint32_t _u32[k_maxDataBytes / 4];
+        uint64_t _u64[k_maxDataBytes / 8];
     };
 
     int64_t _timestamp_us = 0;

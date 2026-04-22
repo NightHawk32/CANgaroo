@@ -29,11 +29,11 @@
 
 #include "CanDriver.h"
 #include "CanTiming.h"
+#include "core/BusMessage.h"
 
-class CanMessage;
 class MeasurementInterface;
 
-class CanInterface: public QObject  {
+class BusInterface: public QObject  {
     Q_OBJECT
 public:
     enum {
@@ -48,22 +48,28 @@ public:
     };
 
     enum {
-        capability_canfd           = 0x01,
-        capability_listen_only     = 0x02,
-        capability_triple_sampling = 0x04,
-        capability_one_shot        = 0x08,
-        capability_auto_restart    = 0x10,
-        capability_config_os       = 0x20,
-        capability_custom_bitrate  = 0x40,
-        capability_custom_canfd_bitrate = 0x80
+        // CAN capabilities
+        capability_canfd                = 0x001,
+        capability_listen_only          = 0x002,
+        capability_triple_sampling      = 0x004,
+        capability_one_shot             = 0x008,
+        capability_auto_restart         = 0x010,
+        capability_config_os            = 0x020,
+        capability_custom_bitrate       = 0x040,
+        capability_custom_canfd_bitrate = 0x080,
+        // LIN capabilities
+        capability_lin_master           = 0x100,
+        capability_lin_slave            = 0x200,
+        capability_lin_monitor          = 0x400,
     };
 
 public:
-    CanInterface(CanDriver *driver);
-    virtual ~CanInterface();
+    BusInterface(CanDriver *driver);
+    virtual ~BusInterface();
     virtual CanDriver *getDriver();
     virtual QString getName() const = 0;
     virtual QString getDetailsStr() const;
+    virtual BusType busType() const { return BusType::CAN; }
 
     virtual void applyConfig(const MeasurementInterface &mi) = 0;
 
@@ -77,8 +83,8 @@ public:
 
     virtual bool isOpen();
 
-    virtual void sendMessage(const CanMessage &msg) = 0;
-    virtual bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) = 0;
+    virtual void sendMessage(const BusMessage &msg) = 0;
+    virtual bool readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms) = 0;
 
     virtual bool updateStatistics();
     virtual void resetStatistics() { _totalBits = 0; }
@@ -90,17 +96,17 @@ public:
     virtual int getNumRxOverruns() = 0;
     virtual int getNumTxDropped() = 0;
     virtual uint64_t getNumBits();
-    void addFrameBits(const CanMessage &msg);
+    void addFrameBits(const BusMessage &msg);
 
     virtual QString getVersion();
 
     QString getStateText();
 
-    CanInterfaceId getId() const;
-    void setId(CanInterfaceId id);
+    BusInterfaceId getId() const;
+    void setId(BusInterfaceId id);
 
 private:
-    CanInterfaceId _id;
+    BusInterfaceId _id;
     CanDriver *_driver;
     std::atomic<uint64_t> _totalBits;
 };

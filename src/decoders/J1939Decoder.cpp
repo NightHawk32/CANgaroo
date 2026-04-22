@@ -2,7 +2,7 @@
 
 J1939Decoder::J1939Decoder() {}
 
-DecodeStatus J1939Decoder::tryDecode(const CanMessage& frame, ProtocolMessage& outMsg) {
+DecodeStatus J1939Decoder::tryDecode(const BusMessage& frame, ProtocolMessage& outMsg) {
     if (frame.isErrorFrame() || frame.isRTR() || !frame.isExtended()) {
         return DecodeStatus::Ignored;
     }

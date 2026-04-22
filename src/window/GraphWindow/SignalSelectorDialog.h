@@ -27,19 +27,21 @@
 #include <QCheckBox>
 #include "core/ThemeManager.h"
 #include "core/Backend.h"
-#include "core/DBC/CanDbSignal.h"
+#include "GraphSignal.h"
 
 class SignalSelectorDialog : public QDialog {
     Q_OBJECT
 public:
     explicit SignalSelectorDialog(QWidget *parent, Backend &backend);
+    ~SignalSelectorDialog();
+
     struct SelectedSignal {
-        CanDbSignal *signal;
-        CanInterfaceIdList interfaces;
+        GraphSignal *signal;
+        BusInterfaceIdList interfaces;
     };
 
     QList<SelectedSignal> getSelectedSignalsWithContext() const;
-    void setSelectedSignals(const QList<CanDbSignal*> &sigList);
+    void setSelectedSignals(const QList<GraphSignal*> &sigList);
 
 private slots:
     void onSearchTextChanged(const QString &text);
@@ -52,6 +54,8 @@ private:
     QLineEdit *_searchEdit;
     QTreeWidget *_tree;
     QCheckBox *_showSelectedOnly;
+
+    QList<GraphSignal*> _ownedSignals;
 
     void populateTree();
     void filterTree(const QString &searchText, bool showSelectedOnly);

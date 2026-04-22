@@ -24,7 +24,7 @@
 #include <QSet>
 #include <QTimer>
 
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "core/ConfigurableWidget.h"
 #include "driver/CanDriver.h"
 
@@ -66,7 +66,7 @@ protected:
     void retranslateUi() override;
 
 public slots:
-    void addMessage(const CanMessage &msg);
+    void addMessage(const BusMessage &msg);
 
 private slots:
     void onRowsInserted(const QModelIndex & parent, int first, int last);
@@ -105,7 +105,8 @@ private:
     bool _filterShowTx = true;
     bool _filterShowRx = true;
     QSet<uint32_t> _filterHiddenMessageIds;
-    QSet<CanInterfaceId> _filterHiddenInterfaces;
+    QSet<uint8_t>  _filterHiddenLinFrameIds;
+    QSet<BusInterfaceId> _filterHiddenInterfaces;
 
     void applyDialogFilters();
 };

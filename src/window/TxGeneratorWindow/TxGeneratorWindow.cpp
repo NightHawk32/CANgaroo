@@ -30,7 +30,7 @@
 #include "core/MeasurementNetwork.h"
 #include "core/MeasurementSetup.h"
 #include "core/MeasurementInterface.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 #include "driver/CanDriver.h"
 #include "window/RawTxWindow/RawTxWindow.h"
 #include <chrono>
@@ -142,7 +142,7 @@ bool TxGeneratorWindow::saveXML(Backend &backend, QDomDocument &xml, QDomElement
         QString ifName;
         for (int i = 0; i < ui->comboBoxInterface->count(); i++)
         {
-            if (static_cast<CanInterfaceId>(ui->comboBoxInterface->itemData(i).toUInt()) == cm.interfaceId)
+            if (static_cast<BusInterfaceId>(ui->comboBoxInterface->itemData(i).toUInt()) == cm.interfaceId)
             {
                 ifName = ui->comboBoxInterface->itemText(i);
                 break;
@@ -232,7 +232,7 @@ void TxGeneratorWindow::resolveInterfaceNames()
         {
             if (ui->comboBoxInterface->itemText(i) == cm.interfaceName)
             {
-                cm.interfaceId = static_cast<CanInterfaceId>(ui->comboBoxInterface->itemData(i).toUInt());
+                cm.interfaceId = static_cast<BusInterfaceId>(ui->comboBoxInterface->itemData(i).toUInt());
                 break;
             }
         }
@@ -247,8 +247,8 @@ void TxGeneratorWindow::refreshInterfaces()
     MeasurementSetup &setup = _backend.getSetup();
     for (auto *network : setup.getNetworks()) {
         for (auto *mi : network->interfaces()) {
-            CanInterfaceId ifid = mi->canInterface();
-            CanInterface *intf = _backend.getInterfaceById(ifid);
+            BusInterfaceId ifid = mi->busInterface();
+            BusInterface *intf = _backend.getInterfaceById(ifid);
             if (intf) {
                 QString name = network->name() + ": " + intf->getName();
                 ui->comboBoxInterface->addItem(name, QVariant(ifid));
@@ -269,7 +269,7 @@ void TxGeneratorWindow::populateDbcMessages()
 {
     ui->treeAvailable->clear();
 
-    CanInterfaceId currentId = static_cast<CanInterfaceId>(ui->comboBoxInterface->currentData().toUInt());
+    BusInterfaceId currentId = static_cast<BusInterfaceId>(ui->comboBoxInterface->currentData().toUInt());
     MeasurementSetup &setup = _backend.getSetup();
 
     for (auto *network : setup.getNetworks()) {
@@ -278,7 +278,7 @@ void TxGeneratorWindow::populateDbcMessages()
         // Let's find if this network is using our interface.
         bool interfaceMatches = false;
         for (auto *mi : network->interfaces()) {
-            if (mi->canInterface() == currentId) {
+            if (mi->busInterface() == currentId) {
                 interfaceMatches = true;
                 break;
             }
@@ -356,7 +356,7 @@ void TxGeneratorWindow::on_btnAddToList_released()
         if (!dbMsg) continue;
 
         CyclicMessage cm;
-        cm.msg = CanMessage(); // Ensure fresh instance
+        cm.msg = BusMessage(); // Ensure fresh instance
         cm.msg.setId(dbMsg->getRaw_id());
         cm.msg.setLength(dbMsg->getDlc());
         cm.msg.setExtended(dbMsg->getRaw_id() > 0x7FF);
@@ -364,7 +364,7 @@ void TxGeneratorWindow::on_btnAddToList_released()
         cm.interval = 100;
         cm.enabled = false;
         cm.lastSent = 0;
-        cm.interfaceId = static_cast<CanInterfaceId>(ui->comboBoxInterface->currentData().toUInt());
+        cm.interfaceId = static_cast<BusInterfaceId>(ui->comboBoxInterface->currentData().toUInt());
         cm.dbMsg = dbMsg;
 
         _cyclicMessages.append(cm);
@@ -380,7 +380,7 @@ void TxGeneratorWindow::on_btnAddManual_released()
     if (!ok) return;
 
     CyclicMessage cm;
-    cm.msg = CanMessage(); // Ensure fresh instance
+    cm.msg = BusMessage(); // Ensure fresh instance
     cm.msg.setId(id);
     cm.msg.setLength(ui->spinManualDlc->value());
     cm.msg.setExtended(id > 0x7FF || ui->lineManualId->text().length() > 3);
@@ -388,7 +388,7 @@ void TxGeneratorWindow::on_btnAddManual_released()
     cm.interval = ui->spinInterval->value();
     cm.enabled = false;
     cm.lastSent = 0;
-    cm.interfaceId = static_cast<CanInterfaceId>(ui->comboBoxInterface->currentData().toUInt());
+    cm.interfaceId = static_cast<BusInterfaceId>(ui->comboBoxInterface->currentData().toUInt());
     cm.dbMsg = nullptr;
 
     _cyclicMessages.append(cm);
@@ -431,11 +431,11 @@ void TxGeneratorWindow::on_btnSendOnce_released()
         int row = ui->treeActive->indexOfTopLevelItem(item);
         if (row >= 0 && row < _cyclicMessages.size()) {
             CyclicMessage &cm = _cyclicMessages[row];
-            CanInterface *intf = _backend.getInterfaceById(cm.interfaceId);
+            BusInterface *intf = _backend.getInterfaceById(cm.interfaceId);
             if (intf && intf->isOpen()) {
                 cm.msg.setInterfaceId(cm.interfaceId);
                 intf->sendMessage(cm.msg);
-                /*CanMessage loopback = cm.msg;
+                /*BusMessage loopback = cm.msg;
                 loopback.setRX(false);
                 auto now = std::chrono::system_clock::now().time_since_epoch();
                 loopback.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
@@ -515,7 +515,7 @@ void TxGeneratorWindow::on_comboBoxInterface_currentIndexChanged(int index)
 {
     (void)index;
     populateDbcMessages();
-    emit interfaceChanged(static_cast<CanInterfaceId>(ui->comboBoxInterface->currentData().toUInt()));
+    emit interfaceChanged(static_cast<BusInterfaceId>(ui->comboBoxInterface->currentData().toUInt()));
 }
 
 void TxGeneratorWindow::on_treeAvailable_itemDoubleClicked(QTreeWidgetItem *item, int column)
@@ -590,17 +590,17 @@ void TxGeneratorWindow::treeActiveItemDoubleClicked(QTreeWidgetItem *item, int c
     connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
 
-    CanMessage editedMsg = cm.msg;
-    CanInterfaceId editedInterfaceId = cm.interfaceId;
+    BusMessage editedMsg = cm.msg;
+    BusInterfaceId editedInterfaceId = cm.interfaceId;
     QString editedInterfaceName = cm.interfaceName;
 
-    connect(rawTx, &RawTxWindow::messageUpdated, this, [&editedMsg](const CanMessage &msg) {
+    connect(rawTx, &RawTxWindow::messageUpdated, this, [&editedMsg](const BusMessage &msg) {
         editedMsg = msg;
     });
-    connect(rawTx, &RawTxWindow::interfaceSelected, this, [&](CanInterfaceId id) {
+    connect(rawTx, &RawTxWindow::interfaceSelected, this, [&](BusInterfaceId id) {
         editedInterfaceId = id;
         for (int i = 0; i < ui->comboBoxInterface->count(); ++i) {
-            if (static_cast<CanInterfaceId>(ui->comboBoxInterface->itemData(i).toUInt()) == id) {
+            if (static_cast<BusInterfaceId>(ui->comboBoxInterface->itemData(i).toUInt()) == id) {
                 editedInterfaceName = ui->comboBoxInterface->itemText(i);
                 break;
             }
@@ -697,11 +697,11 @@ void TxGeneratorWindow::onSendTimerTimeout()
         if (!cm.enabled) { continue; }
         if (now_ms - cm.lastSent < static_cast<uint64_t>(cm.interval)) { continue; }
 
-        CanInterface *intf = _backend.getInterfaceById(cm.interfaceId);
+        BusInterface *intf = _backend.getInterfaceById(cm.interfaceId);
         if (intf && intf->isOpen()) {
             cm.msg.setInterfaceId(cm.interfaceId);
             intf->sendMessage(cm.msg);
-            /*CanMessage loopback = cm.msg;
+            /*BusMessage loopback = cm.msg;
             loopback.setRX(false);
             loopback.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
             emit loopbackFrame(loopback);*/
@@ -767,7 +767,7 @@ void TxGeneratorWindow::updateActiveList()
 
         item->setText(1, "0x" + QString("%1").arg(cm.msg.getId(), 3, 16, QChar('0')).toUpper());
         item->setText(2, cm.name);
-        CanInterface *intf = _backend.getInterfaceById(cm.interfaceId);
+        BusInterface *intf = _backend.getInterfaceById(cm.interfaceId);
         item->setText(3, intf ? intf->getName() : "Unknown");
         item->setText(4, QString::number(cm.msg.getLength()));
         item->setText(5, QString::number(cm.interval));
@@ -806,7 +806,7 @@ void TxGeneratorWindow::updateRowUI(int row)
 
     item->setText(1, "0x" + QString("%1").arg(cm.msg.getId(), 3, 16, QChar('0')).toUpper());
     item->setText(2, cm.name);
-    CanInterface *intf = _backend.getInterfaceById(cm.interfaceId);
+    BusInterface *intf = _backend.getInterfaceById(cm.interfaceId);
     item->setText(3, intf ? intf->getName() : "Unknown");
     item->setText(4, QString::number(cm.msg.getLength()));
     item->setText(5, QString::number(cm.interval));

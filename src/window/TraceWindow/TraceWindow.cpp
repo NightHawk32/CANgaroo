@@ -221,8 +221,18 @@ bool TraceWindow::saveXML(Backend &backend, QDomDocument &xml, QDomElement &root
         filterEl.setAttribute("hiddenMessages", hiddenMsgs.join(","));
     }
 
+    QStringList hiddenLinFrames;
+    for (uint8_t id : _filterHiddenLinFrameIds)
+    {
+        hiddenLinFrames.append(QString::number(id));
+    }
+    if (!hiddenLinFrames.isEmpty())
+    {
+        filterEl.setAttribute("hiddenLinFrames", hiddenLinFrames.join(","));
+    }
+
     QStringList hiddenIfs;
-    for (CanInterfaceId id : _filterHiddenInterfaces)
+    for (BusInterfaceId id : _filterHiddenInterfaces)
     {
         hiddenIfs.append(QString::number(id));
     }
@@ -267,12 +277,21 @@ bool TraceWindow::loadXML(Backend &backend, QDomElement &el)
             }
         }
 
+        QString hiddenLinStr = filterEl.attribute("hiddenLinFrames");
+        if (!hiddenLinStr.isEmpty())
+        {
+            for (const QString &s : hiddenLinStr.split(","))
+            {
+                _filterHiddenLinFrameIds.insert(static_cast<uint8_t>(s.toUInt()));
+            }
+        }
+
         QString hiddenIfsStr = filterEl.attribute("hiddenInterfaces");
         if (!hiddenIfsStr.isEmpty())
         {
             for (const QString &s : hiddenIfsStr.split(","))
             {
-                _filterHiddenInterfaces.insert(static_cast<CanInterfaceId>(s.toUInt()));
+                _filterHiddenInterfaces.insert(static_cast<BusInterfaceId>(s.toUInt()));
             }
         }
 
@@ -282,7 +301,7 @@ bool TraceWindow::loadXML(Backend &backend, QDomElement &el)
     return true;
 }
 
-void TraceWindow::addMessage(const CanMessage &msg)
+void TraceWindow::addMessage(const BusMessage &msg)
 {
     _backend->getTrace()->enqueueMessage(msg);
 }
@@ -347,9 +366,6 @@ void TraceWindow::on_cbFilterChanged()
 void TraceWindow::on_cbTraceClearpushButton()
 {
     _backend->clearTrace();
-    // clearTrace() triggers beforeClear/afterClear signals which the models are connected to.
-    // However, since we have multiple models, we should ensure they all reset correctly.
-    _backend->clearLog();
 }
 
 void TraceWindow::on_cbViewMode_currentIndexChanged(int index)
@@ -363,6 +379,7 @@ void TraceWindow::openFilterDialog()
     dlg.setShowTx(_filterShowTx);
     dlg.setShowRx(_filterShowRx);
     dlg.setHiddenMessageIds(_filterHiddenMessageIds);
+    dlg.setHiddenLinFrameIds(_filterHiddenLinFrameIds);
     dlg.setHiddenInterfaces(_filterHiddenInterfaces);
 
     if (dlg.exec() == QDialog::Accepted)
@@ -370,6 +387,7 @@ void TraceWindow::openFilterDialog()
         _filterShowTx = dlg.showTx();
         _filterShowRx = dlg.showRx();
         _filterHiddenMessageIds = dlg.hiddenMessageIds();
+        _filterHiddenLinFrameIds = dlg.hiddenLinFrameIds();
         _filterHiddenInterfaces = dlg.hiddenInterfaces();
 
         applyDialogFilters();
@@ -384,6 +402,7 @@ void TraceWindow::applyDialogFilters()
         model->setShowTx(_filterShowTx);
         model->setShowRx(_filterShowRx);
         model->setHiddenMessageIds(_filterHiddenMessageIds);
+        model->setHiddenLinFrameIds(_filterHiddenLinFrameIds);
         model->setHiddenInterfaces(_filterHiddenInterfaces);
         model->invalidate();
     };

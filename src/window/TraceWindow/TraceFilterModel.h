@@ -16,7 +16,8 @@ public:
     void setShowTx(bool show);
     void setShowRx(bool show);
     void setHiddenMessageIds(const QSet<uint32_t> &ids);
-    void setHiddenInterfaces(const QSet<CanInterfaceId> &ids);
+    void setHiddenLinFrameIds(const QSet<uint8_t> &ids);
+    void setHiddenInterfaces(const QSet<BusInterfaceId> &ids);
 
 public slots:
     void setFilterText(QString filtertext);
@@ -29,7 +30,8 @@ private:
     bool _showTx = true;
     bool _showRx = true;
     QSet<uint32_t> _hiddenMessageIds;
-    QSet<CanInterfaceId> _hiddenInterfaces;
+    QSet<uint8_t>  _hiddenLinFrameIds;
+    QSet<BusInterfaceId> _hiddenInterfaces;
 
 protected:
     bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override;

@@ -102,7 +102,7 @@ bool SLCANDriver::update()
     return true;
 }
 
-QString SLCANDriver::getName()
+QString SLCANDriver::getName() const
 {
     return "SLCAN";
 }

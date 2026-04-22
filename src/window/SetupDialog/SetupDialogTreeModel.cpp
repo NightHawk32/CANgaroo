@@ -21,6 +21,9 @@
 
 #include "SetupDialogTreeModel.h"
 
+#include "driver/BusInterface.h"
+#include "core/DBC/LinDb.h"
+
 SetupDialogTreeModel::SetupDialogTreeModel(Backend *backend, QObject *parent)
   : QAbstractItemModel(parent),
     _backend(backend),
@@ -40,14 +43,51 @@ QVariant SetupDialogTreeModel::data(const QModelIndex &index, int role) const
     SetupDialogTreeItem *item = static_cast<SetupDialogTreeItem*>(index.internalPointer());
 
     if (item) {
-
-        if (role==Qt::DisplayRole) {
+        if (role == Qt::DisplayRole) {
             return item->dataDisplayRole(index);
         }
 
+        if (role == Qt::CheckStateRole
+            && item->getType() == SetupDialogTreeItem::type_interface
+            && index.column() == column_device)
+        {
+            return item->intf->isEnabled() ? Qt::Checked : Qt::Unchecked;
+        }
     }
 
     return QVariant();
+}
+
+bool SetupDialogTreeModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    SetupDialogTreeItem *item = static_cast<SetupDialogTreeItem*>(index.internalPointer());
+
+    if (item
+        && role == Qt::CheckStateRole
+        && item->getType() == SetupDialogTreeItem::type_interface
+        && index.column() == column_device)
+    {
+        item->intf->setEnabled(qvariant_cast<Qt::CheckState>(value) == Qt::Checked);
+        emit dataChanged(index, index, {Qt::CheckStateRole});
+        return true;
+    }
+
+    return false;
+}
+
+Qt::ItemFlags SetupDialogTreeModel::flags(const QModelIndex &index) const
+{
+    Qt::ItemFlags f = QAbstractItemModel::flags(index);
+
+    SetupDialogTreeItem *item = static_cast<SetupDialogTreeItem*>(index.internalPointer());
+    if (item
+        && item->getType() == SetupDialogTreeItem::type_interface
+        && index.column() == column_device)
+    {
+        f |= Qt::ItemIsUserCheckable;
+    }
+
+    return f;
 }
 
 QVariant SetupDialogTreeModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -174,7 +214,37 @@ void SetupDialogTreeModel::deleteCanDb(const QModelIndex &index)
     }
 }
 
-SetupDialogTreeItem *SetupDialogTreeModel::addInterface(const QModelIndex &parent, CanInterfaceId &interface)
+SetupDialogTreeItem *SetupDialogTreeModel::addLinDb(const QModelIndex &parent, pLinDb db)
+{
+    SetupDialogTreeItem *parentItem = static_cast<SetupDialogTreeItem*>(parent.internalPointer());
+    if (!parentItem) { return nullptr; }
+
+    SetupDialogTreeItem *item = nullptr;
+    if (parentItem->network) {
+        beginInsertRows(parent, rowCount(parent), rowCount(parent));
+        parentItem->network->addLinDb(db);
+        item = loadLinDb(*parentItem, db);
+        endInsertRows();
+    }
+    return item;
+}
+
+void SetupDialogTreeModel::deleteLinDb(const QModelIndex &index)
+{
+    SetupDialogTreeItem *item = static_cast<SetupDialogTreeItem*>(index.internalPointer());
+    if (!item) { return; }
+
+    SetupDialogTreeItem *parentItem = item->getParentItem();
+    if (parentItem && parentItem->network && parentItem->network->_linDbs.contains(item->lindb)) {
+        beginRemoveRows(index.parent(), item->row(), item->row());
+        parentItem->network->_linDbs.removeAll(item->lindb);
+        item->getParentItem()->removeChild(item);
+        delete item;
+        endRemoveRows();
+    }
+}
+
+SetupDialogTreeItem *SetupDialogTreeModel::addInterface(const QModelIndex &parent, BusInterfaceId &interface)
 {
     SetupDialogTreeItem *parentItem = static_cast<SetupDialogTreeItem*>(parent.internalPointer());
     if (!parentItem) { return 0; }
@@ -182,7 +252,11 @@ SetupDialogTreeItem *SetupDialogTreeModel::addInterface(const QModelIndex &paren
     SetupDialogTreeItem *item = 0;
     if (parentItem && parentItem->network) {
         beginInsertRows(parent, parentItem->getChildCount(), parentItem->getChildCount());
-        MeasurementInterface *mi = parentItem->network->addCanInterface(interface);
+        MeasurementInterface *mi = parentItem->network->addBusInterface(interface);
+        // Propagate the actual bus type (e.g. LIN) from the underlying interface
+        BusInterface *canIntf = _backend->getInterfaceById(interface);
+        if (canIntf)
+            mi->setBusType(canIntf->busType());
         item = loadMeasurementInterface(*parentItem, mi);
         endInsertRows();
     }
@@ -212,15 +286,24 @@ SetupDialogTreeItem *SetupDialogTreeModel::itemOrRoot(const QModelIndex &index) 
 SetupDialogTreeItem *SetupDialogTreeModel::loadMeasurementInterface(SetupDialogTreeItem &parent, MeasurementInterface *intf)
 {
     SetupDialogTreeItem *item = new SetupDialogTreeItem(SetupDialogTreeItem::type_interface, _backend, &parent);
+    item->network = parent.network;
     item->intf = intf;
     parent.appendChild(item);
     return item;
 }
 
-SetupDialogTreeItem *SetupDialogTreeModel::loadCanDb(SetupDialogTreeItem &parent, pCanDb &db)
+SetupDialogTreeItem *SetupDialogTreeModel::loadCanDb(SetupDialogTreeItem &parent, const pCanDb &db)
 {
     SetupDialogTreeItem *item = new SetupDialogTreeItem(SetupDialogTreeItem::type_candb, _backend, &parent);
     item->candb = db;
+    parent.appendChild(item);
+    return item;
+}
+
+SetupDialogTreeItem *SetupDialogTreeModel::loadLinDb(SetupDialogTreeItem &parent, const pLinDb &db)
+{
+    SetupDialogTreeItem *item = new SetupDialogTreeItem(SetupDialogTreeItem::type_lindb, _backend, &parent);
+    item->lindb = db;
     parent.appendChild(item);
     return item;
 }
@@ -242,8 +325,12 @@ SetupDialogTreeItem *SetupDialogTreeModel::loadNetwork(SetupDialogTreeItem *root
         loadMeasurementInterface(*item_intf_root, intf);
     }
 
-    for (auto candb : network._canDbs) {
+    for (const auto &candb : network._canDbs) {
         loadCanDb(*item_candb_root, candb);
+    }
+
+    for (const auto &lindb : network._linDbs) {
+        loadLinDb(*item_candb_root, lindb);
     }
 
     root->appendChild(item_network);

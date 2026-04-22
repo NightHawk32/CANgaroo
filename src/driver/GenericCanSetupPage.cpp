@@ -20,7 +20,7 @@
 #include "GenericCanSetupPage.h"
 #include "ui_GenericCanSetupPage.h"
 #include "core/Backend.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 #include "core/MeasurementInterface.h"
 #include "window/SetupDialog/SetupDialog.h"
 #include <QList>
@@ -65,8 +65,11 @@ void GenericCanSetupPage::onSetupDialogCreated(SetupDialog &dlg)
 
 void GenericCanSetupPage::onShowInterfacePage(SetupDialog &dlg, MeasurementInterface *mi)
 {
+    if (mi->busType() != BusType::CAN)
+        return;
+
     _mi = mi;
-    CanInterface *intf = backend().getInterfaceById(_mi->canInterface());
+    BusInterface *intf = backend().getInterfaceById(_mi->busInterface());
 
     _enable_ui_updates = false;
 
@@ -100,7 +103,7 @@ void GenericCanSetupPage::onShowInterfacePage(SetupDialog &dlg, MeasurementInter
 void GenericCanSetupPage::updateUI()
 {
     if (_enable_ui_updates && (_mi!=0)) {
-        CanInterface *intf = backend().getInterfaceById(_mi->canInterface());
+        BusInterface *intf = backend().getInterfaceById(_mi->busInterface());
 
         _mi->setDoConfigure(!ui->cbConfigOS->isChecked());
         _mi->setListenOnlyMode(ui->cbListenOnly->isChecked());
@@ -237,7 +240,7 @@ void GenericCanSetupPage::updateUI()
     }
 }
 
-void GenericCanSetupPage::fillBitratesList(CanInterface *intf, unsigned selectedBitrate)
+void GenericCanSetupPage::fillBitratesList(BusInterface *intf, unsigned selectedBitrate)
 {
     QList<uint32_t> bitrates;
     for (CanTiming t : intf->getAvailableBitrates()) {
@@ -254,7 +257,7 @@ void GenericCanSetupPage::fillBitratesList(CanInterface *intf, unsigned selected
     ui->cbBitrate->setCurrentText(QString::number(selectedBitrate));
 }
 
-void GenericCanSetupPage::fillSamplePointsForBitrate(CanInterface *intf, unsigned selectedBitrate, unsigned selectedSamplePoint)
+void GenericCanSetupPage::fillSamplePointsForBitrate(BusInterface *intf, unsigned selectedBitrate, unsigned selectedSamplePoint)
 {
     QList<uint32_t> samplePoints;
     for (CanTiming t : intf->getAvailableBitrates()) {
@@ -274,7 +277,7 @@ void GenericCanSetupPage::fillSamplePointsForBitrate(CanInterface *intf, unsigne
 }
 
 
-void GenericCanSetupPage::fillFdBitrate(CanInterface *intf, unsigned selectedBitrate)
+void GenericCanSetupPage::fillFdBitrate(BusInterface *intf, unsigned selectedBitrate)
 {
     QList<uint32_t> fdBitrates;
     unsigned currentArbBitrate = ui->cbBitrate->currentData().toUInt();
@@ -301,7 +304,7 @@ void GenericCanSetupPage::fillFdBitrate(CanInterface *intf, unsigned selectedBit
     }
 }
 
-void GenericCanSetupPage::fillSamplePointsForFdBitrate(CanInterface *intf, unsigned selectedBitrate, unsigned selectedSamplePoint)
+void GenericCanSetupPage::fillSamplePointsForFdBitrate(BusInterface *intf, unsigned selectedBitrate, unsigned selectedSamplePoint)
 {
     QList<uint32_t> samplePoints;
     for (CanTiming t : intf->getAvailableBitrates()) {
@@ -323,22 +326,22 @@ void GenericCanSetupPage::fillSamplePointsForFdBitrate(CanInterface *intf, unsig
 void GenericCanSetupPage::disenableUI(bool enabled)
 {
 
-    CanInterface *intf = backend().getInterfaceById(_mi->canInterface());
+    BusInterface *intf = backend().getInterfaceById(_mi->busInterface());
     uint32_t caps = intf->getCapabilities();
 
     ui->cbBitrate->setEnabled(!ui->cbCustomBitrate->isChecked());
     ui->cbSamplePoint->setEnabled(!ui->cbCustomBitrate->isChecked());
-    ui->cbConfigOS->setEnabled(caps & CanInterface::capability_config_os);
+    ui->cbConfigOS->setEnabled(caps & BusInterface::capability_config_os);
 
-    ui->cbBitrateFD->setEnabled(!ui->cbCustomFdBitrate->isChecked() && (caps & CanInterface::capability_canfd));
-    ui->cbSamplePointFD->setEnabled(!ui->cbCustomFdBitrate->isChecked() && (caps & CanInterface::capability_canfd));
-    ui->cbListenOnly->setEnabled(enabled && (caps & CanInterface::capability_listen_only));
-    ui->cbOneShot->setEnabled(enabled && (caps & CanInterface::capability_one_shot));
-    ui->cbTripleSampling->setEnabled(enabled && (caps & CanInterface::capability_triple_sampling));
-    ui->cbAutoRestart->setEnabled(enabled && (caps & CanInterface::capability_auto_restart));
+    ui->cbBitrateFD->setEnabled(!ui->cbCustomFdBitrate->isChecked() && (caps & BusInterface::capability_canfd));
+    ui->cbSamplePointFD->setEnabled(!ui->cbCustomFdBitrate->isChecked() && (caps & BusInterface::capability_canfd));
+    ui->cbListenOnly->setEnabled(enabled && (caps & BusInterface::capability_listen_only));
+    ui->cbOneShot->setEnabled(enabled && (caps & BusInterface::capability_one_shot));
+    ui->cbTripleSampling->setEnabled(enabled && (caps & BusInterface::capability_triple_sampling));
+    ui->cbAutoRestart->setEnabled(enabled && (caps & BusInterface::capability_auto_restart));
 
-    ui->cbCustomBitrate->setEnabled(enabled && (caps & CanInterface::capability_custom_bitrate));
-    ui->cbCustomFdBitrate->setEnabled(enabled && (caps & CanInterface::capability_custom_canfd_bitrate));
+    ui->cbCustomBitrate->setEnabled(enabled && (caps & BusInterface::capability_custom_bitrate));
+    ui->cbCustomFdBitrate->setEnabled(enabled && (caps & BusInterface::capability_custom_canfd_bitrate));
 
     ui->CustomBitrateSet->setEnabled(ui->cbCustomBitrate->isChecked());
     ui->CustomFdBitrateSet->setEnabled(ui->cbCustomFdBitrate->isChecked());

@@ -42,10 +42,10 @@
 #include <QDataStream>
 #include <QProgressBar>
 
-#include "core/CanTrace.h"
+#include "core/BusTrace.h"
 #include "core/Backend.h"
 #include "core/DBC/CanDbMessage.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 
 
 ReplayWindow::ReplayWindow(QWidget *parent, Backend &backend)
@@ -276,7 +276,7 @@ bool ReplayWindow::parseCanDump(QFile &file)
         QString separator = match.captured(4);
         QString payload = match.captured(5);
 
-        CanMessage msg;
+        BusMessage msg;
         msg.setTimestamp(timestamp);
 
         // Error frame: error flag bit set in ID
@@ -375,12 +375,50 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
         // Error frame: "timestamp channel ErrorFrame"
         if (parts[2].compare("ErrorFrame", Qt::CaseInsensitive) == 0)
         {
-            CanMessage msg;
+            BusMessage msg;
             msg.setTimestamp(timestamp);
             msg.setErrorFrame(true);
             msg.setLength(0);
             msg.setId(0);
             msg.setInterfaceId(channel.toInt());
+            _messages.append(msg);
+            _messageInterfaces.append(tr("CH %1").arg(channel));
+            continue;
+        }
+
+        // LIN frame: timestamp channel LIN id dir d DLC byte0 ... checksum = XX ...
+        //            timestamp channel LIN id dir LIN_ChecksumError
+        if (parts.size() >= 6 && parts[2].compare("LIN", Qt::CaseInsensitive) == 0)
+        {
+            uint8_t linId = static_cast<uint8_t>(parts[3].toUInt(nullptr, 16) & 0x3Fu);
+            QString linDir = parts[4];
+
+            BusMessage msg;
+            msg.setTimestamp(timestamp);
+            msg.setBusType(BusType::LIN);
+            msg.setId(linId);
+            msg.setRX(linDir.compare("Rx", Qt::CaseInsensitive) == 0);
+
+            if (parts[5].startsWith("LIN_", Qt::CaseInsensitive))
+            {
+                msg.setErrorFrame(true);
+                msg.setLength(0);
+            }
+            else if (parts[5].compare("d", Qt::CaseInsensitive) == 0 && parts.size() >= 8)
+            {
+                int dlc = parts[6].toInt(&ok);
+                if (ok)
+                {
+                    msg.setLength(static_cast<uint8_t>(dlc));
+                    for (int i = 0; i < dlc && (7 + i) < parts.size(); i++)
+                    {
+                        if (parts[7 + i].compare("checksum", Qt::CaseInsensitive) == 0)
+                            break;
+                        msg.setByte(i, static_cast<uint8_t>(parts[7 + i].toUInt(nullptr, 16)));
+                    }
+                }
+            }
+
             _messages.append(msg);
             _messageInterfaces.append(tr("CH %1").arg(channel));
             continue;
@@ -432,7 +470,7 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
                 dataLength = dlc;
             }
 
-            CanMessage msg;
+            BusMessage msg;
             msg.setTimestamp(timestamp);
             msg.setFD(true);
             msg.setBRS((flags & 0x1) != 0);
@@ -476,7 +514,7 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
             continue;
         }
 
-        CanMessage msg;
+        BusMessage msg;
         msg.setTimestamp(timestamp);
         msg.setExtended(extended);
         msg.setId(canId);
@@ -499,7 +537,7 @@ bool ReplayWindow::parseVectorAsc(QFile &file)
 
 // Helper: parse a SocketCAN frame from a PCAP/PCAPng packet payload
 static bool parseSocketCanFrame(QDataStream &ds, quint32 capturedLen,
-                                CanMessage &msg, bool &valid)
+                                BusMessage &msg, bool &valid)
 {
     static const quint32 CAN_EFF_FLAG = 0x80000000;
     static const quint32 CAN_RTR_FLAG = 0x40000000;
@@ -620,7 +658,7 @@ bool ReplayWindow::parsePcap(QFile &file)
             ts_us = static_cast<int64_t>(ts_sec) * 1000000 + static_cast<int64_t>(ts_frac);
         }
 
-        CanMessage msg;
+        BusMessage msg;
         bool valid;
         parseSocketCanFrame(ds, capturedLen, msg, valid);
 
@@ -642,6 +680,7 @@ bool ReplayWindow::parsePcapNg(QFile &file)
     static const quint32 BT_IDB = 0x00000001;
     static const quint32 BT_EPB = 0x00000006;
     static const quint32 BT_SPB = 0x00000003;
+    Q_UNUSED(BT_SPB);
 
     static const quint32 BYTE_ORDER_MAGIC = 0x1A2B3C4D;
     static const quint32 LINKTYPE_CAN_SOCKETCAN = 227;
@@ -702,6 +741,7 @@ bool ReplayWindow::parsePcapNg(QFile &file)
 
             // Parse options for if_name (code 2) and if_tsresol (code 9)
             qint64 optStart = file.pos();
+            Q_UNUSED(optStart);
             qint64 optEnd = blockStart + blockTotalLen - 4; // exclude trailing total_length
             while (file.pos() + 4 <= optEnd)
             {
@@ -784,7 +824,7 @@ bool ReplayWindow::parsePcapNg(QFile &file)
                 ts_us = static_cast<int64_t>(tsRaw * scale);
             }
 
-            CanMessage msg;
+            BusMessage msg;
             bool valid;
             parseSocketCanFrame(ds, capturedLen, msg, valid);
 
@@ -817,8 +857,9 @@ void ReplayWindow::buildFilterTree()
         bool hasTx = false;
     };
 
-    // Collect interface -> (id -> info)
+    // Collect interface -> (id -> info), and which interfaces carry LIN
     QMap<QString, QMap<uint32_t, IdInfo>> ifaceIds;
+    QSet<QString> linChannels;
     for (int i = 0; i < _messages.size(); i++)
     {
         const QString &iface = _messageInterfaces[i];
@@ -829,10 +870,12 @@ void ReplayWindow::buildFilterTree()
             info.hasRx = true;
         else
             info.hasTx = true;
+        if (_messages[i].busType() == BusType::LIN)
+            linChannels.insert(iface);
     }
 
     // Collect available CAN interfaces for the combo boxes
-    CanInterfaceIdList availableInterfaces = _backend->getInterfaceList();
+    BusInterfaceIdList availableInterfaces = _backend->getInterfaceList();
 
     // Build tree items
     for (auto ifaceIt = ifaceIds.constBegin(); ifaceIt != ifaceIds.constEnd(); ++ifaceIt)
@@ -840,18 +883,30 @@ void ReplayWindow::buildFilterTree()
         const QString &iface = ifaceIt.key();
         const QMap<uint32_t, IdInfo> &ids = ifaceIt.value();
 
+        const bool isLin = linChannels.contains(iface);
+
         auto *ifaceItem = new QTreeWidgetItem(_filterTree);
-        ifaceItem->setText(0, iface);
+        ifaceItem->setText(0, isLin ? tr("%1 (LIN)").arg(iface) : tr("%1 (CAN)").arg(iface));
         ifaceItem->setFlags(ifaceItem->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate);
         ifaceItem->setCheckState(0, Qt::Checked);
 
-        // Output interface combo box
+        // Output interface combo box — LIN channels are locked to trace-only
         auto *combo = new QComboBox(_filterTree);
         combo->addItem(tr("Trace only"), QVariant(static_cast<int>(-1)));
-        for (CanInterfaceId id : availableInterfaces)
+        if (!isLin)
         {
-            QString name = _backend->getInterfaceName(id);
-            combo->addItem(name, QVariant(static_cast<int>(id)));
+            for (BusInterfaceId id : availableInterfaces)
+            {
+                BusInterface *intf = _backend->getInterfaceById(id);
+                if (intf && intf->busType() == BusType::LIN)
+                    continue;
+                combo->addItem(_backend->getInterfaceName(id), QVariant(static_cast<int>(id)));
+            }
+        }
+        else
+        {
+            combo->setEnabled(false);
+            combo->setToolTip(tr("LIN frames can only be replayed to the trace"));
         }
         _channelCombos[iface] = combo;
 
@@ -878,7 +933,7 @@ void ReplayWindow::buildFilterTree()
                 idItem->setText(0, QString("0x%1").arg(id, 0, 16, QChar('0')).toUpper());
 
                 // Look up DBC message name
-                CanMessage tmp;
+                BusMessage tmp;
                 tmp.setId(id);
                 tmp.setExtended(id > 0x7FF);
                 CanDbMessage *dbMsg = _backend->findDbMessage(tmp);
@@ -1075,14 +1130,14 @@ bool ReplayWindow::isMessageEnabled(int index) const
     return (*idIt & flag) != 0;
 }
 
-CanInterfaceId ReplayWindow::getMappedInterface(const QString &channel) const
+BusInterfaceId ReplayWindow::getMappedInterface(const QString &channel) const
 {
     auto it = _channelCombos.constFind(channel);
     if (it == _channelCombos.constEnd())
     {
         return -1;
     }
-    return static_cast<CanInterfaceId>(it.value()->currentData().toInt());
+    return static_cast<BusInterfaceId>(it.value()->currentData().toInt());
 }
 
 void ReplayWindow::onPlayClicked()
@@ -1151,7 +1206,7 @@ void ReplayWindow::onTimerTick()
         return;
     }
 
-    CanTrace *trace = _backend->getTrace();
+    BusTrace *trace = _backend->getTrace();
     double speed = _speedSpin->value();
 
     // How far into the trace we should be, based on wall-clock time and speed
@@ -1169,17 +1224,17 @@ void ReplayWindow::onTimerTick()
 
         if (isMessageEnabled(_playbackIndex))
         {
-            CanMessage msg = _messages[_playbackIndex];
+            BusMessage msg = _messages[_playbackIndex];
             msg.setTimestamp(_backend->currentTimeStamp());
 
             const QString &channel = _messageInterfaces[_playbackIndex];
             int mappedInt = _channelCombos.contains(channel) ? _channelCombos[channel]->currentData().toInt() : -1;
-            CanInterface *intf = (mappedInt >= 0) ? _backend->getInterfaceById(static_cast<CanInterfaceId>(mappedInt)) : nullptr;
+            BusInterface *intf = (mappedInt >= 0) ? _backend->getInterfaceById(static_cast<BusInterfaceId>(mappedInt)) : nullptr;
 
             bool sentOnInterface = false;
-            if (intf && intf->isOpen() && !msg.isErrorFrame())
+            if (intf && intf->isOpen() && !msg.isErrorFrame() && msg.busType() != BusType::LIN)
             {
-                msg.setInterfaceId(static_cast<CanInterfaceId>(mappedInt));
+                msg.setInterfaceId(static_cast<BusInterfaceId>(mappedInt));
                 msg.setRX(false);
                 intf->sendMessage(msg);
                 sentOnInterface = true;
@@ -1189,7 +1244,7 @@ void ReplayWindow::onTimerTick()
             {
                 if (mappedInt >= 0)
                 {
-                    msg.setInterfaceId(static_cast<CanInterfaceId>(mappedInt));
+                    msg.setInterfaceId(static_cast<BusInterfaceId>(mappedInt));
                 }
 
                 bool moreToFollow = false;

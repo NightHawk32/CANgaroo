@@ -28,26 +28,27 @@
 #include <QMap>
 #include <QFile>
 
-#include "CanMessage.h"
+#include "BusMessage.h"
 
-class CanInterface;
+class BusInterface;
 class CanDbMessage;
 class CanDbSignal;
+class LinSignal;
 class MeasurementSetup;
 class Backend;
 
-class CanTrace : public QObject
+class BusTrace : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit CanTrace(Backend &backend, QObject *parent, int flushInterval);
+    explicit BusTrace(Backend &backend, QObject *parent, int flushInterval);
 
     unsigned long size();
     void clear();
-    CanMessage getMessage(int idx);
-    QVector<CanMessage> getSnapshot(int maxCount = 0);
-    void enqueueMessage(const CanMessage &msg, bool more_to_follow=false);
+    BusMessage getMessage(int idx);
+    QVector<BusMessage> getSnapshot(int maxCount = 0);
+    void enqueueMessage(const BusMessage &msg, bool more_to_follow=false);
     void setMaxSize(int maxSize);
 
     void saveCanDump(QFile &file);
@@ -57,6 +58,9 @@ public:
     void savePcapNg(QFile &file);
 
     bool getMuxedSignalFromCache(const CanDbSignal *signal, uint64_t *raw_value);
+
+    // LIN mux cache not needed (LIN has no multiplexing), but keep symmetry:
+    bool getLinSignalFromCache(const LinSignal *signal, uint64_t *raw_value) { (void)signal; (void)raw_value; return false; }
 
 signals:
     void messageEnqueued(int idx);
@@ -77,7 +81,7 @@ private:
 
     Backend &_backend;
 
-    QVector<CanMessage> _data;
+    QVector<BusMessage> _data;
     int _dataRowsUsed;
     int _newRows;
     int _maxSize;

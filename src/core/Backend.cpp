@@ -25,14 +25,16 @@
 #include <QDateTime>
 #include <QFileInfo>
 
-#include "core/CanTrace.h"
+#include "core/BusTrace.h"
 #include "core/MeasurementSetup.h"
 #include "core/MeasurementNetwork.h"
 #include "core/MeasurementInterface.h"
 #include "driver/CanDriver.h"
-#include "driver/CanInterface.h"
-#include "driver/CanListener.h"
+#include "driver/BusInterface.h"
+#include "driver/BusListener.h"
 #include "parser/dbc/DbcParser.h"
+#include "core/DBC/LinDb.h"
+#include "core/DBC/LinFrame.h"
 
 Backend *Backend::_instance = nullptr;
 
@@ -45,10 +47,10 @@ Backend::Backend()
     _logModel = new LogModel(*this);
 
     setDefaultSetup();
-    _trace = new CanTrace(*this, this, 50);
+    _trace = new BusTrace(*this, this, 50);
     _conditionalLoggingManager = new ConditionalLoggingManager(*this, this);
 
-    connect(_trace, &CanTrace::messageEnqueued, this, &Backend::onMessageEnqueued);
+    connect(_trace, &BusTrace::messageEnqueued, this, &Backend::onMessageEnqueued);
     connect(&_setup, &MeasurementSetup::onSetupChanged, this, &Backend::onSetupChanged);
 }
 
@@ -90,12 +92,14 @@ bool Backend::startMeasurement()
     for (auto *network : _setup.getNetworks()) {
         for (auto *mi : network->interfaces()) {
 
-            CanInterface *intf = getInterfaceById(mi->canInterface());
+            if (!mi->isEnabled()) { continue; }
+
+            BusInterface *intf = getInterfaceById(mi->busInterface());
             if (intf) {
                 intf->applyConfig(*mi);
 
                 log_info(QString(tr("Listening on interface: %1")).arg(intf->getName()));
-                CanListener *listener = new CanListener(0, *this, *intf);
+                BusListener *listener = new BusListener(0, *this, *intf);
                 listener->startThread();
                 _listeners.append(listener);
             }
@@ -148,7 +152,10 @@ void Backend::loadDefaultSetup(MeasurementSetup &setup)
             network->setName(tr("Network ") + QString("%1").arg(i++));
 
             MeasurementInterface *mi = new MeasurementInterface();
-            mi->setCanInterface(intf);
+            mi->setBusInterface(intf);
+            BusInterface *canIntf = getInterfaceById(intf);
+            if (canIntf)
+                mi->setBusType(canIntf->busType());
             mi->setBitrate(500000);
             mi->setFdBitrate(2000000);
             network->addInterface(mi);
@@ -178,7 +185,7 @@ double Backend::currentTimeStamp() const
     return static_cast<double>(QDateTime::currentMSecsSinceEpoch()) / 1000;
 }
 
-CanTrace *Backend::getTrace()
+BusTrace *Backend::getTrace()
 {
     return _trace;
 }
@@ -189,14 +196,19 @@ void Backend::clearTrace()
     emit onClearTraceRequested();
 }
 
-CanDbMessage *Backend::findDbMessage(const CanMessage &msg) const
+CanDbMessage *Backend::findDbMessage(const BusMessage &msg) const
 {
     return _setup.findDbMessage(msg);
 }
 
-CanInterfaceIdList Backend::getInterfaceList()
+LinFrame *Backend::findLinFrame(const BusMessage &msg) const
 {
-    CanInterfaceIdList result;
+    return _setup.findLinFrame(msg);
+}
+
+BusInterfaceIdList Backend::getInterfaceList()
+{
+    BusInterfaceIdList result;
     for (auto *driver : _drivers) {
         for (auto id : driver->getInterfaceIds()) {
             result.append(id);
@@ -205,7 +217,7 @@ CanInterfaceIdList Backend::getInterfaceList()
     return result;
 }
 
-CanDriver *Backend::getDriverById(CanInterfaceId id)
+CanDriver *Backend::getDriverById(BusInterfaceId id)
 {
     int driverIdx = (id >> 8) & 0xFF;
     if (driverIdx >= _drivers.size())
@@ -216,19 +228,19 @@ CanDriver *Backend::getDriverById(CanInterfaceId id)
     return _drivers.value(driverIdx);
 }
 
-CanInterface *Backend::getInterfaceById(CanInterfaceId id)
+BusInterface *Backend::getInterfaceById(BusInterfaceId id)
 {
     CanDriver *driver = getDriverById(id);
     return driver ? driver->getInterfaceById(id) : nullptr;
 }
 
-QString Backend::getInterfaceName(CanInterfaceId id)
+QString Backend::getInterfaceName(BusInterfaceId id)
 {
-    CanInterface *intf = getInterfaceById(id);
+    BusInterface *intf = getInterfaceById(id);
     return intf ? intf->getName() : QString::number(id);
 }
 
-QString Backend::getDriverName(CanInterfaceId id)
+QString Backend::getDriverName(BusInterfaceId id)
 {
     CanDriver *driver = getDriverById(id);
     return driver ? driver->getName() : "";
@@ -244,7 +256,7 @@ CanDriver *Backend::getDriverByName(QString driverName)
     return 0;
 }
 
-CanInterface *Backend::getInterfaceByDriverAndName(QString driverName, QString deviceName)
+BusInterface *Backend::getInterfaceByDriverAndName(QString driverName, QString deviceName)
 {
     CanDriver *driver = getDriverByName(driverName);
     if (driver) {
@@ -253,6 +265,21 @@ CanInterface *Backend::getInterfaceByDriverAndName(QString driverName, QString d
         return 0;
     }
 
+}
+
+pLinDb Backend::loadLdf(QString filename, QString *errorMsg)
+{
+    QFileInfo info(filename);
+    if (!info.exists() || !info.isReadable()) {
+        if (errorMsg) *errorMsg = tr("File not found or not readable.");
+        return pLinDb();
+    }
+    pLinDb lindb(new LinDb());
+    if (!lindb->loadFile(filename)) {
+        if (errorMsg) *errorMsg = lindb->lastError();
+        return pLinDb();
+    }
+    return lindb;
 }
 
 pCanDb Backend::loadDbc(QString filename, QString *errorMsg)

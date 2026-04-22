@@ -31,10 +31,10 @@ class GenericCanSetupPage;
 class VectorDriver : public CanDriver {
 public:
     VectorDriver(Backend &backend);
-    virtual ~VectorDriver();
+    ~VectorDriver() override;
 
-    virtual QString getName();
-    virtual bool update();
+    QString getName() const override;
+    bool update() override;
 
 private:
     VectorInterface *createOrUpdateInterface(QString deviceName, QString description);

@@ -32,10 +32,10 @@ class GenericCanSetupPage;
 class CANBlasterDriver: public CanDriver {
 public:
     CANBlasterDriver(Backend &backend);
-    virtual ~CANBlasterDriver();
+    ~CANBlasterDriver() override;
 
-    virtual QString getName();
-    virtual bool update();
+    QString getName() const override;
+    bool update() override;
 
 private:
     CANBlasterInterface *createOrUpdateInterface(int index, QString name, bool fd_support);

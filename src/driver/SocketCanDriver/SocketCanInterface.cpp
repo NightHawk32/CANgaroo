@@ -27,11 +27,12 @@
 
 #include <QMutexLocker>
 #include <QProcess>
+#include <QStandardPaths>
 #include <QString>
 #include <QStringList>
 
 #include "core/Backend.h"
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "core/MeasurementInterface.h"
 #include "core/MeasurementNetwork.h"
 
@@ -51,22 +52,22 @@
 
 
 SocketCanInterface::SocketCanInterface(SocketCanDriver *driver, int index, QString name)
-    : CanInterface(reinterpret_cast<CanDriver *>(driver)),
+    : BusInterface(reinterpret_cast<CanDriver *>(driver)),
       _idx(index),
       _isOpen(false),
       _fd(0),
       _name(name),
       _ts_mode(ts_mode_SIOCSHWTSTAMP)
 {
-    _status.rx_count = 0;
-    _status.rx_errors = 0;
-    _status.rx_overruns = 0;
-    _status.tx_count = 0;
-    _status.tx_errors = 0;
-    _status.tx_dropped = 0;
+    _status.rx_count.store(0);
+    _status.rx_errors.store(0);
+    _status.rx_overruns.store(0);
+    _status.tx_count.store(0);
+    _status.tx_errors.store(0);
+    _status.tx_dropped.store(0);
 
     memset(&_config, 0, sizeof(_config));
-    memset(&_offset_stats, 0, sizeof(_offset_stats));
+    _offset_stats = {};
 
     _ts_mode = ts_mode_SIOCGSTAMP;
 }
@@ -87,7 +88,7 @@ QString SocketCanInterface::getVersion()
     {
         return QString("%1").arg(uts.release);
     }
-    return CanInterface::getVersion();
+    return BusInterface::getVersion();
 }
 
 void SocketCanInterface::setName(QString name)
@@ -174,56 +175,55 @@ void SocketCanInterface::applyConfig(const MeasurementInterface &mi)
         return;
     }
 
-    log_info(QString("calling ip link to reconfigure interface %1").arg(getName()));
-    if (geteuid() != 0)
+    log_info(QString("reconfiguring interface %1").arg(getName()));
+
+    QString ipExe = QStandardPaths::findExecutable("ip");
+    if (ipExe.isEmpty())
+        ipExe = "/sbin/ip";
+
+    bool needElevation = (geteuid() != 0);
+    if (needElevation)
+        log_info("Not running as root — using pkexec for ip link commands");
+
+    auto runIp = [&](const QStringList &args) -> bool
     {
-        log_warning(QString("Not running as root — ip link may fail; See README for setup"));
-    }
+        QProcess proc;
+        if (needElevation)
+            proc.start("pkexec", QStringList{ipExe} + args);
+        else
+            proc.start(ipExe, args);
 
-    // Bring interface down first
-    QProcess proc_down;
-    proc_down.start("ip", {"link", "set", getName(), "down"});
-    proc_down.waitForFinished();
+        if (!proc.waitForFinished(10000))
+        {
+            log_error("timeout waiting for ip command");
+            return false;
+        }
+        if (proc.exitStatus() != QProcess::NormalExit || proc.exitCode() != 0)
+        {
+            log_error(QString("ip command failed: ") + QString(proc.readAllStandardError()).trimmed());
+            return false;
+        }
+        return true;
+    };
 
-    QString cmd = "ip";
-    QStringList args;
-    args << "link" << "set" << getName() << "up" << "type" << "can";
-    args << "bitrate" << QString::number(mi.bitrate());
-    args << "sample-point" << QString::number(static_cast<float>(mi.samplePoint()) / 1000.0f, 'f', 3);
+    runIp({"link", "set", getName(), "down"});
+
+    QStringList upArgs;
+    upArgs << "link" << "set" << getName() << "up" << "type" << "can";
+    upArgs << "bitrate" << QString::number(mi.bitrate());
+    upArgs << "sample-point" << QString::number(static_cast<float>(mi.samplePoint()) / 1000.0f, 'f', 3);
 
     if (mi.isCanFD())
     {
-        args << "dbitrate" << QString::number(mi.fdBitrate());
-        args << "dsample-point" << QString::number(static_cast<float>(mi.fdSamplePoint()) / 1000.0f, 'f', 3);
-        args << "fd" << "on";
+        upArgs << "dbitrate" << QString::number(mi.fdBitrate());
+        upArgs << "dsample-point" << QString::number(static_cast<float>(mi.fdSamplePoint()) / 1000.0f, 'f', 3);
+        upArgs << "fd" << "on";
     }
 
-    if (mi.doAutoRestart())
-    {
-        args << "restart-ms" << QString::number(mi.autoRestartMs());
-    }
+    upArgs << "restart-ms" << (mi.doAutoRestart() ? QString::number(mi.autoRestartMs()) : "0");
 
-    log_info(cmd + " " + args.join(" "));
-
-    QProcess proc;
-    proc.start(cmd, args);
-    if (!proc.waitForFinished())
-    {
-        log_error(QString("timeout waiting for %1").arg(cmd));
-        return;
-    }
-
-    if (proc.exitStatus() != QProcess::NormalExit)
-    {
-        log_error(QString("%1 crashed").arg(cmd));
-        return;
-    }
-
-    if (proc.exitCode() != 0)
-    {
-        log_error(QString("%1 failed: ").arg(cmd) + QString(proc.readAllStandardError()).trimmed());
-        return;
-    }
+    log_info(ipExe + " " + upArgs.join(" "));
+    runIp(upArgs);
 }
 
 #include <linux/netlink.h>
@@ -319,7 +319,7 @@ bool SocketCanInterface::updateStatus()
     struct rtnl_link *link;
     uint32_t state;
 
-    _status.can_state = state_unknown;
+    _status.can_state.store(state_unknown);
 
     nl_connect(sock, NETLINK_ROUTE);
     if (rtnl_link_alloc_cache(sock, AF_UNSPEC, &cache) >= 0)
@@ -327,29 +327,29 @@ bool SocketCanInterface::updateStatus()
         if (rtnl_link_get_kernel(sock, _idx, 0, &link) == 0)
         {
 
-            _status.rx_count = rtnl_link_get_stat(link, RTNL_LINK_RX_PACKETS);
-            _status.rx_overruns = rtnl_link_get_stat(link, RTNL_LINK_RX_OVER_ERR);
-            _status.tx_count = rtnl_link_get_stat(link, RTNL_LINK_TX_PACKETS);
-            _status.tx_dropped = rtnl_link_get_stat(link, RTNL_LINK_TX_DROPPED);
+            _status.rx_count.store(rtnl_link_get_stat(link, RTNL_LINK_RX_PACKETS));
+            _status.rx_overruns.store(rtnl_link_get_stat(link, RTNL_LINK_RX_OVER_ERR));
+            _status.tx_count.store(rtnl_link_get_stat(link, RTNL_LINK_TX_PACKETS));
+            _status.tx_dropped.store(rtnl_link_get_stat(link, RTNL_LINK_TX_DROPPED));
 
             if (rtnl_link_is_can(link))
             {
                 if (rtnl_link_can_state(link, &state) == 0 || can_state_from_rtnetlink(rtnl_link_get_ifindex(link), &state) == 0)
                 {
-                    _status.can_state = state;
+                    _status.can_state.store(state);
                 }
-                _status.rx_errors = rtnl_link_can_berr_rx(link);
-                _status.tx_errors = rtnl_link_can_berr_tx(link);
+                _status.rx_errors.store(rtnl_link_can_berr_rx(link));
+                _status.tx_errors.store(rtnl_link_can_berr_tx(link));
             }
             else
             {
                 const char *type = rtnl_link_get_type(link);
                 if (type && strcmp(type, "vcan") == 0)
                 {
-                    _status.can_state = state_ok;
+                    _status.can_state.store(state_ok);
                 }
-                _status.rx_errors = 0;
-                _status.tx_errors = 0;
+                _status.rx_errors.store(0);
+                _status.tx_errors.store(0);
             }
             retval = true;
         }
@@ -451,7 +451,7 @@ unsigned SocketCanInterface::getBitrate()
         {
             for (auto *mi : network->interfaces())
             {
-                if (mi->canInterface() == getId())
+                if (mi->busInterface() == getId())
                 {
                     unsigned fallbackBr = mi->bitrate();
                     if (!_name.startsWith("vcan"))
@@ -473,18 +473,18 @@ unsigned SocketCanInterface::getBitrate()
 uint32_t SocketCanInterface::getCapabilities()
 {
     uint32_t retval =
-        CanInterface::capability_config_os |
-        CanInterface::capability_listen_only |
-        CanInterface::capability_auto_restart;
+        BusInterface::capability_config_os |
+        BusInterface::capability_listen_only |
+        BusInterface::capability_auto_restart;
 
     if (supportsCanFD())
     {
-        retval |= CanInterface::capability_canfd;
+        retval |= BusInterface::capability_canfd;
     }
 
     if (supportsTripleSampling())
     {
-        retval |= CanInterface::capability_triple_sampling;
+        retval |= BusInterface::capability_triple_sampling;
     }
 
     return retval;
@@ -497,13 +497,20 @@ bool SocketCanInterface::updateStatistics()
 
 void SocketCanInterface::resetStatistics()
 {
-    _offset_stats = _status;
-    CanInterface::resetStatistics();
+    // Snapshot current atomic stats into the plain offset struct
+    _offset_stats.can_state = _status.can_state.load();
+    _offset_stats.rx_count = _status.rx_count.load();
+    _offset_stats.rx_errors = _status.rx_errors.load();
+    _offset_stats.rx_overruns = _status.rx_overruns.load();
+    _offset_stats.tx_count = _status.tx_count.load();
+    _offset_stats.tx_errors = _status.tx_errors.load();
+    _offset_stats.tx_dropped = _status.tx_dropped.load();
+    BusInterface::resetStatistics();
 }
 
 uint32_t SocketCanInterface::getState()
 {
-    switch (_status.can_state)
+    switch (_status.can_state.load())
     {
     case CAN_STATE_ERROR_ACTIVE:
         return state_ok;
@@ -522,32 +529,32 @@ uint32_t SocketCanInterface::getState()
 
 int SocketCanInterface::getNumRxFrames()
 {
-    return _status.rx_count - _offset_stats.rx_count;
+    return static_cast<int>(_status.rx_count.load() - _offset_stats.rx_count);
 }
 
 int SocketCanInterface::getNumRxErrors()
 {
-    return _status.rx_errors - _offset_stats.rx_errors;
+    return static_cast<int>(_status.rx_errors.load() - _offset_stats.rx_errors);
 }
 
 int SocketCanInterface::getNumTxFrames()
 {
-    return _status.tx_count - _offset_stats.tx_count;
+    return static_cast<int>(_status.tx_count.load() - _offset_stats.tx_count);
 }
 
 int SocketCanInterface::getNumTxErrors()
 {
-    return _status.tx_errors - _offset_stats.tx_errors;
+    return static_cast<int>(_status.tx_errors.load() - _offset_stats.tx_errors);
 }
 
 int SocketCanInterface::getNumRxOverruns()
 {
-    return _status.rx_overruns - _offset_stats.rx_overruns;
+    return static_cast<int>(_status.rx_overruns.load() - _offset_stats.rx_overruns);
 }
 
 int SocketCanInterface::getNumTxDropped()
 {
-    return _status.tx_dropped - _offset_stats.tx_dropped;
+    return static_cast<int>(_status.tx_dropped.load() - _offset_stats.tx_dropped);
 }
 
 int SocketCanInterface::getIfIndex()
@@ -563,8 +570,9 @@ const char *SocketCanInterface::cname()
 
 void SocketCanInterface::open()
 {
-    _isOpen = false;
-    if ((_fd = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
+    // create socket before modifying shared _fd/_isOpen
+    int local_fd = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+    if (local_fd < 0)
     {
         log_error(QString("SocketCanInterface: Error while opening socket: %1").arg(strerror(errno)));
         return;
@@ -575,50 +583,66 @@ void SocketCanInterface::open()
 
     strncpy(ifr.ifr_name, _name.toStdString().c_str(), IFNAMSIZ - 1);
     ifr.ifr_name[IFNAMSIZ - 1] = '\0';
-    if (ioctl(_fd, SIOCGIFINDEX, &ifr) < 0)
+    if (ioctl(local_fd, SIOCGIFINDEX, &ifr) < 0)
     {
         log_error(QString("SocketCanInterface: Error getting interface index for %1: %2").arg(_name, strerror(errno)));
-        ::close(_fd);
+        ::close(local_fd);
         return;
     }
 
     addr.can_family = AF_CAN;
     addr.can_ifindex = ifr.ifr_ifindex;
 
-    if (bind(_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    if (bind(local_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
         log_error(QString("SocketCanInterface: Error in socket bind for %1: %2").arg(_name, strerror(errno)));
-        ::close(_fd);
+        ::close(local_fd);
         return;
     }
 
     int enable = 1;
-    if (setsockopt(_fd, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable, sizeof(enable)) != 0) {
+    if (setsockopt(local_fd, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable, sizeof(enable)) != 0) {
         log_warning(QString("SocketCanInterface: Error while enabling CAN FD support for %1: %2").arg(_name, strerror(errno)));
     }
 
-    _isOpen = true;
+    // publish fd and open state under lock
+    {
+        QMutexLocker fdLock(&_fdMutex);
+        _fd = local_fd;
+        _isOpen = true;
+    }
+    QMutexLocker lock(&_txMutex);
     txMsgList.clear();
 }
 
 bool SocketCanInterface::isOpen()
 {
+    QMutexLocker fdLock(&_fdMutex);
     return _isOpen;
 }
 
 void SocketCanInterface::close()
 {
-    ::close(_fd);
-    _fd = -1;
+    QMutexLocker fdLock(&_fdMutex);
+    if (_fd >= 0)
+    {
+        ::close(_fd);
+        _fd = -1;
+    }
     _isOpen = false;
 }
 
-void SocketCanInterface::sendMessage(const CanMessage &msg)
+void SocketCanInterface::sendMessage(const BusMessage &msg)
 {
-    if (!_isOpen)
+    int local_fd;
     {
-        log_error(QString("SocketCanInterface: Cannot send message, interface %1 is not open").arg(_name));
-        return;
+        QMutexLocker fdLock(&_fdMutex);
+        if (!_isOpen)
+        {
+            log_error(QString("SocketCanInterface: Cannot send message, interface %1 is not open").arg(_name));
+            return;
+        }
+        local_fd = _fd;
     }
 
     if (msg.isFD())
@@ -652,7 +676,7 @@ void SocketCanInterface::sendMessage(const CanMessage &msg)
             frame.data[i] = msg.getByte(i);
         }
 
-        if (::write(_fd, &frame, sizeof(struct canfd_frame)) < 0)
+        if (::write(local_fd, &frame, sizeof(struct canfd_frame)) < 0)
         {
             log_error(QString("SocketCanInterface: Error writing FD frame to %1: %2").arg(_name, strerror(errno)));
             return;
@@ -692,7 +716,7 @@ void SocketCanInterface::sendMessage(const CanMessage &msg)
             }
         }
 
-        if (::write(_fd, &frame, sizeof(struct can_frame)) < 0)
+        if (::write(local_fd, &frame, sizeof(struct can_frame)) < 0)
         {
             log_error(QString("SocketCanInterface: Error writing frame to %1: %2").arg(_name, strerror(errno)));
             return;
@@ -702,7 +726,7 @@ void SocketCanInterface::sendMessage(const CanMessage &msg)
     // Only reached on successful write
     addFrameBits(msg);
 
-    CanMessage txMsg = msg;
+    BusMessage txMsg = msg;
     txMsg.setRX(false);
     auto now = std::chrono::system_clock::now().time_since_epoch();
     txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
@@ -710,7 +734,7 @@ void SocketCanInterface::sendMessage(const CanMessage &msg)
     txMsgList.append(txMsg);
 }
 
-bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
+bool SocketCanInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms)
 {
     struct canfd_frame frame;
     struct timespec ts_rcv;
@@ -721,8 +745,18 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
     timeout.tv_sec = timeout_ms / 1000;
     timeout.tv_usec = 1000 * (timeout_ms % 1000);
 
+    // Snapshot fd under lock to avoid races with close()
+    int local_fd;
+    {
+        QMutexLocker fdLock(&_fdMutex);
+        local_fd = _fd;
+    }
+
+    if (local_fd < 0)
+        return !msglist.isEmpty();
+
     FD_ZERO(&fdset);
-    FD_SET(_fd, &fdset);
+    FD_SET(local_fd, &fdset);
 
     // Enqueue tx messages
     {
@@ -737,17 +771,17 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
         timeout.tv_usec = 0;
     }
 
-    CanMessage msg;
+    BusMessage msg;
 
     for (int retry = 0; retry < 4; retry++)
     {
-        int rv = select(_fd + 1, &fdset, nullptr, nullptr, &timeout);
+        int rv = select(local_fd + 1, &fdset, nullptr, nullptr, &timeout);
         if (rv <= 0)
         {
             break;
         }
 
-        int nbytes = ::read(_fd, &frame, sizeof(struct canfd_frame));
+        int nbytes = ::read(local_fd, &frame, sizeof(struct canfd_frame));
         if (nbytes < 0)
         {
             break;
@@ -761,7 +795,7 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
 
         if (_ts_mode == ts_mode_SIOCGSTAMPNS)
         {
-            if (ioctl(_fd, SIOCGSTAMPNS, &ts_rcv) == 0)
+            if (ioctl(local_fd, SIOCGSTAMPNS, &ts_rcv) == 0)
             {
                 msg.setTimestamp(ts_rcv.tv_sec, ts_rcv.tv_nsec / 1000);
             }
@@ -773,7 +807,7 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
 
         if (_ts_mode == ts_mode_SIOCGSTAMP)
         {
-            if (ioctl(_fd, SIOCGSTAMP, &tv_rcv) == 0)
+            if (ioctl(local_fd, SIOCGSTAMP, &tv_rcv) == 0)
             {
                 msg.setTimestamp(tv_rcv.tv_sec, tv_rcv.tv_usec);
             }
@@ -806,7 +840,7 @@ bool SocketCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int ti
         timeout.tv_sec = 0;
         timeout.tv_usec = 0;
         FD_ZERO(&fdset);
-        FD_SET(_fd, &fdset);
+        FD_SET(local_fd, &fdset);
     }
 
     return !msglist.empty();

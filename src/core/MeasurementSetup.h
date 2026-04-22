@@ -28,10 +28,11 @@
 
 class Backend;
 class MeasurementNetwork;
-class CanTrace;
-class CanMessage;
-class CanInterface;
+class BusTrace;
+class BusInterface;
 class CanDbMessage;
+class LinFrame;
+class BusMessage;
 
 class MeasurementSetup : public QObject
 {
@@ -42,9 +43,10 @@ public:
     virtual ~MeasurementSetup();
     void clear();
 
-    CanDbMessage *findDbMessage(const CanMessage &msg) const;
+    CanDbMessage *findDbMessage(const BusMessage &msg) const;
+    LinFrame     *findLinFrame(const BusMessage &msg) const;
     void rebuildMessageCache();
-    QString getInterfaceName(const CanInterface &id) const;
+    QString getInterfaceName(const BusInterface &id) const;
 
     int countNetworks() const;
     MeasurementNetwork *getNetwork(int index) const;
@@ -63,4 +65,5 @@ signals:
 private:
     QList<MeasurementNetwork*> _networks;
     mutable QHash<uint32_t, CanDbMessage*> _messageCache;
+    mutable QHash<uint8_t,  LinFrame*>     _linFrameCache;
 };

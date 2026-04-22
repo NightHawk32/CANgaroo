@@ -3,7 +3,7 @@ INPUT(
 ./../build/o/win32/mainwindow.o
 ./../build/o/win32/Backend.o
 ./../build/o/win32/CanMessage.o
-./../build/o/win32/CanTrace.o
+./../build/o/win32/BusTrace.o
 ./../build/o/win32/CanDbMessage.o
 ./../build/o/win32/CanDb.o
 ./../build/o/win32/CanDbNode.o
@@ -41,7 +41,7 @@ INPUT(
 ./../build/o/win32/qrc_cangaroo.o
 ./../build/o/win32/moc_mainwindow.o
 ./../build/o/win32/moc_Backend.o
-./../build/o/win32/moc_CanTrace.o
+./../build/o/win32/moc_BusTrace.o
 ./../build/o/win32/moc_MeasurementSetup.o
 ./../build/o/win32/moc_LogModel.o
 ./../build/o/win32/moc_ConfigurableWidget.o

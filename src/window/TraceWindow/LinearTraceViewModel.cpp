@@ -27,10 +27,10 @@
 LinearTraceViewModel::LinearTraceViewModel(Backend &backend)
   : BaseTraceViewModel(backend)
 {
-    connect(backend.getTrace(), &CanTrace::beforeAppend, this, &LinearTraceViewModel::beforeAppend);
-    connect(backend.getTrace(), &CanTrace::afterAppend, this, &LinearTraceViewModel::afterAppend);
-    connect(backend.getTrace(), &CanTrace::beforeClear, this, &LinearTraceViewModel::beforeClear);
-    connect(backend.getTrace(), &CanTrace::afterClear, this, &LinearTraceViewModel::afterClear);
+    connect(backend.getTrace(), &BusTrace::beforeAppend, this, &LinearTraceViewModel::beforeAppend);
+    connect(backend.getTrace(), &BusTrace::afterAppend, this, &LinearTraceViewModel::afterAppend);
+    connect(backend.getTrace(), &BusTrace::beforeClear, this, &LinearTraceViewModel::beforeClear);
+    connect(backend.getTrace(), &BusTrace::afterClear, this, &LinearTraceViewModel::afterClear);
 }
 
 QModelIndex LinearTraceViewModel::index(int row, int column, const QModelIndex &parent) const
@@ -59,7 +59,7 @@ int LinearTraceViewModel::rowCount(const QModelIndex &parent) const
         if (id & 0x80000000) { // node of a message
             return 0;
         } else { // a message
-            CanMessage msg = trace()->getMessage(id-1);
+            BusMessage msg = trace()->getMessage(id-1);
             CanDbMessage *dbmsg = backend()->findDbMessage(msg);
             return (dbmsg!=0) ? dbmsg->getSignals().length() : 0;
         }
@@ -77,6 +77,14 @@ int LinearTraceViewModel::columnCount(const QModelIndex &parent) const
 bool LinearTraceViewModel::hasChildren(const QModelIndex &parent) const
 {
     return rowCount(parent)>0;
+}
+
+BusMessage LinearTraceViewModel::getMessage(const QModelIndex &index) const
+{
+    if (!index.isValid()) return BusMessage();
+    quintptr id = index.internalId();
+    int msg_id = static_cast<int>(id & ~0x80000000u) - 1;
+    return trace()->getMessage(msg_id);
 }
 
 void LinearTraceViewModel::beforeAppend(int num_messages)
@@ -104,16 +112,16 @@ QVariant LinearTraceViewModel::data_DisplayRole(const QModelIndex &index, int ro
     quintptr id = index.internalId();
     int msg_id = (id & ~0x80000000)-1;
 
-    CanMessage msg = trace()->getMessage(msg_id);
+    BusMessage msg = trace()->getMessage(msg_id);
 
     if (id & 0x80000000) {
         return data_DisplayRole_Signal(index, role, msg);
     } else if (id) {
         if (msg_id>=1) {
-            CanMessage prev_msg = trace()->getMessage(msg_id-1);
+            BusMessage prev_msg = trace()->getMessage(msg_id-1);
             return data_DisplayRole_Message(index, role, msg, prev_msg);
         } else {
-            return data_DisplayRole_Message(index, role, msg, CanMessage());
+            return data_DisplayRole_Message(index, role, msg, BusMessage());
         }
     }
 
@@ -128,7 +136,7 @@ QVariant LinearTraceViewModel::data_TextColorRole(const QModelIndex &index, int 
 
     if (id & 0x80000000) { // CanSignal row
         int msg_id = (id & ~0x80000000)-1;
-        CanMessage msg = trace()->getMessage(msg_id);
+        BusMessage msg = trace()->getMessage(msg_id);
         return data_TextColorRole_Signal(index, role, msg);
     }
 

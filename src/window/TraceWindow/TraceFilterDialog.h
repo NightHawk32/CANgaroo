@@ -21,12 +21,14 @@ public:
     bool showTx() const;
     bool showRx() const;
     QSet<uint32_t> hiddenMessageIds() const;
-    QSet<CanInterfaceId> hiddenInterfaces() const;
+    QSet<uint8_t>  hiddenLinFrameIds() const;
+    QSet<BusInterfaceId> hiddenInterfaces() const;
 
     void setShowTx(bool show);
     void setShowRx(bool show);
     void setHiddenMessageIds(const QSet<uint32_t> &ids);
-    void setHiddenInterfaces(const QSet<CanInterfaceId> &ids);
+    void setHiddenLinFrameIds(const QSet<uint8_t> &ids);
+    void setHiddenInterfaces(const QSet<BusInterfaceId> &ids);
 
     bool saveXML(QDomDocument &xml, QDomElement &root) const;
     bool loadXML(QDomElement &el);

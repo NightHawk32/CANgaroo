@@ -25,25 +25,25 @@
 #include <QObject>
 #include <atomic>
 #include "driver/CanDriver.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 
 //class QThread;
-class CanMessage;
+#include "core/BusMessage.h"
 class Backend;
 
-class CanListener : public QObject
+class BusListener : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit CanListener(QObject *parent, Backend &backend, CanInterface &intf);
-    virtual ~CanListener();
+    explicit BusListener(QObject *parent, Backend &backend, BusInterface &intf);
+    virtual ~BusListener();
 
-    CanInterfaceId getInterfaceId();
-    CanInterface &getInterface();
+    BusInterfaceId getInterfaceId();
+    BusInterface &getInterface();
 
 signals:
-    void messageReceived(const CanMessage &msg);
+    void messageReceived(const BusMessage &msg);
 
 public slots:
     void run();
@@ -54,7 +54,7 @@ public slots:
 
 private:
     Backend &_backend;
-    CanInterface &_intf;
+    BusInterface &_intf;
     std::atomic<bool> _shouldBeRunning;
     std::atomic<bool> _openComplete;
     QThread *_thread;

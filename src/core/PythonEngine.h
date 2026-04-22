@@ -11,7 +11,7 @@
 #include <optional>
 #include <thread>
 
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 
 class Backend;
 
@@ -29,19 +29,22 @@ public:
 
     Backend &backend() { return _backend; }
 
-    void enqueueMessage(const CanMessage &msg);
+    void enqueueMessage(const BusMessage &msg);
 
     QMutex &msgQueueMutex() { return _msgQueueMutex; }
     QWaitCondition &msgQueueCondition() { return _msgQueueCondition; }
-    QQueue<CanMessage> &msgQueue() { return _msgQueue; }
+    QQueue<BusMessage> &msgQueue() { return _msgQueue; }
     bool stopRequested() const { return _stopRequested.load(); }
 
     // RX filter — applied in enqueueMessage before the message enters the queue
     void setRxFilter(uint32_t id, uint32_t mask, std::optional<bool> extended);
     void clearRxFilter();
 
+    // TX echo — when disabled (default), sent frames are not fed back into receive()
+    void setTxEchoEnabled(bool enabled) { _echoTxEnabled = enabled; }
+
     // Periodic TX tasks — each runs on its own std::thread
-    int  startPeriodicTask(CanMessage msg, unsigned interval_ms, uint16_t interface_id);
+    int  startPeriodicTask(BusMessage msg, unsigned interval_ms, uint16_t interface_id);
     void stopPeriodicTask(int handle);
     void stopAllPeriodicTasks();
 
@@ -61,10 +64,11 @@ private:
     std::unique_ptr<std::thread> _workerThread;
     std::atomic<bool> _running{false};
     std::atomic<bool> _stopRequested{false};
+    std::atomic<bool> _echoTxEnabled{false};
 
     QMutex _msgQueueMutex;
     QWaitCondition _msgQueueCondition;
-    QQueue<CanMessage> _msgQueue;
+    QQueue<BusMessage> _msgQueue;
 
     // RX filter state
     struct RxFilter
@@ -77,7 +81,7 @@ private:
     RxFilter _rxFilter;
     mutable QMutex _rxFilterMutex;
 
-    [[nodiscard]] bool passesRxFilter(const CanMessage &msg) const;
+    [[nodiscard]] bool passesRxFilter(const BusMessage &msg) const;
 
     // Periodic TX tasks
     struct PeriodicTask

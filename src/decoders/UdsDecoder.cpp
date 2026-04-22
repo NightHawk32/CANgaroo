@@ -2,7 +2,7 @@
 
 UdsDecoder::UdsDecoder() {}
 
-DecodeStatus UdsDecoder::tryDecode(const CanMessage& frame, ProtocolMessage& outMsg) {
+DecodeStatus UdsDecoder::tryDecode(const BusMessage& frame, ProtocolMessage& outMsg) {
     if (frame.isErrorFrame() || frame.isRTR() || frame.getLength() < 1) {
         return DecodeStatus::Ignored;
     }

@@ -80,7 +80,7 @@ bool SocketCanDriver::update() {
     return true;
 }
 
-QString SocketCanDriver::getName() {
+QString SocketCanDriver::getName() const {
     return "SocketCAN";
 }
 

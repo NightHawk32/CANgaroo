@@ -46,6 +46,8 @@ public:
     virtual ~SetupDialogTreeModel();
 
     QVariant data(const QModelIndex &index, int role) const override;
+    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
     QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
     QModelIndex parent(const QModelIndex &index) const override;
@@ -64,7 +66,10 @@ public:
     SetupDialogTreeItem *addCanDb(const QModelIndex &parent, pCanDb db);
     void deleteCanDb(const QModelIndex &index);
 
-    SetupDialogTreeItem *addInterface(const QModelIndex &parent, CanInterfaceId &interface);
+    SetupDialogTreeItem *addLinDb(const QModelIndex &parent, pLinDb db);
+    void deleteLinDb(const QModelIndex &index);
+
+    SetupDialogTreeItem *addInterface(const QModelIndex &parent, BusInterfaceId &interface);
     void deleteInterface(const QModelIndex &index);
 
 private:
@@ -74,5 +79,6 @@ private:
 
     SetupDialogTreeItem *loadNetwork(SetupDialogTreeItem *root, MeasurementNetwork &network);
     SetupDialogTreeItem *loadMeasurementInterface(SetupDialogTreeItem &parent, MeasurementInterface *intf);
-    SetupDialogTreeItem *loadCanDb(SetupDialogTreeItem &parent, pCanDb &db);
+    SetupDialogTreeItem *loadCanDb(SetupDialogTreeItem &parent, const pCanDb &db);
+    SetupDialogTreeItem *loadLinDb(SetupDialogTreeItem &parent, const pLinDb &db);
 };

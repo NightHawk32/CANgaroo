@@ -18,7 +18,7 @@ public:
      * @param outMsg If a full protocol message is reassembled/decoded, it is stored here.
      * @return The status of the decoding process.
      */
-    virtual DecodeStatus tryDecode(const CanMessage& frame, ProtocolMessage& outMsg) = 0;
+    virtual DecodeStatus tryDecode(const BusMessage& frame, ProtocolMessage& outMsg) = 0;
 
     /**
      * @brief Resets the decoder state (e.g. for multiple channels or starting trace).

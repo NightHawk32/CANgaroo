@@ -1,0 +1,72 @@
+#pragma once
+
+#include <QString>
+#include <QList>
+#include <QMap>
+#include <QSharedPointer>
+#include <QVector>
+
+class LinFrame;
+
+using LinFrameMap = QMap<uint8_t, LinFrame*>;
+
+struct LinScheduleEntry
+{
+    uint8_t frameId          {0};
+    QString frameName;
+    QString publisherName;
+    uint8_t dlc              {0};
+    uint8_t delayMs          {0};
+    bool    isMasterPublisher {false};
+};
+
+class LinDb
+{
+public:
+    LinDb();
+    ~LinDb();
+
+    // File path helpers
+    void    setPath(const QString &path);
+    QString path() const;
+    QString fileName() const;
+    QString directory() const;
+
+    // LDF metadata
+    QString     protocolVersion() const;
+    double      speedBps() const;
+    QString     channelName() const;
+    QString     masterNode() const;
+    QStringList slaveNodes() const;
+    double      masterTimebaseMs() const;
+    double      masterJitterMs() const;
+
+    // Schedule tables
+    QStringList scheduleTableNames() const;
+    QVector<LinScheduleEntry> scheduleTableEntries(int tableIndex) const;
+
+    // Frame access
+    LinFrame           *frameById(uint8_t id) const;
+    LinFrame           *frameByName(const QString &name) const;
+    const LinFrameMap  &frames() const;
+
+    // Load from an LDF file. Returns false and sets lastError() on failure.
+    bool    loadFile(const QString &path);
+    QString lastError() const;
+
+private:
+    QString     _path;
+    QString     _protocolVersion;
+    double      _speedBps {19200.0};
+    QString     _channelName;
+    QString     _masterNode;
+    QStringList _slaveNodes;
+    LinFrameMap _frames;
+    QStringList _scheduleTableNames;
+    QVector<QVector<LinScheduleEntry>> _scheduleTables;
+    double      _masterTimebaseMs {0.0};
+    double      _masterJitterMs   {0.0};
+    QString     _lastError;
+};
+
+using pLinDb = QSharedPointer<LinDb>;

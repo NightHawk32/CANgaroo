@@ -22,10 +22,10 @@
 #pragma once
 
 #include <QWidget>
-#include "core/CanMessage.h"
-#include "core/DBC/CanDbSignal.h"
+#include "core/BusMessage.h"
 #include "core/Backend.h"
 #include "core/ThemeManager.h"
+#include "GraphSignal.h"
 #include <QMetaType>
 
 class ThemeManager;
@@ -47,15 +47,16 @@ public:
 
     virtual void applyTheme(ThemeManager::Theme theme) { Q_UNUSED(theme); }
 
-    virtual void addMessage(const CanMessage &msg) = 0;
-    virtual void addDecodedData(const QMap<CanDbSignal*, DecodedSignalData>& newPoints) = 0;
+    virtual void addMessage(const BusMessage &msg) = 0;
+    virtual void addDecodedData(const QMap<GraphSignal*, DecodedSignalData>& newPoints) = 0;
     virtual void clear() = 0;
-    
+
     virtual void zoomIn() {}
     virtual void zoomOut() {}
     virtual void resetZoom() {}
     virtual void setWindowDuration(int seconds) { Q_UNUSED(seconds); }
-    virtual void addSignal(CanDbSignal *signal, const CanInterfaceIdList &interfaces = {}) { 
+    virtual int getWindowDuration() const { return 0; }
+    virtual void addSignal(GraphSignal *signal, const BusInterfaceIdList &interfaces = {}) {
         if (!_signals.contains(signal)) {
             _signals.append(signal);
         }
@@ -63,24 +64,24 @@ public:
             _signalInterfaces[signal] = interfaces;
         }
     }
-    virtual void removeSignal(CanDbSignal *signal) { 
-        _signals.removeAll(signal); 
+    virtual void removeSignal(GraphSignal *signal) {
+        _signals.removeAll(signal);
         _signalInterfaces.remove(signal);
     }
     virtual void clearSignals() { _signals.clear(); _signalInterfaces.clear(); _signalBuffers.clear(); }
-    virtual QList<CanDbSignal*> getSignals() const { return _signals; }
+    virtual QList<GraphSignal*> getSignals() const { return _signals; }
 
-    virtual CanInterfaceIdList getSignalInterfaces(CanDbSignal *signal) const {
+    virtual BusInterfaceIdList getSignalInterfaces(GraphSignal *signal) const {
         return _signalInterfaces.value(signal);
     }
 
     virtual void setGlobalStartTime(double t) { _startTime = t; }
 
-    virtual void setSignalColor(CanDbSignal *signal, const QColor &color) {
+    virtual void setSignalColor(GraphSignal *signal, const QColor &color) {
         _signalColors[signal] = color;
     }
-    
-    QColor getSignalColor(CanDbSignal *signal) const {
+
+    QColor getSignalColor(GraphSignal *signal) const {
         return _signalColors.value(signal, Qt::white);
     }
 
@@ -94,16 +95,16 @@ public:
 
 protected:
     Backend &_backend;
-    QList<CanDbSignal*> _signals;
-    QMap<CanDbSignal*, QColor> _signalColors;
-    QMap<CanDbSignal*, CanInterfaceIdList> _signalInterfaces;
-    QMap<CanDbSignal*, GraphSignalBuffer> _signalBuffers;
-    QMap<CanDbSignal*, int> _syncIndices; // Index of next point in buffer to add to chart
+    QList<GraphSignal*> _signals;
+    QMap<GraphSignal*, QColor> _signalColors;
+    QMap<GraphSignal*, BusInterfaceIdList> _signalInterfaces;
+    QMap<GraphSignal*, GraphSignalBuffer> _signalBuffers;
+    QMap<GraphSignal*, int> _syncIndices;
     double _startTime = -1.0;
 };
 
 Q_DECLARE_METATYPE(DecodedSignalData)
-Q_DECLARE_METATYPE(QList<CanDbSignal*>)
+Q_DECLARE_METATYPE(QList<GraphSignal*>)
 
-typedef QMap<CanDbSignal*,CanInterfaceIdList> SignalInterfaceMap;
+typedef QMap<GraphSignal*, BusInterfaceIdList> SignalInterfaceMap;
 Q_DECLARE_METATYPE(SignalInterfaceMap)

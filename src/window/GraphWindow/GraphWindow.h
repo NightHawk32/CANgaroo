@@ -24,14 +24,9 @@
 #include "core/Backend.h"
 #include "core/ConfigurableWidget.h"
 #include "core/MeasurementSetup.h"
+#include "core/DBC/CanDbSignal.h"
+#include "GraphSignal.h"
 #include "VisualizationWidget.h"
-
-class QComboBox;
-class QLabel;
-
-namespace Ui {
-class GraphWindow;
-}
 
 class QComboBox;
 class QLabel;
@@ -43,8 +38,6 @@ class GraphWindow;
 class QDomDocument;
 class QDomElement;
 
-#include "core/DBC/CanDbSignal.h"
-
 struct DecodedSignalData;
 
 class SignalDecoderWorker : public QObject
@@ -54,21 +47,21 @@ public:
     explicit SignalDecoderWorker(Backend& backend, QObject *parent = nullptr);
 
 public slots:
-    void updateActiveSignals(const QList<CanDbSignal*>& activeSignals, const QMap<CanDbSignal*, CanInterfaceIdList>& signalInterfaces, double globalStartTime);
+    void updateActiveSignals(const QList<GraphSignal*>& activeSignals, const QMap<GraphSignal*, BusInterfaceIdList>& signalInterfaces, double globalStartTime);
+    void clearActiveSignals();
     void reset();
-    
-private slots:
+    void rewindForWindow(int windowSeconds);
     void onTraceAppended();
 
 signals:
-    void dataDecoded(const QMap<CanDbSignal*, DecodedSignalData>& newPoints, double globalStartTime);
+    void dataDecoded(const QMap<GraphSignal*, DecodedSignalData>& newPoints, double globalStartTime);
 
 private:
     Backend& _backend;
     int _lastProcessedIdx;
     double _globalStartTime;
-    QList<CanDbSignal*> _activeSignals;
-    QMap<CanDbSignal*, CanInterfaceIdList> _signalInterfaces;
+    QList<GraphSignal*> _activeSignals;
+    QMap<GraphSignal*, BusInterfaceIdList> _signalInterfaces;
     QMutex _mutex;
 };
 
@@ -99,7 +92,7 @@ private slots:
     void onConditionToggled();
     void onAddToConditionClicked();
     void buildConditionsFromTable();
-    void onDecodedDataReady(const QMap<CanDbSignal*, DecodedSignalData>& newPoints, double globalStartTime);
+    void onDecodedDataReady(const QMap<GraphSignal*, DecodedSignalData>& newPoints, double globalStartTime);
     void onMouseMove(QMouseEvent *event);
     void onLegendMarkerClicked();
     void onColumnSelectorChanged(int val);
@@ -109,13 +102,14 @@ private slots:
     void onSearchTextChanged(const QString &text);
     void onSignalItemChanged(class QTreeWidgetItem *item, int column);
     void onAddGraphClicked();
-    
+
     void onResumeMeasurement();
     void onPauseMeasurement();
 
 signals:
-    void activeSignalsUpdated(const QList<CanDbSignal*>& activeSignals, const QMap<CanDbSignal*, CanInterfaceIdList>& signalInterfaces, double globalStartTime);
+    void activeSignalsUpdated(const QList<GraphSignal*>& activeSignals, const QMap<GraphSignal*, BusInterfaceIdList>& signalInterfaces, double globalStartTime);
     void requestDecoderReset();
+    void requestDecoderRewindForWindow(int windowSeconds);
 
 private:
     void connectLegendMarkers(VisualizationWidget* v);
@@ -128,12 +122,14 @@ private:
     QList<VisualizationWidget*> _visualizations;
     VisualizationWidget* _activeVisualization;
 
+    QList<GraphSignal*> _ownedSignals;
+
     void setupVisualizations();
     void updateConditionalSignals();
     void clearGraphData();
     void resetGraphView();
     void notifyWorkerActiveSignals();
-    
+
     void filterSignalTree(const QString &searchText);
     bool shouldShowSignalItem(class QTreeWidgetItem *item, const QString &searchText);
 

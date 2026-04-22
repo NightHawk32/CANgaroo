@@ -21,11 +21,12 @@
 */
 #pragma once
 
-#include "../CanInterface.h"
+#include "../BusInterface.h"
 
 #include <string>
 
 #include <QMutex>
+#include <atomic>
 
 #include <linux/can/netlink.h>
 
@@ -46,22 +47,34 @@ struct can_config_t
 
 struct can_status_t
 {
-    uint32_t can_state;
+    std::atomic<uint32_t> can_state{0};
 
-    uint64_t rx_count;
-    int rx_errors;
-    uint64_t rx_overruns;
+    std::atomic<uint64_t> rx_count{0};
+    std::atomic<int> rx_errors{0};
+    std::atomic<uint64_t> rx_overruns{0};
 
-    uint64_t tx_count;
-    int tx_errors;
-    uint64_t tx_dropped;
+    std::atomic<uint64_t> tx_count{0};
+    std::atomic<int> tx_errors{0};
+    std::atomic<uint64_t> tx_dropped{0};
 };
 
-class SocketCanInterface : public CanInterface
+// Snapshot type for storing non-atomic offsets
+struct can_status_snapshot_t
+{
+    uint32_t can_state{0};
+    uint64_t rx_count{0};
+    int rx_errors{0};
+    uint64_t rx_overruns{0};
+    uint64_t tx_count{0};
+    int tx_errors{0};
+    uint64_t tx_dropped{0};
+};
+
+class SocketCanInterface : public BusInterface
 {
 public:
     SocketCanInterface(SocketCanDriver *driver, int index, QString name);
-    virtual ~SocketCanInterface();
+    ~SocketCanInterface() override;
 
     QString getName() const override;
     void setName(QString name);
@@ -84,8 +97,8 @@ public:
     bool isOpen() override;
     void close() override;
 
-    void sendMessage(const CanMessage &msg) override;
-    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
+    void sendMessage(const BusMessage &msg) override;
+    bool readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms) override;
 
     bool updateStatistics() override;
     void resetStatistics() override;
@@ -115,7 +128,7 @@ private:
 
     can_config_t _config;
     can_status_t _status;
-    can_status_t _offset_stats;
+    can_status_snapshot_t _offset_stats;
     ts_mode_t _ts_mode;
 
     const char *cname();
@@ -123,7 +136,8 @@ private:
     bool updateStatus();
 
     QMutex _txMutex;
-    QList<CanMessage> txMsgList;
+    QList<BusMessage> txMsgList;
+    QMutex _fdMutex; // guards _fd and _isOpen
 
     QString buildIpRouteCmd(const MeasurementInterface &mi);
 };

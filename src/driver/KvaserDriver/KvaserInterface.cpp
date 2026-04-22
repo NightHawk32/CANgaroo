@@ -27,7 +27,7 @@
 #include <QMutexLocker>
 
 #include "core/Backend.h"
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "core/MeasurementInterface.h"
 
 // canlib.h is the same header name on Linux and Windows.
@@ -56,7 +56,7 @@ static inline void kvaserTimestampToSecUsec(unsigned long ts, long &sec, long &u
 #endif
 
 KvaserInterface::KvaserInterface(KvaserDriver *driver, int channel, QString name)
-  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
+  : BusInterface(reinterpret_cast<CanDriver*>(driver)),
     _channel(channel),
     _handle(canINVALID_HANDLE),
     _isOpen(false),
@@ -115,7 +115,7 @@ unsigned KvaserInterface::getBitrate()
 
 uint32_t KvaserInterface::getCapabilities()
 {
-    return CanInterface::capability_listen_only;
+    return BusInterface::capability_listen_only;
 }
 
 void KvaserInterface::open()
@@ -179,7 +179,7 @@ void KvaserInterface::close()
     log_info(QString("KvaserInterface %1: closed").arg(_name));
 }
 
-void KvaserInterface::sendMessage(const CanMessage &msg)
+void KvaserInterface::sendMessage(const BusMessage &msg)
 {
     if (!_isOpen) {
         log_error(QString("KvaserInterface %1: cannot send, interface not open").arg(_name));
@@ -217,7 +217,7 @@ void KvaserInterface::sendMessage(const CanMessage &msg)
         _stats.tx_count++;
         addFrameBits(msg);
 
-        CanMessage txMsg = msg;
+        BusMessage txMsg = msg;
         txMsg.setRX(false);
         auto now = std::chrono::system_clock::now().time_since_epoch();
         txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
@@ -226,7 +226,7 @@ void KvaserInterface::sendMessage(const CanMessage &msg)
     }
 }
 
-bool KvaserInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
+bool KvaserInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms)
 {
     if (!_isOpen) {
         return false;
@@ -259,7 +259,7 @@ bool KvaserInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeo
         return hasTx;
     }
 
-    CanMessage msg;
+    BusMessage msg;
     msg.setId(id & 0x1FFFFFFF);
     msg.setExtended((flags & canMSG_EXT) != 0);
     msg.setRTR((flags & canMSG_RTR) != 0);
@@ -296,7 +296,7 @@ bool KvaserInterface::updateStatistics()
 void KvaserInterface::resetStatistics()
 {
     _offset_stats = _stats;
-    CanInterface::resetStatistics();
+    BusInterface::resetStatistics();
 }
 
 uint32_t KvaserInterface::getState()

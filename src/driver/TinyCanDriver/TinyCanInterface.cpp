@@ -30,11 +30,11 @@
 #include <QMutexLocker>
 
 #include "core/Backend.h"
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "core/MeasurementInterface.h"
 
 TinyCanInterface::TinyCanInterface(TinyCanDriver *driver, QString deviceName, QString description)
-  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
+  : BusInterface(reinterpret_cast<CanDriver*>(driver)),
     _deviceName(deviceName),
     _name(description),
     _device(nullptr),
@@ -94,7 +94,7 @@ unsigned TinyCanInterface::getBitrate()
 
 uint32_t TinyCanInterface::getCapabilities()
 {
-    return CanInterface::capability_listen_only;
+    return BusInterface::capability_listen_only;
 }
 
 void TinyCanInterface::open()
@@ -125,16 +125,18 @@ void TinyCanInterface::open()
         return;
     }
 
+    _isOpen.store(true);
     log_info(QString("TinyCanInterface %1: opened").arg(_name));
 }
 
 bool TinyCanInterface::isOpen()
 {
-    return _device && _device->state() == QCanBusDevice::ConnectedState;
+    return _isOpen.load();
 }
 
 void TinyCanInterface::close()
 {
+    _isOpen.store(false);
     if (_device) {
         _device->disconnectDevice();
         delete _device;
@@ -143,7 +145,7 @@ void TinyCanInterface::close()
     log_info(QString("TinyCanInterface %1: closed").arg(_name));
 }
 
-void TinyCanInterface::sendMessage(const CanMessage &msg)
+void TinyCanInterface::sendMessage(const BusMessage &msg)
 {
     if (!isOpen()) {
         log_error(QString("TinyCanInterface %1: cannot send, interface not open").arg(_name));
@@ -174,7 +176,7 @@ void TinyCanInterface::sendMessage(const CanMessage &msg)
         _stats.tx_count++;
         addFrameBits(msg);
 
-        CanMessage txMsg = msg;
+        BusMessage txMsg = msg;
         txMsg.setRX(false);
         auto now = std::chrono::system_clock::now().time_since_epoch();
         txMsg.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
@@ -183,7 +185,7 @@ void TinyCanInterface::sendMessage(const CanMessage &msg)
     }
 }
 
-bool TinyCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
+bool TinyCanInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms)
 {
     if (!isOpen()) {
         return false;
@@ -217,7 +219,7 @@ bool TinyCanInterface::readMessage(QList<CanMessage> &msglist, unsigned int time
         return hasTx;
     }
 
-    CanMessage msg;
+    BusMessage msg;
     msg.setId(frame.frameId());
     msg.setExtended(frame.hasExtendedFrameFormat());
     msg.setRTR(frame.frameType() == QCanBusFrame::RemoteRequestFrame);
@@ -248,7 +250,7 @@ bool TinyCanInterface::updateStatistics()
 void TinyCanInterface::resetStatistics()
 {
     _offset_stats = _stats;
-    CanInterface::resetStatistics();
+    BusInterface::resetStatistics();
 }
 
 uint32_t TinyCanInterface::getState()

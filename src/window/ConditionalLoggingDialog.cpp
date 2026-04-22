@@ -296,7 +296,7 @@ void ConditionalLoggingDialog::onAccept()
             if (type == "network") {
                 MeasurementNetwork *net = static_cast<MeasurementNetwork*>(data);
                 for (auto *mi : net->interfaces()) {
-                    filterBusIds.insert(mi->canInterface());
+                    filterBusIds.insert(mi->busInterface());
                 }
             } else if (type == "message") {
                 filterMessages.insert(static_cast<CanDbMessage*>(data));

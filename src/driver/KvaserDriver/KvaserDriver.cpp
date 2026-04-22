@@ -38,7 +38,7 @@ KvaserDriver::~KvaserDriver()
 {
 }
 
-QString KvaserDriver::getName()
+QString KvaserDriver::getName() const
 {
     return "Kvaser";
 }

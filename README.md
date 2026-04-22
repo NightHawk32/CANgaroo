@@ -9,21 +9,22 @@
 | **SocketCAN** | ✅ | — | Any kernel CAN interface (`can0`, `vcan0`, …) |
 | **PEAK PCAN** | ✅ | ✅ | PCAN-USB, PCAN-USB Pro, PCAN-PCIe, … via PCAN-Basic SDK (`CONFIG+=peakcan`) |
 | **Kvaser** | ✅ | ✅ | USB/CAN Leaf and other Kvaser devices via CANlib SDK (`CONFIG+=kvaser`) |
-| **Vector** | — | ✅ | VN-series and other Vector devices via Qt serialbus (XL Driver Library required at runtime) |
+| **Vector** | — | ✅ | VN-series and other Vector devices via Qt serialbus (XL Driver Library required at runtime), CAN FD supported |
 | **TinyCAN** | ✅ | ✅ | TinyCAN USB adapters via Qt serialbus (enable in Measurement > Driver menu) |
-| **Candlelight / CANable** | ✅ | ✅ | CANable (Candlelight firmware), MKS CANable, cantact, … |
+| **Candlelight / CANable** | ✅ | ✅ | CANable (Candlelight firmware), MKS CANable, cantact, … CAN FD supported |
 | **SLCAN** | ✅ | ✅ | CANable (SLCAN firmware), Arduino CAN shields |
 | **CANblaster** | ✅ | ✅ | UDP-based remote CAN via [CANblaster](https://github.com/OpenAutoDiagLabs/CANblaster) |
 | **GrIP** | ✅ | ✅ | GrIP protocol |
 
 ## ⚙️ Features
 
-*   **Real-time CAN/CAN-FD Decoding**: Support for standard and high-speed flexible data-rate frames.
+*   **Real-time CAN/CAN-FD/LIN Decoding**: Support for standard CAN, high-speed CAN-FD, and LIN bus frames.
 *   **Wide Hardware Compatibility**: Works with **SocketCAN** (Linux), **PEAK PCAN**, **Kvaser**, **Vector**, **TinyCAN**, **CANable**, **Candlelight**, **SLCAN**, and **CANblaster** (UDP).
-*   **DBC Database Support**: Load multiple `.dbc` files to instantly decode frames into human-readable signals.
-*   **Powerful Data Visualization**: Integrated Graphing tools supporting Time-series, Scatter charts, Text-based monitoring, and interactive Gauge views with zoom and live tooltips.
+*   **DBC & LDF Database Support**: Load multiple `.dbc` files for CAN signal decoding and `.ldf` files for LIN bus signal decoding.
+*   **Powerful Data Visualization**: Integrated Graphing tools supporting Time-series, Scatter charts, Text-based monitoring, and interactive Gauge views with zoom and live tooltips. Supports both CAN and LIN signals.
 *   **Advanced Filtering & Logging**: Isolate critical data with live filters and export captures for offline analysis.
-*   **Python Scripting**: Built-in script editor with an embedded Python interpreter (via pybind11). Send and receive CAN messages, decode signals using loaded DBC files, and automate tasks. Scripts can be started manually or automatically with the measurement.
+*   **Network Rights Management**: Per-network access control for bus interfaces.
+*   **Python Scripting**: Built-in script editor with an embedded Python interpreter (via pybind11). Send and receive CAN and LIN messages, decode signals using loaded DBC/LDF files, and automate tasks. Scripts can be started manually or automatically with the measurement.
 *   **Trace Replay**: Replay captured CAN logs (Vector ASC, candump, PCAP, and PCAPng formats) with adjustable speed, per-message RX/TX direction filtering, channel mapping to live interfaces, and optional autoplay with the measurement. Supports classic CAN, CAN-FD, RTR, and error frames.
 *   **Multiple Export Formats**: Save traces as Vector ASC, Vector MDF4, Linux candump, PCAP, or PCAPng (Wireshark-compatible).
 *   **Modern Workspace**: A clean, dockable userinterface optimized for multi-monitor setups.

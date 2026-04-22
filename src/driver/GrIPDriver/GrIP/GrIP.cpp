@@ -489,7 +489,7 @@ void GrIP_Update()
             // Temporarily release the stream lock while transmitting
             // (GrIP_Transmit re-acquires it)
             lk.unlock();
-            GrIP_Transmit(PROT_GrIP, MSG_RESPONSE,
+            std::ignore = GrIP_Transmit(PROT_GrIP, MSG_RESPONSE,
                           static_cast<GrIP_ReturnType_e>(ctx.errors.LastError), nullptr);
             lk.relock();
             ctx.sendResponse = false;
