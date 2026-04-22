@@ -27,6 +27,7 @@
 
 #include <QMutexLocker>
 #include <QProcess>
+#include <QStandardPaths>
 #include <QString>
 #include <QStringList>
 
@@ -174,56 +175,55 @@ void SocketCanInterface::applyConfig(const MeasurementInterface &mi)
         return;
     }
 
-    log_info(QString("calling ip link to reconfigure interface %1").arg(getName()));
-    if (geteuid() != 0)
+    log_info(QString("reconfiguring interface %1").arg(getName()));
+
+    QString ipExe = QStandardPaths::findExecutable("ip");
+    if (ipExe.isEmpty())
+        ipExe = "/sbin/ip";
+
+    bool needElevation = (geteuid() != 0);
+    if (needElevation)
+        log_info("Not running as root — using pkexec for ip link commands");
+
+    auto runIp = [&](const QStringList &args) -> bool
     {
-        log_warning(QString("Not running as root — ip link may fail; See README for setup"));
-    }
+        QProcess proc;
+        if (needElevation)
+            proc.start("pkexec", QStringList{ipExe} + args);
+        else
+            proc.start(ipExe, args);
 
-    // Bring interface down first
-    QProcess proc_down;
-    proc_down.start("ip", {"link", "set", getName(), "down"});
-    proc_down.waitForFinished();
+        if (!proc.waitForFinished(10000))
+        {
+            log_error("timeout waiting for ip command");
+            return false;
+        }
+        if (proc.exitStatus() != QProcess::NormalExit || proc.exitCode() != 0)
+        {
+            log_error(QString("ip command failed: ") + QString(proc.readAllStandardError()).trimmed());
+            return false;
+        }
+        return true;
+    };
 
-    QString cmd = "ip";
-    QStringList args;
-    args << "link" << "set" << getName() << "up" << "type" << "can";
-    args << "bitrate" << QString::number(mi.bitrate());
-    args << "sample-point" << QString::number(static_cast<float>(mi.samplePoint()) / 1000.0f, 'f', 3);
+    runIp({"link", "set", getName(), "down"});
+
+    QStringList upArgs;
+    upArgs << "link" << "set" << getName() << "up" << "type" << "can";
+    upArgs << "bitrate" << QString::number(mi.bitrate());
+    upArgs << "sample-point" << QString::number(static_cast<float>(mi.samplePoint()) / 1000.0f, 'f', 3);
 
     if (mi.isCanFD())
     {
-        args << "dbitrate" << QString::number(mi.fdBitrate());
-        args << "dsample-point" << QString::number(static_cast<float>(mi.fdSamplePoint()) / 1000.0f, 'f', 3);
-        args << "fd" << "on";
+        upArgs << "dbitrate" << QString::number(mi.fdBitrate());
+        upArgs << "dsample-point" << QString::number(static_cast<float>(mi.fdSamplePoint()) / 1000.0f, 'f', 3);
+        upArgs << "fd" << "on";
     }
 
-    if (mi.doAutoRestart())
-    {
-        args << "restart-ms" << QString::number(mi.autoRestartMs());
-    }
+    upArgs << "restart-ms" << (mi.doAutoRestart() ? QString::number(mi.autoRestartMs()) : "0");
 
-    log_info(cmd + " " + args.join(" "));
-
-    QProcess proc;
-    proc.start(cmd, args);
-    if (!proc.waitForFinished())
-    {
-        log_error(QString("timeout waiting for %1").arg(cmd));
-        return;
-    }
-
-    if (proc.exitStatus() != QProcess::NormalExit)
-    {
-        log_error(QString("%1 crashed").arg(cmd));
-        return;
-    }
-
-    if (proc.exitCode() != 0)
-    {
-        log_error(QString("%1 failed: ").arg(cmd) + QString(proc.readAllStandardError()).trimmed());
-        return;
-    }
+    log_info(ipExe + " " + upArgs.join(" "));
+    runIp(upArgs);
 }
 
 #include <linux/netlink.h>
