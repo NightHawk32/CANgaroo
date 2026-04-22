@@ -12,7 +12,7 @@
 #include <QTextStream>
 #include <QSet>
 #include <QTimer>
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "core/DBC/CanDbSignal.h"
 
 class Backend;
@@ -44,8 +44,8 @@ public:
     void setConditions(const QList<LoggingCondition> &conditions, bool useAndLogic);
     void setLogSignals(const QList<CanDbSignal*> &signalList);
     const QList<CanDbSignal*>& getLogSignals() const { return _logSignals; }
-    void setSignalInterfaces(const QMap<CanDbSignal*, CanInterfaceIdList> &interfaces) { _signalInterfaces = interfaces; }
-    QMap<CanDbSignal*, CanInterfaceIdList> getSignalInterfaces() const { return _signalInterfaces; }
+    void setSignalInterfaces(const QMap<CanDbSignal*, BusInterfaceIdList> &interfaces) { _signalInterfaces = interfaces; }
+    QMap<CanDbSignal*, BusInterfaceIdList> getSignalInterfaces() const { return _signalInterfaces; }
     void setLogFilePath(const QString &path);
 
     const QList<LoggingCondition>& getConditions() const { return _conditions; }
@@ -64,7 +64,7 @@ signals:
     void liveValuesUpdated(const QMap<CanDbSignal*, double>& values, bool isStale);
 
 public slots:
-    void processMessage(const CanMessage &msg);
+    void processMessage(const BusMessage &msg);
 
 private:
     void evaluate();
@@ -85,7 +85,7 @@ private:
     QList<LoggingCondition> _conditions;
     QList<CanDbSignal*> _logSignals;
     QList<QPair<double, QMap<CanDbSignal*, double>>> _preBuffer;
-    QMap<CanDbSignal*, CanInterfaceIdList> _signalInterfaces;
+    QMap<CanDbSignal*, BusInterfaceIdList> _signalInterfaces;
     QMap<CanDbSignal*, double> _signalValues;
     QMap<CanDbSignal*, qint64> _signalUpdateTimes;
 

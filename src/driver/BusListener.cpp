@@ -19,16 +19,16 @@
 
 */
 
-#include "CanListener.h"
-#include "CanInterface.h"
+#include "BusListener.h"
+#include "BusInterface.h"
 
 #include <QThread>
 
 #include "core/Backend.h"
-#include "core/CanMessage.h"
-#include "core/CanTrace.h"
+#include "core/BusMessage.h"
+#include "core/BusTrace.h"
 
-CanListener::CanListener(QObject *parent, Backend &backend, CanInterface &intf)
+BusListener::BusListener(QObject *parent, Backend &backend, BusInterface &intf)
   : QObject(parent),
     _backend(backend),
     _intf(intf),
@@ -38,27 +38,27 @@ CanListener::CanListener(QObject *parent, Backend &backend, CanInterface &intf)
     _thread = new QThread();
 }
 
-CanListener::~CanListener()
+BusListener::~BusListener()
 {
     delete _thread;
 }
 
-CanInterfaceId CanListener::getInterfaceId()
+BusInterfaceId BusListener::getInterfaceId()
 {
     return _intf.getId();
 }
 
-CanInterface &CanListener::getInterface()
+BusInterface &BusListener::getInterface()
 {
     return _intf;
 }
 
-void CanListener::run()
+void BusListener::run()
 {
     // Note: open and close done from run() so all operations take place in the same thread
-    //CanMessage msg;
-    QList<CanMessage> rxMessages;
-    CanTrace *trace = _backend.getTrace();
+    //BusMessage msg;
+    QList<BusMessage> rxMessages;
+    BusTrace *trace = _backend.getTrace();
 
     _intf.open();
 
@@ -68,7 +68,7 @@ void CanListener::run()
     _openComplete = true;
     while (_shouldBeRunning) {
         if (_intf.readMessage(rxMessages, 100)) {
-            for(const CanMessage &msg: std::as_const(rxMessages))
+            for(const BusMessage &msg: std::as_const(rxMessages))
             {
                 trace->enqueueMessage(msg, false);
             }
@@ -85,28 +85,30 @@ void CanListener::run()
         {
             rxMessages.clear();
         }
+
+        QThread::msleep(1);
     }
     _intf.close();
     _thread->quit();
 }
 
-void CanListener::startThread()
+void BusListener::startThread()
 {
     moveToThread(_thread);
-    connect(_thread, &QThread::started, this, &CanListener::run);
+    connect(_thread, &QThread::started, this, &BusListener::run);
     _thread->start();
 
     // Wait for interface to be open before returning so that beginMeasurement is emitted after interface open
     while(!_openComplete)
-      QThread().usleep(250);
+      QThread::usleep(250);
 }
 
-void CanListener::requestStop()
+void BusListener::requestStop()
 {
     _shouldBeRunning = false;
 }
 
-void CanListener::waitFinish()
+void BusListener::waitFinish()
 {
     requestStop();
     _thread->wait();

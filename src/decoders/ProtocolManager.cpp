@@ -7,7 +7,7 @@ ProtocolManager::ProtocolManager() {
     m_j1939Decoder = std::make_shared<J1939Decoder>();
 }
 
-DecodeStatus ProtocolManager::processFrame(const CanMessage& frame, ProtocolMessage& outMsg) {
+DecodeStatus ProtocolManager::processFrame(const BusMessage& frame, ProtocolMessage& outMsg) {
     DecodeStatus status = DecodeStatus::Ignored;
 
     if (frame.isExtended()) {

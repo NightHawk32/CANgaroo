@@ -73,11 +73,13 @@ QVariant SetupDialogTreeItem::dataInterface(const QModelIndex &index) const
 {
     switch (index.column()) {
         case SetupDialogTreeModel::column_device:
-            return _backend->getInterfaceName(intf->canInterface());
+            return _backend->getInterfaceName(intf->busInterface());
         case SetupDialogTreeModel::column_driver:
-            return _backend->getDriverName(intf->canInterface());
+            return _backend->getDriverName(intf->busInterface());
         case SetupDialogTreeModel::column_bitrate:
-            return intf->bitrate();
+            return (intf->busType() == BusType::LIN)
+                ? intf->linBaudRate()
+                : intf->bitrate();
         default:
             return QVariant();
     }
@@ -97,6 +99,20 @@ QVariant SetupDialogTreeItem::dataCanDb(const QModelIndex &index) const
     }
 }
 
+QVariant SetupDialogTreeItem::dataLinDb(const QModelIndex &index) const
+{
+    switch (index.column()) {
+        case SetupDialogTreeModel::column_device:
+            return lindb->fileName();
+        case SetupDialogTreeModel::column_filename:
+            return lindb->fileName();
+        case SetupDialogTreeModel::column_path:
+            return lindb->directory();
+        default:
+            return QVariant();
+    }
+}
+
 QVariant SetupDialogTreeItem::dataDisplayRole(const QModelIndex &index) const
 {
     switch (_type) {
@@ -104,8 +120,9 @@ QVariant SetupDialogTreeItem::dataDisplayRole(const QModelIndex &index) const
         case type_network: return (network!=0) ? network->name() : QVariant();
         case type_interface_root: return QObject::tr("Interfaces");
         case type_interface: return dataInterface(index);
-        case type_candb_root: return QObject::tr("DBC");
+        case type_candb_root: return QObject::tr("Database");
         case type_candb: return dataCanDb(index);
+        case type_lindb: return dataLinDb(index);
     }
     return QVariant();
 }

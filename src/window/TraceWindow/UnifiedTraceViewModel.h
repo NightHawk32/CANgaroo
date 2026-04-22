@@ -30,7 +30,7 @@ public:
     virtual int columnCount(const QModelIndex &parent) const override;
     virtual bool hasChildren(const QModelIndex &parent) const override;
 
-    virtual CanMessage getMessage(const QModelIndex &index) const override;
+    virtual BusMessage getMessage(const QModelIndex &index) const override;
 
     virtual QVariant data(const QModelIndex &index, int role) const override;
 
@@ -65,10 +65,10 @@ private:
     // Tracks the previous timestamp per unique message key (ID + direction + interface)
     // so that delta mode shows the interval between same-ID messages, not adjacent rows.
     QHash<uint64_t, uint64_t> m_prevTimestampByKey;
-    static uint64_t makeDeltaKey(const CanMessage &msg);
+    static uint64_t makeDeltaKey(const BusMessage &msg);
     static uint64_t makeDeltaKey(const ProtocolMessage &pmsg);
 
-    QVariant data_DisplayRole(const QModelIndex &index) const;
-    QVariant data_TextColorRole(const QModelIndex &index) const;
+    QVariant data_DisplayRole(const QModelIndex &index, int role) const override;
+    QVariant data_TextColorRole(const QModelIndex &index, int role) const override;
     QString formatUnifiedTimestamp(uint64_t ts, uint64_t prevTs) const;
 };

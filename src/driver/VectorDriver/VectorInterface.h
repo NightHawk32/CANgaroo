@@ -21,17 +21,19 @@
 
 #pragma once
 
-#include "../CanInterface.h"
+#include "../BusInterface.h"
+
+#include <atomic>
 
 #include <QMutex>
 
 class QCanBusDevice;
 class VectorDriver;
 
-class VectorInterface : public CanInterface {
+class VectorInterface : public BusInterface {
 public:
     VectorInterface(VectorDriver *driver, QString deviceName, QString description);
-    virtual ~VectorInterface();
+    ~VectorInterface() override;
 
     QString getName() const override;
     void setName(QString name);
@@ -47,8 +49,8 @@ public:
     bool isOpen() override;
     void close() override;
 
-    void sendMessage(const CanMessage &msg) override;
-    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
+    void sendMessage(const BusMessage &msg) override;
+    bool readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms) override;
 
     bool updateStatistics() override;
     void resetStatistics() override;
@@ -63,13 +65,14 @@ public:
     QString getDeviceName() const;
 
 private:
-    QString        _deviceName;
-    QString        _name;
-    QCanBusDevice *_device;
-    unsigned       _bitrate;
-    unsigned       _fdBitrate;
-    bool           _listenOnly;
-    bool           _isCanFD;
+    QString           _deviceName;
+    QString           _name;
+    QCanBusDevice    *_device;
+    unsigned          _bitrate;
+    unsigned          _fdBitrate;
+    bool              _listenOnly;
+    bool              _isCanFD;
+    std::atomic<bool> _isOpen{false};
 
     struct {
         uint64_t rx_count;
@@ -81,5 +84,5 @@ private:
     } _stats, _offset_stats;
 
     QMutex _txMutex;
-    QList<CanMessage> _txMsgList;
+    QList<BusMessage> _txMsgList;
 };

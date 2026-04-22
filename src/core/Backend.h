@@ -29,15 +29,18 @@
 #include <QDateTime>
 #include <QElapsedTimer>
 #include "driver/CanDriver.h"
+#include "core/BusMessage.h"
 #include "core/DBC/CanDb.h"
+#include "core/DBC/LinDb.h"
 #include "core/MeasurementSetup.h"
 #include "core/Log.h"
 #include "core/ConditionalLoggingManager.h"
 
 class MeasurementNetwork;
-class CanTrace;
-class CanListener;
+class BusTrace;
+class BusListener;
 class CanDbMessage;
+class LinFrame;
 class SetupDialog;
 class LogModel;
 
@@ -71,23 +74,25 @@ public:
 
     double currentTimeStamp() const;
 
-    CanTrace *getTrace();
+    BusTrace *getTrace();
     void clearTrace();
 
     ConditionalLoggingManager *getConditionalLoggingManager() const { return _conditionalLoggingManager; }
 
-    CanDbMessage *findDbMessage(const CanMessage &msg) const;
+    CanDbMessage *findDbMessage(const BusMessage &msg) const;
+    LinFrame     *findLinFrame(const BusMessage &msg) const;
 
-    CanInterfaceIdList getInterfaceList();
-    CanDriver *getDriverById(CanInterfaceId id);
-    CanInterface *getInterfaceById(CanInterfaceId id);
-    QString getInterfaceName(CanInterfaceId id);
-    QString getDriverName(CanInterfaceId id);
+    BusInterfaceIdList getInterfaceList();
+    CanDriver *getDriverById(BusInterfaceId id);
+    BusInterface *getInterfaceById(BusInterfaceId id);
+    QString getInterfaceName(BusInterfaceId id);
+    QString getDriverName(BusInterfaceId id);
 
     CanDriver *getDriverByName(QString driverName);
-    CanInterface *getInterfaceByDriverAndName(QString driverName, QString deviceName);
+    BusInterface *getInterfaceByDriverAndName(QString driverName, QString deviceName);
 
-    pCanDb loadDbc(QString filename, QString *errorMsg = 0);
+    pCanDb loadDbc(QString filename, QString *errorMsg = nullptr);
+    pLinDb loadLdf(QString filename, QString *errorMsg = nullptr);
 
     void clearLog();
     LogModel &getLogModel() const;
@@ -115,8 +120,8 @@ private:
     QElapsedTimer _timerSinceStart;
     QList<CanDriver*> _drivers;
     MeasurementSetup _setup;
-    CanTrace *_trace;
-    QList<CanListener*> _listeners;
+    BusTrace *_trace;
+    QList<BusListener*> _listeners;
 
     LogModel *_logModel;
     ConditionalLoggingManager *_conditionalLoggingManager;

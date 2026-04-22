@@ -5,7 +5,7 @@
 
 #include "ConditionalLoggingManager.h"
 #include "core/Backend.h"
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "core/DBC/CanDbMessage.h"
 #include "core/DBC/CanDbSignal.h"
 #include <QDateTime>
@@ -84,7 +84,7 @@ void ConditionalLoggingManager::setLogFilePath(const QString &path)
     _logFilePath = path;
 }
 
-void ConditionalLoggingManager::processMessage(const CanMessage &msg)
+void ConditionalLoggingManager::processMessage(const BusMessage &msg)
 {
     if (!_enabled) return;
 
@@ -92,7 +92,7 @@ void ConditionalLoggingManager::processMessage(const CanMessage &msg)
     if (!dbmsg) return;
 
     bool relevantUpdate = false;
-    CanInterfaceId msgIfId = msg.getInterfaceId();
+    BusInterfaceId msgIfId = msg.getInterfaceId();
     qint64 now = QDateTime::currentMSecsSinceEpoch();
 
     for (CanDbSignal *signal : dbmsg->getSignals()) {

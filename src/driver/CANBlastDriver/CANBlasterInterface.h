@@ -21,7 +21,9 @@
 
 #pragma once
 
-#include "../CanInterface.h"
+#include "../BusInterface.h"
+
+#include <atomic>
 
 #include <QTimer>
 #include <QtNetwork/QUdpSocket>
@@ -40,22 +42,22 @@ struct can_config_t {
 };
 
 struct can_status_t {
-    uint32_t can_state;
+    std::atomic<uint32_t> can_state{0};
 
-    uint64_t rx_count;
-    int rx_errors;
-    uint64_t rx_overruns;
+    std::atomic<uint64_t> rx_count{0};
+    std::atomic<int>      rx_errors{0};
+    std::atomic<uint64_t> rx_overruns{0};
 
-    uint64_t tx_count;
-    int tx_errors;
-    uint64_t tx_dropped;
+    std::atomic<uint64_t> tx_count{0};
+    std::atomic<int>      tx_errors{0};
+    std::atomic<uint64_t> tx_dropped{0};
 };
 
-class CANBlasterInterface: public CanInterface {
+class CANBlasterInterface: public BusInterface {
     Q_OBJECT
 public:
     CANBlasterInterface(CANBlasterDriver *driver, int index, QString name, bool fd_support);
-    virtual ~CANBlasterInterface();
+    ~CANBlasterInterface() override;
 
     QString getDetailsStr() const override;
     QString getName() const override;
@@ -76,8 +78,8 @@ public:
     void close() override;
     bool isOpen() override;
 
-    void sendMessage(const CanMessage &msg) override;
-    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
+    void sendMessage(const BusMessage &msg) override;
+    bool readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms) override;
 
     bool updateStatistics() override;
     uint32_t getState() override;
@@ -100,7 +102,7 @@ private:
     };
 
     int _idx;
-    bool _isOpen;
+    std::atomic<bool> _isOpen{false};
     QString _name;
 
     MeasurementInterface _settings;

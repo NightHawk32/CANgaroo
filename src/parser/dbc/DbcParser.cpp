@@ -561,16 +561,9 @@ bool DbcParser::parseSectionBoSg(CanDb &candb, CanDbMessage *msg, DbcTokenList &
     // If the signal is big endian, convert the start bit to the Intel-style start bit for further parsing
     if(signal->isBigEndian())
     {
-        // This will be the number of 8-bit rows above the message
-        uint8_t row_position = signal->startBit() >> 3;
-
-        // Bit position in current row (0-7)
-        uint8_t column_position = signal->startBit() & 0b111;
-
-        // Calcualte the normalized start bit position (bit index starting at 0)
-        uint8_t normalized_position = (row_position * 8) + (7 - column_position);
-
-        signal->setStartBit(normalized_position);
+        uint16_t row_position = signal->startBit() >> 3;
+        uint16_t column_position = signal->startBit() & 0b111;
+        signal->setStartBit(static_cast<uint16_t>((row_position * 8) + (7 - column_position)));
     }
 
     if (expectAndSkipToken(tokens, dbc_tok_plus)) {

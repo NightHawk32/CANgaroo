@@ -24,9 +24,11 @@
 #include <QThread>
 #include <QMetaType>
 
-#include "core/CanTrace.h"
-#include "core/CanMessage.h"
+#include "core/BusTrace.h"
+#include "core/BusMessage.h"
 #include "core/MeasurementNetwork.h"
+#include "core/DBC/LinDb.h"
+#include "core/DBC/LinFrame.h"
 
 MeasurementSetup::MeasurementSetup(QObject *parent)
   : QObject(parent)
@@ -106,18 +108,26 @@ void MeasurementSetup::removeNetwork(MeasurementNetwork *network)
 void MeasurementSetup::rebuildMessageCache()
 {
     _messageCache.clear();
+    _linFrameCache.clear();
     for (auto *network : _networks) {
         for (const auto &db : network->_canDbs) {
             const CanDbMessageList &msgs = db->getMessageList();
             for (auto it = msgs.constBegin(); it != msgs.constEnd(); ++it) {
-                _messageCache.insert(it.key(), it.value());
+                // DBC stores extended IDs with bit 31 set; strip it to match BusMessage::getRawId()
+                _messageCache.insert(it.key() & 0x1FFFFFFF, it.value());
+            }
+        }
+        for (const auto &lindb : network->_linDbs) {
+            for (LinFrame *frame : lindb->frames()) {
+                _linFrameCache.insert(frame->id(), frame);
             }
         }
     }
 }
 
-CanDbMessage *MeasurementSetup::findDbMessage(const CanMessage &msg) const
+CanDbMessage *MeasurementSetup::findDbMessage(const BusMessage &msg) const
 {
+    if (msg.busType() != BusType::CAN) return nullptr;
     auto it = _messageCache.constFind(msg.getRawId());
     if (it != _messageCache.constEnd()) {
         return it.value();
@@ -125,7 +135,13 @@ CanDbMessage *MeasurementSetup::findDbMessage(const CanMessage &msg) const
     return nullptr;
 }
 
-QString MeasurementSetup::getInterfaceName(const CanInterface &id) const
+LinFrame *MeasurementSetup::findLinFrame(const BusMessage &msg) const
+{
+    if (msg.busType() != BusType::LIN) return nullptr;
+    return _linFrameCache.value(static_cast<uint8_t>(msg.getId() & 0x3F), nullptr);
+}
+
+QString MeasurementSetup::getInterfaceName(const BusInterface &id) const
 {
     return id.getName();
 }

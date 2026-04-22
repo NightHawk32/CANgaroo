@@ -6,14 +6,14 @@
 class J1939Decoder : public IDecoder {
 public:
     J1939Decoder();
-    virtual ~J1939Decoder() = default;
+    ~J1939Decoder() override = default;
 
-    virtual DecodeStatus tryDecode(const CanMessage& frame, ProtocolMessage& outMsg) override;
-    virtual void reset() override;
+    DecodeStatus tryDecode(const BusMessage& frame, ProtocolMessage& outMsg) override;
+    void reset() override;
 
 private:
     struct J1939Session {
-        QVector<CanMessage> frames;
+        QVector<BusMessage> frames;
         QByteArray data;
         uint32_t pgn = 0;
         int expectedSize = 0;

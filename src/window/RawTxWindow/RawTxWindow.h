@@ -45,20 +45,20 @@ protected:
     void retranslateUi() override;
 
 public slots:
-    void setMessage(const CanMessage &msg, const QString &name, CanInterfaceId interfaceId, CanDbMessage *dbMsg = nullptr);
+    void setMessage(const BusMessage &msg, const QString &name, BusInterfaceId interfaceId, CanDbMessage *dbMsg = nullptr);
 
 signals:
-    void messageUpdated(const CanMessage &msg);
-    void interfaceSelected(CanInterfaceId interfaceId);
+    void messageUpdated(const BusMessage &msg);
+    void interfaceSelected(BusInterfaceId interfaceId);
 
 private slots:
     void onFieldChanged();
 
 private:
     Backend &_backend;
-    CanMessage _can_msg;
+    BusMessage _can_msg;
     CanDbMessage *_currentDbMsg;
-    CanInterfaceId _slavedInterfaceId;
+    BusInterfaceId _slavedInterfaceId;
     bool _settingMessage;
 
     QLineEdit *_editId;

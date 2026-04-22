@@ -30,7 +30,7 @@
 #include "core/MeasurementSetup.h"
 #include "core/MeasurementNetwork.h"
 #include "core/MeasurementInterface.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 
 CanStatusWindow::CanStatusWindow(QWidget *parent, Backend &backend) :
     ConfigurableWidget(parent),
@@ -106,7 +106,7 @@ void CanStatusWindow::beginMeasurement()
     ui->treeWidget->clear();
     _lastStats.clear();
     for (auto ifid : backend().getInterfaceList()) {
-        CanInterface *intf = backend().getInterfaceById(ifid);
+        BusInterface *intf = backend().getInterfaceById(ifid);
         QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeWidget);
         item->setData(0, Qt::UserRole, QVariant::fromValue((void*)intf));
         item->setText(column_driver, intf->getDriver()->getName());
@@ -141,7 +141,7 @@ void CanStatusWindow::clearStatistics()
     // Reset statistics in all active interfaces
     for (auto ifid : backend().getInterfaceList())
     {
-        CanInterface *intf = backend().getInterfaceById(ifid);
+        BusInterface *intf = backend().getInterfaceById(ifid);
         if (intf)
         {
             intf->resetStatistics();
@@ -156,7 +156,7 @@ void CanStatusWindow::update()
     for (QTreeWidgetItemIterator it(ui->treeWidget); *it; ++it)
     {
         QTreeWidgetItem *item = *it;
-        CanInterface *intf = static_cast<CanInterface *>(item->data(0, Qt::UserRole).value<void *>());
+        BusInterface *intf = static_cast<BusInterface *>(item->data(0, Qt::UserRole).value<void *>());
         if (intf)
         {
             intf->updateStatistics();

@@ -26,10 +26,10 @@
 #include <QString>
 
 class Backend;
-class CanInterface;
+class BusInterface;
 
-using CanInterfaceId = uint16_t;
-using CanInterfaceIdList = QList<uint16_t>;
+using BusInterfaceId = uint16_t;
+using BusInterfaceIdList = QList<uint16_t>;
 
 class CanDriver {
 public:
@@ -42,22 +42,22 @@ public:
 
     int id();
 
-    virtual QString getName() = 0;
+    virtual QString getName() const = 0;
     virtual bool update() = 0;
 
-    CanInterfaceIdList getInterfaceIds() const;
-    QList<CanInterface*> getInterfaces() const;
-    CanInterface *getInterfaceById(CanInterfaceId id);
-    CanInterfaceId addInterface(CanInterface *intf);
-    void deleteInterface(CanInterface *intf);
+    BusInterfaceIdList getInterfaceIds() const;
+    QList<BusInterface*> getInterfaces() const;
+    BusInterface *getInterfaceById(BusInterfaceId id);
+    BusInterfaceId addInterface(BusInterface *intf);
+    void deleteInterface(BusInterface *intf);
     void deleteAllInterfaces();
 
-    CanInterface *getInterfaceByName(QString ifName);
+    BusInterface *getInterfaceByName(QString ifName);
 
 private:
     Backend &_backend;
     int _id;
-    QList<CanInterface*> _interfaces;
+    QList<BusInterface*> _interfaces;
 
     void setId(int id);
 };

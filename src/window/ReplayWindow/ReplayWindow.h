@@ -82,7 +82,7 @@ private:
     QTimer *_timer;
 
     QString _traceFilePath;
-    QVector<CanMessage> _messages;
+    QVector<BusMessage> _messages;
     QVector<QString> _messageInterfaces;
     int _playbackIndex;
     bool _playing;
@@ -107,5 +107,5 @@ private:
     void buildFilterTree();
     void updatePositionLabel();
     bool isMessageEnabled(int index) const;
-    CanInterfaceId getMappedInterface(const QString &channel) const;
+    BusInterfaceId getMappedInterface(const QString &channel) const;
 };

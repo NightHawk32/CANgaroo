@@ -32,24 +32,21 @@
 #include <QtSerialPort/QSerialPortInfo>
 
 #include "core/Backend.h"
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "core/MeasurementInterface.h"
 #include <QThread>
 
 
 SLCANInterface::SLCANInterface(SLCANDriver *driver, int index, QString name, bool fd_support, uint32_t manufacturer)
-  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
+  : BusInterface(reinterpret_cast<CanDriver*>(driver)),
     _manufacturer(manufacturer),
     _idx(index),
-    _isOpen(false),
-    _isOffline(false),
     _serport(nullptr),
     _name(name),
     _rx_linbuf_ctr(0),
     _rxbuf_head(0),
     _rxbuf_tail(0),
-    _ts_mode(ts_mode_SIOCSHWTSTAMP),
-    _send_wait_respond(0)
+    _ts_mode(ts_mode_SIOCSHWTSTAMP)
 {
     // Set defaults
     _settings.setBitrate(500000);
@@ -64,17 +61,16 @@ SLCANInterface::SLCANInterface(SLCANDriver *driver, int index, QString name, boo
         _settings.setFdSamplePoint(750);
     }
 
-    _status.can_state = state_bus_off;
-    _status.rx_count = 0;
-    _status.rx_errors = 0;
-    _status.rx_overruns = 0;
-    _status.tx_count = 0;
-    _status.tx_errors = 0;
-    _status.tx_dropped = 0;
+    _status.can_state.store(state_bus_off);
+    _status.rx_count.store(0);
+    _status.rx_errors.store(0);
+    _status.rx_overruns.store(0);
+    _status.tx_count.store(0);
+    _status.tx_errors.store(0);
+    _status.tx_dropped.store(0);
 
-    _readMessage_datetime = QDateTime::currentDateTime();
-
-    _readMessage_datetime_run = QDateTime::currentDateTime();
+    _readMessage_ms.store(QDateTime::currentMSecsSinceEpoch());
+    _readMessage_run_ms.store(QDateTime::currentMSecsSinceEpoch());
 
     _can_msg_queue.clear();
     _can_msg_tx_queue.clear();
@@ -82,6 +78,16 @@ SLCANInterface::SLCANInterface(SLCANDriver *driver, int index, QString name, boo
 
 SLCANInterface::~SLCANInterface()
 {
+    // Ensure serial port is closed and freed safely
+    _serport_mutex.lock();
+    if (_serport)
+    {
+        if (_serport->isOpen())
+            _serport->close();
+        delete _serport;
+        _serport = nullptr;
+    }
+    _serport_mutex.unlock();
 }
 
 QString SLCANInterface::getDetailsStr() const
@@ -215,28 +221,28 @@ uint32_t SLCANInterface::getCapabilities()
     if(_manufacturer == CANable)
     {
         retval =
-            CanInterface::capability_config_os |
-            CanInterface::capability_auto_restart |
-            CanInterface::capability_listen_only;
+            BusInterface::capability_config_os |
+            BusInterface::capability_auto_restart |
+            BusInterface::capability_listen_only;
     }
     else if(_manufacturer == WeActStudio)
     {
         retval =
-            // CanInterface::capability_config_os |
-            // CanInterface::capability_auto_restart |
-            CanInterface::capability_listen_only |
-            CanInterface::capability_custom_bitrate |
-            CanInterface::capability_custom_canfd_bitrate;
+            // BusInterface::capability_config_os |
+            // BusInterface::capability_auto_restart |
+            BusInterface::capability_listen_only |
+            BusInterface::capability_custom_bitrate |
+            BusInterface::capability_custom_canfd_bitrate;
     }
 
     if (supportsCanFD())
     {
-        retval |= CanInterface::capability_canfd;
+        retval |= BusInterface::capability_canfd;
     }
 
     if (supportsTripleSampling())
     {
-        retval |= CanInterface::capability_triple_sampling;
+        retval |= BusInterface::capability_triple_sampling;
     }
 
     return retval;
@@ -249,37 +255,37 @@ bool SLCANInterface::updateStatistics()
 
 uint32_t SLCANInterface::getState()
 {
-    return _status.can_state;
+    return _status.can_state.load();
 }
 
 int SLCANInterface::getNumRxFrames()
 {
-    return _status.rx_count;
+    return static_cast<int>(_status.rx_count.load());
 }
 
 int SLCANInterface::getNumRxErrors()
 {
-    return _status.rx_errors;
+    return _status.rx_errors.load();
 }
 
 int SLCANInterface::getNumTxFrames()
 {
-    return _status.tx_count;
+    return static_cast<int>(_status.tx_count.load());
 }
 
 int SLCANInterface::getNumTxErrors()
 {
-    return _status.tx_errors;
+    return _status.tx_errors.load();
 }
 
 int SLCANInterface::getNumRxOverruns()
 {
-    return _status.rx_overruns;
+    return static_cast<int>(_status.rx_overruns.load());
 }
 
 int SLCANInterface::getNumTxDropped()
 {
-    return _status.tx_dropped;
+    return static_cast<int>(_status.tx_dropped.load());
 }
 
 int SLCANInterface::getIfIndex()
@@ -299,7 +305,7 @@ void SLCANInterface::open()
         delete _serport;
     }
 
-    _serport = new QSerialPort();
+    _serport = new QSerialPort(this);
 
     _serport_mutex.lock();
     _serport->setPortName(_name);
@@ -328,7 +334,7 @@ void SLCANInterface::open()
     _serport->flush();
     _serport->clear();
 
-    _no_confirm = false;
+    _no_confirm.store(false);
 
     // Close CAN port
     _serport->write("C\r", 2);
@@ -340,17 +346,17 @@ void SLCANInterface::open()
 
         if(_serport->bytesAvailable())
         {
-            _no_confirm = false;
+            _no_confirm.store(false);
             _serport->readAll();
         }
         else
         {
-            _no_confirm = true;
+            _no_confirm.store(true);
         }
     }
     else
     {
-        _no_confirm = true;
+        _no_confirm.store(true);
     }
 
     // Get Version
@@ -519,19 +525,19 @@ void SLCANInterface::open()
 
     _can_msg_queue.clear();
     _can_msg_tx_queue.clear();
-    _send_wait_respond = 0;
+    _send_wait_respond.store(0);
     memset(_rxbuf,0,sizeof(_rxbuf));
     memset(_rx_linbuf,0,sizeof(_rx_linbuf));
 
     _isOpen = true;
     _isOffline = false;
-    _status.can_state = state_ok;
-    _status.rx_count = 0;
-    _status.rx_errors = 0;
-    _status.rx_overruns = 0;
-    _status.tx_count = 0;
-    _status.tx_errors = 0;
-    _status.tx_dropped = 0;
+    _status.can_state.store(state_ok);
+    _status.rx_count.store(0);
+    _status.rx_errors.store(0);
+    _status.rx_overruns.store(0);
+    _status.tx_count.store(0);
+    _status.tx_errors.store(0);
+    _status.tx_dropped.store(0);
 
     // Release port mutex
     _serport_mutex.unlock();
@@ -602,9 +608,9 @@ void SLCANInterface::close()
     _serport_mutex.lock();
 
     _isOpen = false;
-    _status.can_state = state_bus_off;
+    _status.can_state.store(state_bus_off);
 
-    if (_serport->isOpen())
+    if (_serport && _serport->isOpen())
     {
         // Close CAN port
         _serport->write("C\r", 2);
@@ -626,7 +632,7 @@ bool SLCANInterface::isOpen()
     return _isOpen;
 }
 
-void SLCANInterface::sendMessage(const CanMessage &msg)
+void SLCANInterface::sendMessage(const BusMessage &msg)
 {
     _serport_mutex.lock();
     // SLCAN_MTU plus null terminator
@@ -756,25 +762,27 @@ void SLCANInterface::sendMessage(const CanMessage &msg)
     _serport_mutex.unlock();
 }
 
-bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
+bool SLCANInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms)
 {
-    CanMessage msgtx;
+    BusMessage msgtx;
     QDateTime datetime;
 
     Q_UNUSED(timeout_ms);
 
-    datetime = QDateTime::currentDateTime();
-    if(datetime.toMSecsSinceEpoch() - _readMessage_datetime_run.toMSecsSinceEpoch() >= 1)
     {
-        _readMessage_datetime_run = QDateTime::currentDateTime().addMSecs(1);
-    }
-    else
-    {
-        return false;
+        qint64 now_ms = QDateTime::currentMSecsSinceEpoch();
+        if (now_ms - _readMessage_run_ms.load() >= 1)
+        {
+            _readMessage_run_ms.store(now_ms + 1);
+        }
+        else
+        {
+            return false;
+        }
     }
 
     // Don't saturate the thread. Read the buffer every 1ms.
-    QThread().msleep(1);
+    QThread::msleep(1);
 
     if(_isOffline == true)
     {
@@ -784,11 +792,13 @@ bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeou
     }
     else
     {
-        datetime = QDateTime::currentDateTime();
-        if(datetime.toMSecsSinceEpoch() - _readMessage_datetime.toMSecsSinceEpoch() > 3000)
         {
-            _status.can_state = state_ok;
-            _send_wait_respond = 0;
+            qint64 now_ms = QDateTime::currentMSecsSinceEpoch();
+            if (now_ms - _readMessage_ms.load() > 3000)
+            {
+                _status.can_state.store(state_ok);
+                _send_wait_respond.store(0);
+            }
         }
     }
 
@@ -805,12 +815,12 @@ bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeou
         // Write string to serial device
         if(_serport->write(tmp.buf, tmp.length)==tmp.length)
         {
-            _send_wait_respond ++;
-            _readMessage_datetime = QDateTime::currentDateTime();
+            _send_wait_respond.fetch_add(1);
+            _readMessage_ms.store(QDateTime::currentMSecsSinceEpoch());
         }
         else
         {
-            _status.tx_errors ++;
+            _status.tx_errors.fetch_add(1);
 
             if(_can_msg_tx_queue.empty() == false)
             {
@@ -855,14 +865,15 @@ bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeou
 
     //////////////////////////
 
-    if (_no_confirm)
+    if (_no_confirm.load())
     {
+        QMutexLocker locker(&_serport_mutex);
         while (_can_msg_tx_queue.empty() == false)
         {
-            _status.tx_count++;
-            _status.can_state = state_tx_success;
+            _status.tx_count.fetch_add(1);
+            _status.can_state.store(state_tx_success);
 
-            msgtx.cloneFrom(_can_msg_tx_queue.front());
+            msgtx = _can_msg_tx_queue.front();
             msgtx.setRX(false);
             msgtx.setTimestamp_us(std::chrono::duration_cast<std::chrono::microseconds>(
                                       std::chrono::system_clock::now().time_since_epoch())
@@ -891,31 +902,31 @@ bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeou
             {
                 if(_rx_linbuf_ctr > 1)
                 {
-                    CanMessage msg;
+                    BusMessage msg;
                     ret = parseMessage(msg);
                     if(ret == true)
                     {
                          msglist.append(msg);
-                        _status.rx_count ++;
+                        _status.rx_count.fetch_add(1);
                     }
                 }
                 else
                 {
-                    if(_send_wait_respond)
+                    if(_send_wait_respond.load())
                     {
-                        datetime = QDateTime::currentDateTime();
-                        if(datetime.toMSecsSinceEpoch() - _readMessage_datetime.toMSecsSinceEpoch() < 200)
+                        qint64 now_ms = QDateTime::currentMSecsSinceEpoch();
+                        if(now_ms - _readMessage_ms.load() < 200)
                         {
-                            _status.tx_count ++;
-                            _status.can_state = state_tx_success;
+                            _status.tx_count.fetch_add(1);
+                            _status.can_state.store(state_tx_success);
                         }
-                        _send_wait_respond --;
+                        _send_wait_respond.fetch_sub(1);
 
                         if(_can_msg_tx_queue.empty() == false)
                         {
-                            if(_status.can_state == state_tx_success)
+                            if(_status.can_state.load() == state_tx_success)
                             {
-                                msgtx.cloneFrom(_can_msg_tx_queue.front());
+                                msgtx = _can_msg_tx_queue.front();
                                 msgtx.setRX(false);
                                 msglist.append(msgtx);
                             }
@@ -930,15 +941,15 @@ bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeou
             {
                 if(_rx_linbuf_ctr == 1)
                 {
-                    if(_send_wait_respond)
+                    if(_send_wait_respond.load())
                     {
-                        datetime = QDateTime::currentDateTime();
-                        if(datetime.toMSecsSinceEpoch() - _readMessage_datetime.toMSecsSinceEpoch() < 200)
+                        qint64 now_ms = QDateTime::currentMSecsSinceEpoch();
+                        if(now_ms - _readMessage_ms.load() < 200)
                         {
-                            _status.tx_errors ++;
+                            _status.tx_errors.fetch_add(1);
                             _status.can_state = state_tx_fail;
                         }
-                        _send_wait_respond --;
+                        _send_wait_respond.fetch_sub(1);
 
                         if(_can_msg_tx_queue.empty() == false)
                             _can_msg_tx_queue.pop_front();
@@ -961,7 +972,7 @@ bool SLCANInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeou
     return ret;
 }
 
-bool SLCANInterface::parseMessage(CanMessage &msg)
+bool SLCANInterface::parseMessage(BusMessage &msg)
 {
     // Set timestamp to current time
     msg.setTimestamp_ms(QDateTime::currentMSecsSinceEpoch());

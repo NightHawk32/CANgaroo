@@ -1,5 +1,5 @@
 #include "UnifiedTraceViewModel.h"
-#include "core/CanTrace.h"
+#include "core/BusTrace.h"
 #include "core/Backend.h"
 #include <QColor>
 #include <QSet>
@@ -9,7 +9,7 @@
 UnifiedTraceViewModel::UnifiedTraceViewModel(Backend &backend, Category category)
     : BaseTraceViewModel(backend), m_category(category)
 {
-    m_rootItem = std::make_shared<UnifiedTraceItem>(CanMessage()); // Dummy root
+    m_rootItem = std::make_shared<UnifiedTraceItem>(BusMessage()); // Dummy root
     m_firstTimestamp = 0;
     m_previousRowTimestamp = 0;
     m_globalIndexCounter = 1;
@@ -18,11 +18,11 @@ UnifiedTraceViewModel::UnifiedTraceViewModel(Backend &backend, Category category
     m_processTimer.setSingleShot(true);
     connect(&m_processTimer, &QTimer::timeout, this, &UnifiedTraceViewModel::processNewMessages);
 
-    connect(backend.getTrace(), &CanTrace::afterAppend, this, &UnifiedTraceViewModel::onTraceDirty);
-    connect(backend.getTrace(), &CanTrace::beforeRemove, this, &UnifiedTraceViewModel::beforeRemove);
-    connect(backend.getTrace(), &CanTrace::afterRemove, this, &UnifiedTraceViewModel::afterRemove);
-    connect(backend.getTrace(), &CanTrace::beforeClear, this, &UnifiedTraceViewModel::beforeClear);
-    connect(backend.getTrace(), &CanTrace::afterClear, this, &UnifiedTraceViewModel::afterClear);
+    connect(backend.getTrace(), &BusTrace::afterAppend, this, &UnifiedTraceViewModel::onTraceDirty);
+    connect(backend.getTrace(), &BusTrace::beforeRemove, this, &UnifiedTraceViewModel::beforeRemove);
+    connect(backend.getTrace(), &BusTrace::afterRemove, this, &UnifiedTraceViewModel::afterRemove);
+    connect(backend.getTrace(), &BusTrace::beforeClear, this, &UnifiedTraceViewModel::beforeClear);
+    connect(backend.getTrace(), &BusTrace::afterClear, this, &UnifiedTraceViewModel::afterClear);
     connect(&backend, &Backend::onSetupChanged, this, &UnifiedTraceViewModel::onSetupChanged);
 }
 
@@ -87,20 +87,20 @@ bool UnifiedTraceViewModel::hasChildren(const QModelIndex &parent) const
     return rowCount(parent) > 0;
 }
 
-CanMessage UnifiedTraceViewModel::getMessage(const QModelIndex &index) const
+BusMessage UnifiedTraceViewModel::getMessage(const QModelIndex &index) const
 {
-    if (!index.isValid()) return CanMessage();
+    if (!index.isValid()) return BusMessage();
     UnifiedTraceItem *item = static_cast<UnifiedTraceItem*>(index.internalPointer());
     if (item->isProtocol()) {
         const ProtocolMessage& pmsg = item->protocolMessage();
-        return pmsg.rawFrames.isEmpty() ? CanMessage() : pmsg.rawFrames.first();
+        return pmsg.rawFrames.isEmpty() ? BusMessage() : pmsg.rawFrames.first();
     } else if (item->isMetadata()) {
         UnifiedTraceItem *parent = item->parentItem();
         if (parent && parent->isProtocol()) {
             const ProtocolMessage& pmsg = parent->protocolMessage();
-            return pmsg.rawFrames.isEmpty() ? CanMessage() : pmsg.rawFrames.first();
+            return pmsg.rawFrames.isEmpty() ? BusMessage() : pmsg.rawFrames.first();
         }
-        return CanMessage();
+        return BusMessage();
     } else {
         return item->rawFrame();
     }
@@ -113,11 +113,11 @@ QVariant UnifiedTraceViewModel::data(const QModelIndex &index, int role) const
 
     switch (role) {
         case Qt::DisplayRole:
-            return data_DisplayRole(index);
+            return data_DisplayRole(index, role);
         case Qt::ForegroundRole:
-            return data_TextColorRole(index);
+            return data_TextColorRole(index, role);
         case Qt::TextAlignmentRole:
-            return static_cast<int>(Qt::AlignLeft | Qt::AlignVCenter);
+            return BaseTraceViewModel::data_TextAlignmentRole(index, role);
         default:
             return BaseTraceViewModel::data(index, role);
     }
@@ -132,7 +132,7 @@ void UnifiedTraceViewModel::onTraceDirty()
 
 void UnifiedTraceViewModel::processNewMessages()
 {
-    CanTrace *trace = backend()->getTrace();
+    BusTrace *trace = backend()->getTrace();
     int size = trace->size();
     QSet<int> updatedRows;
     if (m_lastProcessedIndex >= size) {
@@ -142,7 +142,7 @@ void UnifiedTraceViewModel::processNewMessages()
     QList<std::shared_ptr<UnifiedTraceItem>> newItems;
 
     for (int i = m_lastProcessedIndex + 1; i < size; ++i) {
-        CanMessage msg = trace->getMessage(i);
+        BusMessage msg = trace->getMessage(i);
 
         ProtocolMessage pmsg;
         DecodeStatus status = m_protocolManager.processFrame(msg, pmsg);
@@ -251,7 +251,7 @@ void UnifiedTraceViewModel::processNewMessages()
 
 void UnifiedTraceViewModel::beforeRemove(int count)
 {
-    // Adjust lastProcessedIndex since CanTrace removed items from the front
+    // Adjust lastProcessedIndex since BusTrace removed items from the front
     m_lastProcessedIndex -= count;
     if (m_lastProcessedIndex < -1) m_lastProcessedIndex = -1;
 }
@@ -270,7 +270,7 @@ void UnifiedTraceViewModel::beforeClear()
 void UnifiedTraceViewModel::afterClear()
 {
     m_processTimer.stop();
-    m_rootItem = std::make_shared<UnifiedTraceItem>(CanMessage());
+    m_rootItem = std::make_shared<UnifiedTraceItem>(BusMessage());
     m_protocolManager.reset();
     m_lastProcessedIndex = -1;
     m_globalIndexCounter = 1;
@@ -285,7 +285,7 @@ void UnifiedTraceViewModel::onSetupChanged()
 {
     m_processTimer.stop();
     beginResetModel();
-    m_rootItem = std::make_shared<UnifiedTraceItem>(CanMessage());
+    m_rootItem = std::make_shared<UnifiedTraceItem>(BusMessage());
     m_protocolManager.reset();
     m_lastProcessedIndex = -1;
     m_globalIndexCounter = 1;
@@ -301,7 +301,7 @@ void UnifiedTraceViewModel::onSetupChanged()
     endResetModel();
 }
 
-uint64_t UnifiedTraceViewModel::makeDeltaKey(const CanMessage &msg)
+uint64_t UnifiedTraceViewModel::makeDeltaKey(const BusMessage &msg)
 {
     // Combine interface ID, direction, and CAN ID into a unique key
     return static_cast<uint64_t>(msg.getInterfaceId()) << 32
@@ -322,7 +322,7 @@ uint32_t UnifiedTraceViewModel::getJ1939Key(const ProtocolMessage& pmsg) const
     return (pgn << 8) | (sa & 0xFF);
 }
 
-QVariant UnifiedTraceViewModel::data_DisplayRole(const QModelIndex &index) const
+QVariant UnifiedTraceViewModel::data_DisplayRole(const QModelIndex &index, [[maybe_unused]] int role) const
 {
     UnifiedTraceItem *item = static_cast<UnifiedTraceItem*>(index.internalPointer());
 
@@ -399,7 +399,7 @@ QVariant UnifiedTraceViewModel::data_DisplayRole(const QModelIndex &index) const
             default: return QVariant();
         }
     } else {
-        const CanMessage& msg = item->rawFrame();
+        const BusMessage& msg = item->rawFrame();
         switch (index.column()) {
             case column_index:
                 return (item->parentItem() == m_rootItem.get()) ? QVariant(item->globalIndex()) : QVariant();
@@ -418,9 +418,9 @@ QVariant UnifiedTraceViewModel::data_DisplayRole(const QModelIndex &index) const
             case column_type: {
                 QString t;
                 if (msg.isFD())       t += QStringLiteral("FD.");
-                if (msg.isExtended()) t += QStringLiteral("EXT."); else t += QStringLiteral("STD.");
-                if (msg.isRTR())      t += QStringLiteral("RTR");
-                if (msg.isBRS())      t += QStringLiteral("BRS");
+                if (msg.isExtended()) t += QStringLiteral("EXT"); else t += QStringLiteral("STD");
+                if (msg.isRTR())      t += QStringLiteral(".RTR");
+                if (msg.isBRS())      t += QStringLiteral(".BRS");
                 return t;
             }
             case column_canid: return QString("0x%1").arg(msg.getId(), 0, 16);
@@ -449,7 +449,7 @@ QVariant UnifiedTraceViewModel::data_DisplayRole(const QModelIndex &index) const
     }
 }
 
-QVariant UnifiedTraceViewModel::data_TextColorRole(const QModelIndex &index) const
+QVariant UnifiedTraceViewModel::data_TextColorRole(const QModelIndex &index, [[maybe_unused]] int role) const
 {
     UnifiedTraceItem *item = static_cast<UnifiedTraceItem*>(index.internalPointer());
     bool isDark = ThemeManager::instance().isDarkMode();
@@ -466,7 +466,7 @@ QVariant UnifiedTraceViewModel::data_TextColorRole(const QModelIndex &index) con
             default: break;
         }
     }
-    const CanMessage& msg = item->rawFrame();
+    const BusMessage& msg = item->rawFrame();
     if (msg.isErrorFrame()) return isDark ? QColor(255, 100, 100) : QColor(Qt::red);
     return QVariant();
 }

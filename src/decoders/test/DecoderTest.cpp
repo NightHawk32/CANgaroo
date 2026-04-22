@@ -6,7 +6,7 @@
 
 void testUdsSingleFrame() {
     UdsDecoder decoder;
-    CanMessage msg(0x7E0);
+    BusMessage msg(0x7E0);
     msg.setLength(8);
     msg.setByte(0, 0x02); // SF, size 2
     msg.setByte(1, 0x10); // SID 0x10
@@ -29,7 +29,7 @@ void testUdsMultiFrame() {
     ProtocolMessage out;
 
     // FF
-    CanMessage ff(0x7E0);
+    BusMessage ff(0x7E0);
     ff.setLength(8);
     ff.setByte(0, 0x10); // FF
     ff.setByte(1, 0x0A); // Size 10
@@ -39,7 +39,7 @@ void testUdsMultiFrame() {
     assert(decoder.tryDecode(ff, out) == DecodeStatus::Consumed);
 
     // CF
-    CanMessage cf(0x7E0);
+    BusMessage cf(0x7E0);
     cf.setLength(8);
     cf.setByte(0, 0x21); // CF, SN 1
     for(int i=1; i<6; i++) cf.setByte(i, 0xA0 + i);
@@ -55,7 +55,7 @@ void testUdsMultiFrame() {
 
 void testJ1939SingleFrame() {
     J1939Decoder decoder;
-    CanMessage msg(0x18FEEF01); // PGN 65263 (EngTemp), SA 1, Pri 6
+    BusMessage msg(0x18FEEF01); // PGN 65263 (EngTemp), SA 1, Pri 6
     msg.setExtended(true);
     msg.setLength(8);
     for(int i=0; i<8; i++) msg.setByte(i, i);
@@ -72,7 +72,7 @@ void testJ1939SingleFrame() {
 
 void testUdsNegativeResponse() {
     UdsDecoder decoder;
-    CanMessage msg(0x7E8);
+    BusMessage msg(0x7E8);
     msg.setLength(8);
     msg.setByte(0, 0x03); // SF
     msg.setByte(1, 0x7F); // SID 0x7F (Negative Response)

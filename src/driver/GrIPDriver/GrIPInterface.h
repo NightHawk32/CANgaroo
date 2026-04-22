@@ -21,9 +21,10 @@
 
 #pragma once
 
-#include "../CanInterface.h"
+#include "../BusInterface.h"
 
-#include <QMutex>
+#include <atomic>
+
 #include <QtSerialPort/QSerialPort>
 
 #include "core/MeasurementInterface.h"
@@ -46,28 +47,29 @@ struct can_config_t
 
 struct can_status_t
 {
-    uint32_t can_state;
+    std::atomic<uint32_t> can_state{0};
 
-    uint64_t rx_count;
-    int rx_errors;
-    uint64_t rx_overruns;
+    std::atomic<uint64_t> rx_count{0};
+    std::atomic<int> rx_errors{0};
+    std::atomic<uint64_t> rx_overruns{0};
 
-    uint64_t tx_count;
-    int tx_errors;
-    uint64_t tx_dropped;
+    std::atomic<uint64_t> tx_count{0};
+    std::atomic<int> tx_errors{0};
+    std::atomic<uint64_t> tx_dropped{0};
 };
 
-class GrIPInterface : public CanInterface
+class GrIPInterface : public BusInterface
 {
     Q_OBJECT
 
 public:
     enum
     {
-        CANIL
+        CANIL_CAN,
+        CANIL_LIN
     };
 
-    GrIPInterface(GrIPDriver *driver, int index, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer);
+    GrIPInterface(GrIPDriver *driver, int index, int channel_idx, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer);
     ~GrIPInterface() override;
 
     QString getDetailsStr() const override;
@@ -85,14 +87,15 @@ public:
     bool supportsTripleSampling();
 
     unsigned getBitrate() override;
+    BusType busType() const override;
     uint32_t getCapabilities() override;
 
     void open() override;
     void close() override;
     bool isOpen() override;
 
-    void sendMessage(const CanMessage &msg) override;
-    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
+    void sendMessage(const BusMessage &msg) override;
+    bool readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms) override;
 
     bool updateStatistics() override;
     void resetStatistics() override;
@@ -109,14 +112,20 @@ public:
 
     int getIfIndex();
 
+private slots:
+    void handleSerialError(QSerialPort::SerialPortError error);
+
 private:
+    bool updateStatus();
+
     uint32_t _manufacturer;
     QString _version;
 
     int _idx;
-    bool _isOpen;
-    bool _isOffline;
-    QMutex _serport_mutex;
+    int _channel_idx;
+    std::atomic<bool> _isOpen{false};
+    std::atomic<bool> _isOffline{false};
+    bool _isLin;
     QString _name;
 
     MeasurementInterface _settings;
@@ -128,9 +137,4 @@ private:
     qint64 _lastReadMsec;  ///< Timestamp of last readMessage() execution; used for rate-limiting.
 
     GrIPHandler *m_GrIPHandler;
-
-    bool updateStatus();
-
-private slots:
-    void handleSerialError(QSerialPort::SerialPortError error);
 };

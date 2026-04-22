@@ -33,8 +33,8 @@ class CandleApiDriver : public CanDriver
 public:
     CandleApiDriver(Backend &backend);
 
-    virtual QString getName();
-    virtual bool update();
+    QString getName() const override;
+    bool update() override;
 
 private:
     GenericCanSetupPage *setupPage;

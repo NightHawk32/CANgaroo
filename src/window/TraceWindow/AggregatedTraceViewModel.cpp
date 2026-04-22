@@ -26,16 +26,17 @@
 #include "core/ThemeManager.h"
 
 #include "core/Backend.h"
-#include "core/CanTrace.h"
+#include "core/BusTrace.h"
 #include "core/DBC/CanDbMessage.h"
+#include "core/DBC/LinFrame.h"
 
 AggregatedTraceViewModel::AggregatedTraceViewModel(Backend &backend)
     : BaseTraceViewModel(backend)
 {
     _rootItem = new AggregatedTraceViewItem(0);
-    connect(backend.getTrace(), &CanTrace::beforeAppend, this, &AggregatedTraceViewModel::beforeAppend);
-    connect(backend.getTrace(), &CanTrace::beforeClear, this, &AggregatedTraceViewModel::beforeClear);
-    connect(backend.getTrace(), &CanTrace::afterClear, this, &AggregatedTraceViewModel::afterClear);
+    connect(backend.getTrace(), &BusTrace::beforeAppend, this, &AggregatedTraceViewModel::beforeAppend);
+    connect(backend.getTrace(), &BusTrace::beforeClear, this, &AggregatedTraceViewModel::beforeClear);
+    connect(backend.getTrace(), &BusTrace::afterClear, this, &AggregatedTraceViewModel::afterClear);
 
     connect(&backend, &Backend::onSetupChanged, this, &AggregatedTraceViewModel::onSetupChanged);
 
@@ -54,15 +55,24 @@ AggregatedTraceViewModel::AggregatedTraceViewModel(Backend &backend)
     _fadeTimer.start(200);
 }
 
-void AggregatedTraceViewModel::createItem(const CanMessage &msg)
+void AggregatedTraceViewModel::createItem(const BusMessage &msg)
 {
     AggregatedTraceViewItem *item = new AggregatedTraceViewItem(_rootItem);
     item->_lastmsg = msg;
 
-    CanDbMessage *dbmsg = backend()->findDbMessage(msg);
-    if (dbmsg) {
-        for (int i = 0; i < dbmsg->getSignals().length(); i++) {
-            item->appendChild(new AggregatedTraceViewItem(item));
+    if (msg.busType() == BusType::LIN) {
+        LinFrame *linFrame = backend()->findLinFrame(msg);
+        if (linFrame) {
+            for (int i = 0; i < linFrame->signalList().size(); ++i) {
+                item->appendChild(new AggregatedTraceViewItem(item));
+            }
+        }
+    } else {
+        CanDbMessage *dbmsg = backend()->findDbMessage(msg);
+        if (dbmsg) {
+            for (int i = 0; i < dbmsg->getSignals().length(); i++) {
+                item->appendChild(new AggregatedTraceViewItem(item));
+            }
         }
     }
 
@@ -70,7 +80,7 @@ void AggregatedTraceViewModel::createItem(const CanMessage &msg)
     _map[makeUniqueKey(msg)] = item;
 }
 
-void AggregatedTraceViewModel::updateItem(const CanMessage &msg)
+void AggregatedTraceViewModel::updateItem(const BusMessage &msg)
 {
     AggregatedTraceViewItem *item = _map.value(makeUniqueKey(msg));
     if (item) {
@@ -123,10 +133,20 @@ void AggregatedTraceViewModel::onSetupChanged()
     beginResetModel();
     for (AggregatedTraceViewItem *item : _map.values()) {
         item->removeChildren();
-        CanDbMessage *dbmsg = backend()->findDbMessage(item->_lastmsg);
-        if (dbmsg) {
-            for (int i=0; i<dbmsg->getSignals().length(); i++) {
-                item->appendChild(new AggregatedTraceViewItem(item));
+        const BusMessage &lastMsg = item->_lastmsg;
+        if (lastMsg.busType() == BusType::LIN) {
+            LinFrame *linFrame = backend()->findLinFrame(lastMsg);
+            if (linFrame) {
+                for (int i = 0; i < linFrame->signalList().size(); ++i) {
+                    item->appendChild(new AggregatedTraceViewItem(item));
+                }
+            }
+        } else {
+            CanDbMessage *dbmsg = backend()->findDbMessage(lastMsg);
+            if (dbmsg) {
+                for (int i = 0; i < dbmsg->getSignals().length(); i++) {
+                    item->appendChild(new AggregatedTraceViewItem(item));
+                }
             }
         }
     }
@@ -135,11 +155,11 @@ void AggregatedTraceViewModel::onSetupChanged()
 
 void AggregatedTraceViewModel::beforeAppend(int num_messages)
 {
-    CanTrace *trace = backend()->getTrace();
+    BusTrace *trace = backend()->getTrace();
     int start_id = trace->size();
 
     for (int i=start_id; i<start_id + num_messages; i++) {
-        CanMessage msg = trace->getMessage(i);
+        BusMessage msg = trace->getMessage(i);
         unique_key_t key = makeUniqueKey(msg);
         if (_map.contains(key) || _pendingMessageInserts.contains(key)) {
             _pendingMessageUpdates.append(msg);
@@ -164,9 +184,13 @@ void AggregatedTraceViewModel::afterClear()
     endResetModel();
 }
 
-AggregatedTraceViewModel::unique_key_t AggregatedTraceViewModel::makeUniqueKey(const CanMessage &msg) const
+AggregatedTraceViewModel::unique_key_t AggregatedTraceViewModel::makeUniqueKey(const BusMessage &msg) const
 {
-    return static_cast<uint64_t>(msg.getInterfaceId()) << 32 | static_cast<uint64_t>(msg.isRX()) << 63 | msg.getRawId();
+    // Bit 63: RX flag; bits 32-47: interface ID; bit 30: bus type (1=LIN); bits 0-29: frame ID
+    return  static_cast<uint64_t>(msg.isRX()) << 63
+          | static_cast<uint64_t>(msg.getInterfaceId()) << 32
+          | static_cast<uint64_t>(static_cast<uint8_t>(msg.busType())) << 30
+          | (static_cast<uint64_t>(msg.getRawId()) & 0x3FFFFFFFull);
 }
 
 QModelIndex AggregatedTraceViewModel::index(int row, int column, const QModelIndex &parent) const
@@ -216,11 +240,11 @@ int AggregatedTraceViewModel::rowCount(const QModelIndex &parent) const
     return parentItem->childCount();
 }
 
-CanMessage AggregatedTraceViewModel::getMessage(const QModelIndex &index) const
+BusMessage AggregatedTraceViewModel::getMessage(const QModelIndex &index) const
 {
-    if (!index.isValid()) return CanMessage();
+    if (!index.isValid()) return BusMessage();
     AggregatedTraceViewItem *item = static_cast<AggregatedTraceViewItem*>(index.internalPointer());
-    if (item == _rootItem) return CanMessage();
+    if (item == _rootItem) return BusMessage();
     return (item->parent() == _rootItem) ? item->_lastmsg : item->parent()->_lastmsg;
 }
 
@@ -233,7 +257,7 @@ QVariant AggregatedTraceViewModel::data_DisplayRole(const QModelIndex &index, in
         return (item->parent() == _rootItem) ? QVariant(static_cast<uint32_t>(index.row() + 1)) : QVariant();
     }
 
-    if (item->parent() == _rootItem) { // CanMessage row
+    if (item->parent() == _rootItem) { // BusMessage row
         return data_DisplayRole_Message(index, role, item->_lastmsg, item->_prevmsg);
     } else { // CanSignal Row
         return data_DisplayRole_Signal(index, role, item->parent()->_lastmsg);
@@ -248,7 +272,7 @@ QVariant AggregatedTraceViewModel::data_TextColorRole(const QModelIndex &index, 
     AggregatedTraceViewItem *item = static_cast<AggregatedTraceViewItem *>(index.internalPointer());
     if (!item) { return QVariant(); }
 
-    const CanMessage &msg = (item->parent() == _rootItem)
+    const BusMessage &msg = (item->parent() == _rootItem)
         ? item->_lastmsg
         : item->parent()->_lastmsg;
 

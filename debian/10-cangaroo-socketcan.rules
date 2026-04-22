@@ -1,0 +1,18 @@
+// Allow members of the netdev group to configure SocketCAN interfaces
+// via `ip link set` without a password prompt.
+// CANgaroo invokes ip through pkexec when it needs to bring a CAN
+// interface up or down (requires CAP_NET_ADMIN).
+polkit.addRule(function(action, subject) {
+    if (action.id === "org.freedesktop.policykit.exec" &&
+        subject.isInGroup("netdev"))
+    {
+        var prog = action.lookup("program");
+        if (prog === "/sbin/ip"      ||
+            prog === "/bin/ip"       ||
+            prog === "/usr/sbin/ip"  ||
+            prog === "/usr/bin/ip")
+        {
+            return polkit.Result.YES;
+        }
+    }
+});

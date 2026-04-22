@@ -47,19 +47,19 @@ public:
 
 public:
     LogModel(Backend &backend);
-    virtual ~LogModel();
+    ~LogModel() override;
 
-    void clear();
+  void clear();
 
-    virtual QModelIndex index(int row, int column, const QModelIndex &parent) const;
-    virtual QModelIndex parent(const QModelIndex &child) const;
+    QModelIndex index(int row, int column, const QModelIndex &parent) const override;
+    QModelIndex parent(const QModelIndex &child) const override;
 
-    virtual int rowCount(const QModelIndex &parent) const;
-    virtual int columnCount(const QModelIndex &parent) const;
-    virtual bool hasChildren(const QModelIndex &parent) const;
+    int rowCount(const QModelIndex &parent) const override;
+    int columnCount(const QModelIndex &parent) const override;
+    bool hasChildren(const QModelIndex &parent) const override;
 
-    virtual QVariant headerData(int section, Qt::Orientation orientation, int role) const;
-    virtual QVariant data(const QModelIndex &index, int role) const;
+    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
+    QVariant data(const QModelIndex &index, int role) const override;
 
 public slots:
     void onLogMessage(const QDateTime dt, const log_level_t level, const QString msg);

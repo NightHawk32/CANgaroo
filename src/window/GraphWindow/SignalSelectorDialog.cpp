@@ -28,6 +28,8 @@
 #include "core/MeasurementSetup.h"
 #include "core/MeasurementNetwork.h"
 #include "core/DBC/CanDbMessage.h"
+#include "core/DBC/LinFrame.h"
+#include "core/DBC/LinSignal.h"
 
 SignalSelectorDialog::SignalSelectorDialog(QWidget *parent, Backend &backend)
     : QDialog(parent), _backend(backend)
@@ -45,7 +47,7 @@ SignalSelectorDialog::SignalSelectorDialog(QWidget *parent, Backend &backend)
 
     _showSelectedOnly = new QCheckBox(tr("Show selection only"), this);
     filterLayout->addWidget(_showSelectedOnly);
-    
+
     layout->addLayout(filterLayout);
 
     // Tree
@@ -75,50 +77,92 @@ SignalSelectorDialog::SignalSelectorDialog(QWidget *parent, Backend &backend)
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 }
 
+SignalSelectorDialog::~SignalSelectorDialog()
+{
+    qDeleteAll(_ownedSignals);
+}
+
 void SignalSelectorDialog::populateTree()
 {
     MeasurementSetup &setup = _backend.getSetup();
-    
-    QTreeWidgetItem *networksItem = new QTreeWidgetItem(_tree);
-    networksItem->setText(0, tr("CAN Networks"));
-    networksItem->setExpanded(true);
+
+    auto addSignalItem = [&](QTreeWidgetItem *parentItem, GraphSignal *gs,
+                              const QString &sigName,
+                              const QString &details, const QString &comment,
+                              const QVariant &interfaceData)
+    {
+        QTreeWidgetItem *sigItem = new QTreeWidgetItem(parentItem);
+        sigItem->setText(0, sigName);
+        sigItem->setText(1, details);
+        sigItem->setText(2, comment);
+        sigItem->setCheckState(0, Qt::Unchecked);
+        sigItem->setData(0, Qt::UserRole, QVariant::fromValue(static_cast<void*>(gs)));
+        sigItem->setData(0, Qt::UserRole + 1, interfaceData);
+
+        QPixmap pix(12, 12);
+        uint h = qHash(sigName);
+        QColor c = QColor::fromHsl(h % 360, 180, 150);
+        pix.fill(c);
+        sigItem->setIcon(0, QIcon(pix));
+    };
 
     for (MeasurementNetwork *network : setup.getNetworks()) {
-        QTreeWidgetItem *netItem = new QTreeWidgetItem(networksItem);
-        netItem->setText(0, network->name());
-        
-        // Store interfaces for this network
-        CanInterfaceIdList interfaces = network->getReferencedCanInterfaces();
+        BusInterfaceIdList interfaces = network->getReferencedBusInterfaces();
         QVariant interfaceData = QVariant::fromValue(interfaces);
 
-        for (pCanDb db : network->_canDbs) {
-            for (CanDbMessage *msg : db->getMessageList().values()) {
-                QTreeWidgetItem *msgItem = new QTreeWidgetItem(netItem);
-                msgItem->setText(0, QString("%1 (0x%2)").arg(msg->getName()).arg(msg->getRaw_id(), 0, 16));
-                msgItem->setCheckState(0, Qt::Unchecked); // Select All checkbox
-                
-                for (CanDbSignal *sig : msg->getSignals()) {
-                    QTreeWidgetItem *sigItem = new QTreeWidgetItem(msgItem);
-                    sigItem->setText(0, sig->name());
-                    
-                    QString details = QString("%1 | %2..%3 %4")
-                        .arg(sig->isUnsigned() ? tr("Unsigned") : tr("Signed"))
-                        .arg(sig->getMinimumValue())
-                        .arg(sig->getMaximumValue())
-                        .arg(sig->getUnit());
-                    
-                    sigItem->setText(1, details);
-                    sigItem->setText(2, sig->comment());
-                    sigItem->setCheckState(0, Qt::Unchecked);
-                    sigItem->setData(0, Qt::UserRole, QVariant::fromValue((void*)sig));
-                    sigItem->setData(0, Qt::UserRole + 1, interfaceData);
+        // ── CAN signals ──────────────────────────────────────────────
+        if (!network->_canDbs.isEmpty()) {
+            QTreeWidgetItem *canRoot = new QTreeWidgetItem(_tree);
+            canRoot->setText(0, tr("CAN — %1").arg(network->name()));
+            canRoot->setExpanded(true);
 
-                    // Add colored legend icon (deterministic color based on name)
-                    QPixmap pix(12, 12);
-                    uint h = qHash(sig->name());
-                    QColor c = QColor::fromHsl(h % 360, 180, 150);
-                    pix.fill(c);
-                    sigItem->setIcon(0, QIcon(pix));
+            for (pCanDb db : network->_canDbs) {
+                for (CanDbMessage *msg : db->getMessageList().values()) {
+                    QTreeWidgetItem *msgItem = new QTreeWidgetItem(canRoot);
+                    msgItem->setText(0, QString("%1 (0x%2)").arg(msg->getName()).arg(msg->getRaw_id(), 0, 16));
+                    msgItem->setCheckState(0, Qt::Unchecked);
+
+                    for (CanDbSignal *sig : msg->getSignals()) {
+                        auto *gs = new GraphSignal(sig);
+                        _ownedSignals.append(gs);
+
+                        QString details = QString("%1 | %2..%3 %4")
+                            .arg(sig->isUnsigned() ? tr("Unsigned") : tr("Signed"))
+                            .arg(sig->getMinimumValue())
+                            .arg(sig->getMaximumValue())
+                            .arg(sig->getUnit());
+
+                        addSignalItem(msgItem, gs, sig->name(), details,
+                                      sig->comment(), interfaceData);
+                    }
+                }
+            }
+        }
+
+        // ── LIN signals ──────────────────────────────────────────────
+        if (!network->_linDbs.isEmpty()) {
+            QTreeWidgetItem *linRoot = new QTreeWidgetItem(_tree);
+            linRoot->setText(0, tr("LIN — %1").arg(network->name()));
+            linRoot->setExpanded(true);
+
+            for (pLinDb db : network->_linDbs) {
+                for (LinFrame *frame : db->frames().values()) {
+                    QTreeWidgetItem *frmItem = new QTreeWidgetItem(linRoot);
+                    frmItem->setText(0, QString("%1 (0x%2)").arg(frame->name()).arg(frame->id(), 0, 16));
+                    frmItem->setCheckState(0, Qt::Unchecked);
+
+                    for (LinSignal *sig : frame->signalList()) {
+                        auto *gs = new GraphSignal(sig, frame);
+                        _ownedSignals.append(gs);
+
+                        QString details = QString("LIN | %1..%2 %3")
+                            .arg(sig->minValue())
+                            .arg(sig->maxValue())
+                            .arg(sig->unit());
+
+                        addSignalItem(frmItem, gs, sig->name(), details,
+                                      QString(), interfaceData);
+                    }
                 }
             }
         }
@@ -134,8 +178,8 @@ QList<SignalSelectorDialog::SelectedSignal> SignalSelectorDialog::getSelectedSig
             void* sigPtr = (*it)->data(0, Qt::UserRole).value<void*>();
             if (sigPtr) {
                 SelectedSignal s;
-                s.signal = (CanDbSignal*)sigPtr;
-                s.interfaces = (*it)->data(0, Qt::UserRole + 1).value<CanInterfaceIdList>();
+                s.signal = static_cast<GraphSignal*>(sigPtr);
+                s.interfaces = (*it)->data(0, Qt::UserRole + 1).value<BusInterfaceIdList>();
                 selected.append(s);
             }
         }
@@ -144,14 +188,14 @@ QList<SignalSelectorDialog::SelectedSignal> SignalSelectorDialog::getSelectedSig
     return selected;
 }
 
-void SignalSelectorDialog::setSelectedSignals(const QList<CanDbSignal*> &sigList)
+void SignalSelectorDialog::setSelectedSignals(const QList<GraphSignal*> &sigList)
 {
     QTreeWidgetItemIterator it(_tree);
     while (*it) {
         void* sigPtr = (*it)->data(0, Qt::UserRole).value<void*>();
-        if (sigPtr && sigList.contains((CanDbSignal*)sigPtr)) {
+        if (sigPtr && sigList.contains(static_cast<GraphSignal*>(sigPtr))) {
             (*it)->setCheckState(0, Qt::Checked);
-            
+
             // Expand parents
             QTreeWidgetItem *p = (*it)->parent();
             while (p) {
@@ -180,13 +224,12 @@ void SignalSelectorDialog::filterTree(const QString &searchText, bool showSelect
         QTreeWidgetItem *item = *it;
         bool visible = shouldShowItem(item, searchText, showSelectedOnly);
         item->setHidden(!visible);
-        
+
         // Ensure parents are visible if children are
         if (visible) {
             QTreeWidgetItem *p = item->parent();
             while (p) {
                 p->setHidden(false);
-                // p->setExpanded(true); // Don't auto-expand everything, just show path
                 p = p->parent();
             }
         }
@@ -279,13 +322,13 @@ bool SignalSelectorDialog::shouldShowItem(QTreeWidgetItem *item, const QString &
 void SignalSelectorDialog::applyTheme(ThemeManager::Theme theme)
 {
     bool isDark = (theme == ThemeManager::Dark);
-    
+
     // Revert dialog-level background styling to keep original view
     this->setStyleSheet("");
 
     if (isDark) {
         // Targeted styling for tree indicators (CAN messages and signals)
-        QString treeStyle = 
+        QString treeStyle =
             "QTreeView::indicator {"
             "  width: 14px;"
             "  height: 14px;"
@@ -308,7 +351,7 @@ void SignalSelectorDialog::applyTheme(ThemeManager::Theme theme)
             "}";
 
         // Targeted styling for the standalone "Show selection only" checkbox
-        QString checkStyle = 
+        QString checkStyle =
             "QCheckBox::indicator {"
             "  width: 14px;"
             "  height: 14px;"
@@ -326,8 +369,7 @@ void SignalSelectorDialog::applyTheme(ThemeManager::Theme theme)
 
         _tree->setStyleSheet(treeStyle);
         _showSelectedOnly->setStyleSheet(checkStyle);
-    }
- else {
+    } else {
         // Restore standard Light Mode styling
         _tree->setStyleSheet("");
         _showSelectedOnly->setStyleSheet("");

@@ -31,10 +31,10 @@ class GenericCanSetupPage;
 class KvaserDriver : public CanDriver {
 public:
     KvaserDriver(Backend &backend);
-    virtual ~KvaserDriver();
+    ~KvaserDriver() override;
 
-    virtual QString getName();
-    virtual bool update();
+    QString getName() const override;
+    bool update() override;
 
 private:
     KvaserInterface *createOrUpdateInterface(int channel, QString name);

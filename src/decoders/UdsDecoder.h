@@ -6,14 +6,14 @@
 class UdsDecoder : public IDecoder {
 public:
     UdsDecoder();
-    virtual ~UdsDecoder() = default;
+    ~UdsDecoder() override = default;
 
-    virtual DecodeStatus tryDecode(const CanMessage& frame, ProtocolMessage& outMsg) override;
-    virtual void reset() override;
+    DecodeStatus tryDecode(const BusMessage& frame, ProtocolMessage& outMsg) override;
+    void reset() override;
 
 private:
     struct IsotpSession {
-        QVector<CanMessage> frames;
+        QVector<BusMessage> frames;
         QByteArray data;
         int expectedSize = 0;
         int nextSn = 1;

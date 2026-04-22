@@ -38,7 +38,7 @@ VectorDriver::~VectorDriver()
 {
 }
 
-QString VectorDriver::getName()
+QString VectorDriver::getName() const
 {
     return "Vector";
 }

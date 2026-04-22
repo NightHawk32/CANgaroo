@@ -32,7 +32,7 @@ CandleApiDriver::CandleApiDriver(Backend &backend)
     QObject::connect(&backend, &Backend::onSetupDialogCreated, setupPage, &GenericCanSetupPage::onSetupDialogCreated);
 }
 
-QString CandleApiDriver::getName()
+QString CandleApiDriver::getName() const
 {
     return "CandleAPI";
 }

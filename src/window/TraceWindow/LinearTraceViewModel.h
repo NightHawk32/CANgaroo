@@ -23,7 +23,7 @@
 
 #include <QAbstractItemModel>
 #include "core/DBC/CanDb.h"
-#include "core/CanTrace.h"
+#include "core/BusTrace.h"
 #include "BaseTraceViewModel.h"
 
 class Backend;
@@ -35,11 +35,12 @@ class LinearTraceViewModel : public BaseTraceViewModel
 public:
     LinearTraceViewModel(Backend &backend);
 
-    virtual QModelIndex index(int row, int column, const QModelIndex &parent) const;
-    virtual QModelIndex parent(const QModelIndex &child) const;
-    virtual int rowCount(const QModelIndex &parent) const;
-    virtual int columnCount(const QModelIndex &parent) const;
-    virtual bool hasChildren(const QModelIndex &parent) const;
+    QModelIndex index(int row, int column, const QModelIndex &parent) const override;
+    QModelIndex parent(const QModelIndex &child) const override;
+    int rowCount(const QModelIndex &parent) const override;
+    int columnCount(const QModelIndex &parent) const override;
+    bool hasChildren(const QModelIndex &parent) const override;
+    BusMessage getMessage(const QModelIndex &index) const override;
 
 private slots:
     void beforeAppend(int num_messages);
@@ -48,6 +49,6 @@ private slots:
     void afterClear();
 
 private:
-    virtual QVariant data_DisplayRole(const QModelIndex &index, int role) const;
-    virtual QVariant data_TextColorRole(const QModelIndex &index, int role) const;
+    QVariant data_DisplayRole(const QModelIndex &index, int role) const override;
+    QVariant data_TextColorRole(const QModelIndex &index, int role) const override;
 };

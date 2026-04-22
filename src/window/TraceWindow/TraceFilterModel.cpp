@@ -4,7 +4,7 @@
 #include <QRegularExpression>
 #include <QSortFilterProxyModel>
 
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 
 TraceFilterModel::TraceFilterModel(QObject *parent)
     : QSortFilterProxyModel{parent},
@@ -41,14 +41,19 @@ void TraceFilterModel::setHiddenMessageIds(const QSet<uint32_t> &ids)
     _hiddenMessageIds = ids;
 }
 
-void TraceFilterModel::setHiddenInterfaces(const QSet<CanInterfaceId> &ids)
+void TraceFilterModel::setHiddenLinFrameIds(const QSet<uint8_t> &ids)
+{
+    _hiddenLinFrameIds = ids;
+}
+
+void TraceFilterModel::setHiddenInterfaces(const QSet<BusInterfaceId> &ids)
 {
     _hiddenInterfaces = ids;
 }
 
 bool TraceFilterModel::filterAcceptsRow(int source_row, const QModelIndex &source_parent) const
 {
-    // Get the underlying BaseTraceViewModel to access the CanMessage directly
+    // Get the underlying BaseTraceViewModel to access the BusMessage directly
     auto *baseModel = qobject_cast<BaseTraceViewModel *>(sourceModel());
     QSortFilterProxyModel *proxySource = nullptr;
     if (!baseModel)
@@ -72,7 +77,7 @@ bool TraceFilterModel::filterAcceptsRow(int source_row, const QModelIndex &sourc
         {
             baseIdx = sourceModel()->index(source_row, 0, source_parent);
         }
-        CanMessage msg = baseModel->getMessage(baseIdx);
+        BusMessage msg = baseModel->getMessage(baseIdx);
 
         if (!_showTx && !msg.isRX())
         {
@@ -82,7 +87,14 @@ bool TraceFilterModel::filterAcceptsRow(int source_row, const QModelIndex &sourc
         {
             return false;
         }
-        if (_hiddenMessageIds.contains(msg.getId()))
+        if (msg.busType() == BusType::LIN)
+        {
+            if (_hiddenLinFrameIds.contains(static_cast<uint8_t>(msg.getId())))
+            {
+                return false;
+            }
+        }
+        else if (_hiddenMessageIds.contains(msg.getId()))
         {
             return false;
         }

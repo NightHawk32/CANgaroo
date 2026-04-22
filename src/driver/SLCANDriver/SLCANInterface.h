@@ -21,11 +21,12 @@
 
 #pragma once
 
-#include "../CanInterface.h"
+#include "../BusInterface.h"
 
 #include <QDateTime>
 #include <QMutex>
 #include <QtSerialPort/QSerialPort>
+#include <atomic>
 
 #include "core/MeasurementInterface.h"
 
@@ -49,15 +50,15 @@ struct can_config_t {
 };
 
 struct can_status_t {
-    uint32_t can_state;
+    std::atomic<uint32_t> can_state{0};
 
-    uint64_t rx_count;
-    int rx_errors;
-    uint64_t rx_overruns;
+    std::atomic<uint64_t> rx_count{0};
+    std::atomic<int> rx_errors{0};
+    std::atomic<uint64_t> rx_overruns{0};
 
-    uint64_t tx_count;
-    int tx_errors;
-    uint64_t tx_dropped;
+    std::atomic<uint64_t> tx_count{0};
+    std::atomic<int> tx_errors{0};
+    std::atomic<uint64_t> tx_dropped{0};
 };
 
 struct can_msg_t {
@@ -65,7 +66,7 @@ struct can_msg_t {
     qint64 length;
 };
 
-class SLCANInterface: public CanInterface {
+class SLCANInterface: public BusInterface {
     Q_OBJECT
 public:
     enum {
@@ -74,7 +75,7 @@ public:
     };
 public:
     SLCANInterface(SLCANDriver *driver, int index, QString name, bool fd_support, uint32_t manufacturer);
-    virtual ~SLCANInterface();
+    ~SLCANInterface() override;
 
     QString getDetailsStr() const override;
     QString getName() const override;
@@ -97,8 +98,8 @@ public:
     void close() override;
     bool isOpen() override;
 
-    void sendMessage(const CanMessage &msg) override;
-    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
+    void sendMessage(const BusMessage &msg) override;
+    bool readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms) override;
 
     bool updateStatistics() override;
     uint32_t getState() override;
@@ -125,12 +126,11 @@ private:
     QString _version;
 
     int _idx;
-    bool _isOpen;
-    bool _isOffline;
-    bool _no_confirm;
+    std::atomic<bool> _isOpen{false};
+    std::atomic<bool> _isOffline{false};
     QSerialPort* _serport;
     QList<can_msg_t> _can_msg_queue;
-    QList<CanMessage> _can_msg_tx_queue;
+    QList<BusMessage> _can_msg_tx_queue;
     QMutex _serport_mutex;
     QString _name;
     char _rx_linbuf[SLCAN_MTU+1];
@@ -147,12 +147,14 @@ private:
     can_status_t _status;
     ts_mode_t _ts_mode;
 
-    QDateTime  _readMessage_datetime;
-    uint32_t _send_wait_respond;
-    QDateTime  _readMessage_datetime_run;
+    // timestamps stored as ms since epoch to avoid data races on QDateTime
+    std::atomic<qint64> _readMessage_ms{0};
+    std::atomic<uint32_t> _send_wait_respond{0};
+    std::atomic<qint64> _readMessage_run_ms{0};
+    std::atomic<bool> _no_confirm{false};
 
     bool updateStatus();
-    bool parseMessage(CanMessage &msg);
+    bool parseMessage(BusMessage &msg);
 
 private slots:
     void handleSerialError(QSerialPort::SerialPortError error);

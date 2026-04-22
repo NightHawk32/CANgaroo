@@ -26,8 +26,9 @@
 #include <QDomDocument>
 
 #include "driver/CanDriver.h"
-#include "driver/CanInterface.h"
+#include "driver/BusInterface.h"
 #include "core/DBC/CanDb.h"
+#include "core/DBC/LinDb.h"
 
 class Backend;
 class MeasurementInterface;
@@ -42,12 +43,16 @@ public:
     void removeInterface(MeasurementInterface *intf);
     QList<MeasurementInterface*> interfaces();
 
-    MeasurementInterface *addCanInterface(CanInterfaceId canif);
-    CanInterfaceIdList getReferencedCanInterfaces();
+    MeasurementInterface *addBusInterface(BusInterfaceId busif);
+    BusInterfaceIdList getReferencedBusInterfaces();
 
     void addCanDb(pCanDb candb);
-    bool reloadCanDbs(Backend *backend, QStringList *errors = 0);
+    bool reloadCanDbs(Backend *backend, QStringList *errors = nullptr);
     QList<pCanDb> _canDbs;
+
+    void addLinDb(pLinDb lindb);
+    bool reloadLinDbs(Backend *backend, QStringList *errors = nullptr);
+    QList<pLinDb> _linDbs;
 
     QString name() const;
     void setName(const QString &name);

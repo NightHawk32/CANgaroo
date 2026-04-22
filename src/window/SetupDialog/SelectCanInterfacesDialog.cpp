@@ -36,11 +36,11 @@ SelectCanInterfacesDialog::~SelectCanInterfacesDialog()
     delete ui;
 }
 
-bool SelectCanInterfacesDialog::selectInterfaces(Backend &backend, CanInterfaceIdList &selectedInterfaces, const CanInterfaceIdList &excludeInterfaces)
+bool SelectCanInterfacesDialog::selectInterfaces(Backend &backend, BusInterfaceIdList &selectedInterfaces, const BusInterfaceIdList &excludeInterfaces)
 {
     ui->treeWidget->clear();
 
-    CanInterfaceIdList allInterfaces;
+    BusInterfaceIdList allInterfaces;
     for (auto intf : backend.getInterfaceList()) {
         if (!excludeInterfaces.contains(intf)) {
             allInterfaces.append(intf);

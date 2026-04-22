@@ -30,14 +30,13 @@
 #include <QTimer>
 
 #include "core/Backend.h"
-#include "core/CanMessage.h"
+#include "core/BusMessage.h"
 #include "core/MeasurementInterface.h"
 
 
 CANBlasterInterface::CANBlasterInterface(CANBlasterDriver *driver, int index, QString name, bool fd_support)
-  : CanInterface(reinterpret_cast<CanDriver*>(driver)),
+  : BusInterface(reinterpret_cast<CanDriver*>(driver)),
     _idx(index),
-    _isOpen(false),
     _name(name),
     _ts_mode(ts_mode_SIOCSHWTSTAMP),
     _socket(nullptr)
@@ -126,16 +125,16 @@ unsigned CANBlasterInterface::getBitrate()
 uint32_t CANBlasterInterface::getCapabilities()
 {
     uint32_t retval =
-        CanInterface::capability_config_os |
-        CanInterface::capability_listen_only |
-        CanInterface::capability_auto_restart;
+        BusInterface::capability_config_os |
+        BusInterface::capability_listen_only |
+        BusInterface::capability_auto_restart;
 
     if (supportsCanFD()) {
-        retval |= CanInterface::capability_canfd;
+        retval |= BusInterface::capability_canfd;
     }
 
     if (supportsTripleSampling()) {
-        retval |= CanInterface::capability_triple_sampling;
+        retval |= BusInterface::capability_triple_sampling;
     }
 
     return retval;
@@ -156,32 +155,32 @@ uint32_t CANBlasterInterface::getState()
 
 int CANBlasterInterface::getNumRxFrames()
 {
-    return _status.rx_count;
+    return static_cast<int>(_status.rx_count.load());
 }
 
 int CANBlasterInterface::getNumRxErrors()
 {
-    return _status.rx_errors;
+    return _status.rx_errors.load();
 }
 
 int CANBlasterInterface::getNumTxFrames()
 {
-    return _status.tx_count;
+    return static_cast<int>(_status.tx_count.load());
 }
 
 int CANBlasterInterface::getNumTxErrors()
 {
-    return _status.tx_errors;
+    return _status.tx_errors.load();
 }
 
 int CANBlasterInterface::getNumRxOverruns()
 {
-    return _status.rx_overruns;
+    return static_cast<int>(_status.rx_overruns.load());
 }
 
 int CANBlasterInterface::getNumTxDropped()
 {
-    return _status.tx_dropped;
+    return static_cast<int>(_status.tx_dropped.load());
 }
 
 int CANBlasterInterface::getIfIndex() {
@@ -228,15 +227,15 @@ bool CANBlasterInterface::isOpen()
     return _isOpen;
 }
 
-void CANBlasterInterface::sendMessage(const CanMessage &msg)
+void CANBlasterInterface::sendMessage(const BusMessage &msg)
 {
     Q_UNUSED(msg);
 }
 
-bool CANBlasterInterface::readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms)
+bool CANBlasterInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms)
 {
     // Don't saturate the thread
-    QThread().usleep(250);
+    QThread::usleep(250);
 
     Q_UNUSED(timeout_ms);
 
@@ -282,7 +281,7 @@ bool CANBlasterInterface::readMessage(QList<CanMessage> &msglist, unsigned int t
         if(res > 0)
         {
             // Set timestamp to current time
-            CanMessage msg;
+            BusMessage msg;
 
             msg.setTimestamp_ms(QDateTime::currentMSecsSinceEpoch());
 

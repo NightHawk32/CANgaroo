@@ -32,10 +32,10 @@ class GenericCanSetupPage;
 class SLCANDriver: public CanDriver {
 public:
     SLCANDriver(Backend &backend);
-    virtual ~SLCANDriver();
+    ~SLCANDriver() override;
 
-    virtual QString getName();
-    virtual bool update();
+    QString getName() const override;
+    bool update() override;
 
 private:
     SLCANInterface *createOrUpdateInterface(int index, QString name, bool fd_support, uint32_t manufacturer);

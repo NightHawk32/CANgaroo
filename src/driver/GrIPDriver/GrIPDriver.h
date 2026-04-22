@@ -30,21 +30,22 @@
 class GrIPInterface;
 class SetupDialogInterfacePage;
 class GenericCanSetupPage;
+class GenericLinSetupPage;
 
 
 class GrIPDriver: public CanDriver
 {
 public:
     GrIPDriver(Backend &backend);
-    virtual ~GrIPDriver();
+    ~GrIPDriver() override;
 
-    virtual QString getName();
-    virtual bool update();
+    QString getName() const override;
+    bool update() override;
 
 private:
-    GrIPInterface *createOrUpdateInterface(int index, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer);
+    GrIPInterface *createOrUpdateInterface(int index, int channel_idx, GrIPHandler *hdl, QString name, bool fd_support, uint32_t manufacturer);
     GenericCanSetupPage *setupPage;
-    uint32_t _manufacturer;
+    GenericLinSetupPage *linSetupPage;
 
     GrIPHandler *m_GrIPHandler;
 };

@@ -119,10 +119,10 @@ GaugeVisualization::~GaugeVisualization()
 {
 }
 
-void GaugeVisualization::addDecodedData(const QMap<CanDbSignal*, DecodedSignalData>& newPoints)
+void GaugeVisualization::addDecodedData(const QMap<GraphSignal*, DecodedSignalData>& newPoints)
 {
     for (auto it = newPoints.begin(); it != newPoints.end(); ++it) {
-        CanDbSignal* signal = it.key();
+        GraphSignal* signal = it.key();
         if (!_signals.contains(signal)) continue;
 
         const DecodedSignalData &data = it.value();
@@ -143,11 +143,11 @@ void GaugeVisualization::addDecodedData(const QMap<CanDbSignal*, DecodedSignalDa
     }
 }
 
-void GaugeVisualization::addMessage(const CanMessage &msg)
+void GaugeVisualization::addMessage(const BusMessage &msg)
 {
-    CanInterfaceId msgIfId = msg.getInterfaceId();
+    BusInterfaceId msgIfId = msg.getInterfaceId();
 
-    for (CanDbSignal *signal : _signals) {
+    for (GraphSignal *signal : _signals) {
         if (signal->isPresentInMessage(msg)) {
             // Network Context Filtering
             if (_signalInterfaces.contains(signal)) {
@@ -199,7 +199,7 @@ void GaugeVisualization::clearSignals()
     _signals.clear();
 }
 
-void GaugeVisualization::addSignal(CanDbSignal *signal, const CanInterfaceIdList &interfaces)
+void GaugeVisualization::addSignal(GraphSignal *signal, const BusInterfaceIdList &interfaces)
 {
     if (_gaugeMap.contains(signal)) return;
 
@@ -207,11 +207,11 @@ void GaugeVisualization::addSignal(CanDbSignal *signal, const CanInterfaceIdList
 
     GaugeWidget *gauge = new GaugeWidget(_container);
     gauge->setSignalName(signal->name());
-    gauge->setUnit(signal->getUnit());
-    
-    // Scale based on DBC if available
-    double min = signal->getMinimumValue();
-    double max = signal->getMaximumValue();
+    gauge->setUnit(signal->unit());
+
+    // Scale based on DB definition if available
+    double min = signal->minValue();
+    double max = signal->maxValue();
     if (qAbs(max - min) < 0.01) {
         gauge->setRange(0, 100); 
     } else {
@@ -231,7 +231,7 @@ void GaugeVisualization::addSignal(CanDbSignal *signal, const CanInterfaceIdList
     }
 }
 
-void GaugeVisualization::setSignalColor(CanDbSignal *signal, const QColor &color)
+void GaugeVisualization::setSignalColor(GraphSignal *signal, const QColor &color)
 {
     VisualizationWidget::setSignalColor(signal, color);
     if (_gaugeMap.contains(signal)) {
@@ -245,7 +245,7 @@ void GaugeVisualization::setColumnCount(int count)
     _columnCount = count;
     
     // Relayout
-    QList<CanDbSignal*> sigs = _gaugeMap.keys();
+    QList<GraphSignal*> sigs = _gaugeMap.keys();
     for (auto signal : sigs) {
         _containerLayout->removeWidget(_gaugeMap[signal]);
     }

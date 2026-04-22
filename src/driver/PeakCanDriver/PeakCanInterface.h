@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "../CanInterface.h"
+#include "../BusInterface.h"
 
 #include <QMutex>
 
@@ -31,10 +31,10 @@ using TPCANHandle = uint16_t;
 
 class PeakCanDriver;
 
-class PeakCanInterface : public CanInterface {
+class PeakCanInterface : public BusInterface {
 public:
     PeakCanInterface(PeakCanDriver *driver, TPCANHandle channel, QString name);
-    virtual ~PeakCanInterface();
+    ~PeakCanInterface() override;
 
     QString getName() const override;
     void setName(QString name);
@@ -50,8 +50,8 @@ public:
     bool isOpen() override;
     void close() override;
 
-    void sendMessage(const CanMessage &msg) override;
-    bool readMessage(QList<CanMessage> &msglist, unsigned int timeout_ms) override;
+    void sendMessage(const BusMessage &msg) override;
+    bool readMessage(QList<BusMessage> &msglist, unsigned int timeout_ms) override;
 
     bool updateStatistics() override;
     void resetStatistics() override;
@@ -82,5 +82,5 @@ private:
     } _stats, _offset_stats;
 
     QMutex _txMutex;
-    QList<CanMessage> _txMsgList;
+    QList<BusMessage> _txMsgList;
 };
