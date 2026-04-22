@@ -113,7 +113,8 @@ void MeasurementSetup::rebuildMessageCache()
         for (const auto &db : network->_canDbs) {
             const CanDbMessageList &msgs = db->getMessageList();
             for (auto it = msgs.constBegin(); it != msgs.constEnd(); ++it) {
-                _messageCache.insert(it.key(), it.value());
+                // DBC stores extended IDs with bit 31 set; strip it to match BusMessage::getRawId()
+                _messageCache.insert(it.key() & 0x1FFFFFFF, it.value());
             }
         }
         for (const auto &lindb : network->_linDbs) {

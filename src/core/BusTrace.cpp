@@ -60,6 +60,7 @@ void BusTrace::clear()
     _data.resize(pool_chunk_size);
     _dataRowsUsed = 0;
     _newRows = 0;
+    _muxCache.clear();
     emit afterClear();
 }
 

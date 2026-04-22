@@ -39,11 +39,11 @@ public:
     
     CanDbMessage* getParentMessage() const { return _parent; }
 
-    uint8_t startBit() const;
-    void setStartBit(uint8_t startBit);
+    uint16_t startBit() const;
+    void setStartBit(uint16_t startBit);
 
-    uint8_t length() const;
-    void setLength(uint8_t length);
+    uint16_t length() const;
+    void setLength(uint16_t length);
 
     QString comment() const;
     void setComment(const QString &comment);
@@ -91,8 +91,8 @@ public:
 private:
     CanDbMessage *_parent;
     QString _name;
-    uint8_t _startBit;
-    uint8_t _length;
+    uint16_t _startBit;
+    uint16_t _length;
     bool _isUnsigned;
     bool _isBigEndian;
     double _factor;

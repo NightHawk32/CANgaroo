@@ -47,22 +47,22 @@ void CanDbSignal::setName(const QString &name)
     _name = name;
 }
 
-uint8_t CanDbSignal::startBit() const
+uint16_t CanDbSignal::startBit() const
 {
     return _startBit;
 }
 
-void CanDbSignal::setStartBit(uint8_t startBit)
+void CanDbSignal::setStartBit(uint16_t startBit)
 {
     _startBit = startBit;
 }
 
-uint8_t CanDbSignal::length() const
+uint16_t CanDbSignal::length() const
 {
     return _length;
 }
 
-void CanDbSignal::setLength(uint8_t length)
+void CanDbSignal::setLength(uint16_t length)
 {
     _length = length;
 }
@@ -97,11 +97,9 @@ double CanDbSignal::convertRawValueToPhysical(const uint64_t rawValue) const
         uint64_t v = rawValue;
         return v * _factor + _offset;
     } else {
-        // TODO check with DBC that actually contains signed values?!
-        int64_t v = (int64_t)(rawValue<<(64-_length));
-        v>>=(64-_length);
+        int64_t v = static_cast<int64_t>(rawValue << (64 - _length));
+        v >>= (64 - _length);
         return v * _factor + _offset;
-
     }
 }
 
@@ -211,7 +209,7 @@ void CanDbSignal::setMuxValue(const uint32_t &muxValue)
 
 bool CanDbSignal::isPresentInMessage(const BusMessage &msg) const
 {
-    if (msg.getRawId() != _parent->getRaw_id()) {
+    if (msg.getRawId() != (_parent->getRaw_id() & 0x1FFFFFFF)) {
         return false;
     }
 

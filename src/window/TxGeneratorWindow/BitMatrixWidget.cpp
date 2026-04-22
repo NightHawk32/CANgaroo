@@ -15,7 +15,7 @@ BitMatrixWidget::BitMatrixWidget(QWidget *parent)
 void BitMatrixWidget::setMessage(CanDbMessage *msg)
 {
     _msg = msg;
-    updateGeometry();
+    setFixedSize(sizeHint());
     update();
 }
 
@@ -226,8 +226,12 @@ BitMatrixWidget::BitInfo BitMatrixWidget::getBitInfo(int byteIndex, int bitIndex
                 return info;
             }
         } else {
-            // Motorola logic
-            int currentBit = start;
+            // Motorola (big-endian) logic.
+            // _startBit is stored as a normalized value: (msb_byte*8 + (7 - msb_col)).
+            // Invert to get the actual DBC Motorola bit number of the MSB, which equals
+            // the absoluteBit of the MSB (both use byteIndex*8 + bitIndex numbering).
+            int motorolaMsb = (start / 8) * 8 + (7 - start % 8);
+            int currentBit = motorolaMsb;
             for (int i = 0; i < len; ++i) {
                 if (absoluteBit == currentBit) {
                     info.signal = sig;
@@ -236,9 +240,8 @@ BitMatrixWidget::BitInfo BitMatrixWidget::getBitInfo(int byteIndex, int bitIndex
                     info.color = getColorForSignal(sig);
                     return info;
                 }
-                
                 if ((currentBit % 8) == 0) {
-                    currentBit += 15;
+                    currentBit += 15; // LSB of byte → MSB of next byte
                 } else {
                     currentBit--;
                 }

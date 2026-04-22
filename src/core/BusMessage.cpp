@@ -192,7 +192,7 @@ const uint8_t *BusMessage::getData() const
     return _u8;
 }
 
-uint64_t BusMessage::extractRawSignal(uint8_t start_bit, const uint8_t length, const bool isBigEndian) const
+uint64_t BusMessage::extractRawSignal(uint16_t start_bit, uint16_t length, bool isBigEndian) const
 {
     if (length == 0 || start_bit >= sizeof(_u8) * 8) return 0;
 

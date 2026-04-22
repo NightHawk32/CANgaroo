@@ -43,12 +43,12 @@ static PythonEngine *g_activeEngine = nullptr;
 // This is the inverse of BusMessage::extractRawSignal.
 // ---------------------------------------------------------------------------
 static void insertRawSignalIntoMsg(BusMessage &msg,
-                                   uint8_t start_bit,
-                                   uint8_t length,
+                                   uint16_t start_bit,
+                                   uint16_t length,
                                    bool isBigEndian,
                                    uint64_t raw) noexcept
 {
-    if (length == 0 || start_bit >= 64) { return; }
+    if (length == 0 || start_bit >= BusMessage::k_maxDataBytes * 8) { return; }
 
     if (isBigEndian && length > 8)
     {
