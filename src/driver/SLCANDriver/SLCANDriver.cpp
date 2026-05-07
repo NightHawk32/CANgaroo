@@ -66,7 +66,7 @@ bool SLCANDriver::update()
             std::cout << "   ++ CANable 2.0 detected: " << info.portName().toStdString() << '\n';
             createOrUpdateInterface(ifaceIdx++, info.portName(), true, Mfr::CANable);
         }
-        else if (vid == 1155 && pid == 22336 && info.serialNumber().startsWith("AAA"))
+        else if (vid == 0x0483 && pid == 0x5740 && info.serialNumber().startsWith("AAA"))
         {
             std::cout << "   ++ WeAct Studio USB2CAN detected: "
                       << info.portName().toStdString() << " (" << info.serialNumber().toStdString() << ")\n";

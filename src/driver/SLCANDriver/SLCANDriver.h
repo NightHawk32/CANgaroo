@@ -29,7 +29,8 @@
 class SetupDialogInterfacePage;
 class GenericCanSetupPage;
 
-class SLCANDriver: public CanDriver {
+class SLCANDriver : public CanDriver
+{
 public:
     SLCANDriver(Backend &backend);
     ~SLCANDriver() override;

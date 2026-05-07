@@ -23,8 +23,8 @@
 #include "SLCANInterface.h"
 #include "SLCANDriver.h"
 
-#include <chrono>
 #include <array>
+#include <chrono>
 
 #include <QList>
 #include <QString>
@@ -68,18 +68,18 @@ static int64_t nowMicroseconds() noexcept
         std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-// Standard bitrate index → SLCAN 'S' command suffix
-struct BitrateEntry { unsigned bitrate; const char *cmd; };
-static constexpr std::array<BitrateEntry, 14> kBitrateTable = {{
+struct RateEntry { unsigned bitrate; const char *cmd; };
+
+// Nominal bitrate → SLCAN 'S' command
+static constexpr std::array<RateEntry, 14> kBitrateTable = {{
     {1000000, "S8"}, {800000,  "S7"}, {500000,  "S6"}, {250000,  "S5"},
     {125000,  "S4"}, {100000,  "S3"}, {83333,   "S9"}, {75000,   "SA"},
     {62500,   "SB"}, {50000,   "S2"}, {33333,   "SC"}, {20000,   "S1"},
     {10000,   "S0"}, {5000,    "SD"},
 }};
 
-// Standard FD bitrate index → SLCAN 'Y' command suffix
-struct FdBitrateEntry { unsigned bitrate; const char *cmd; };
-static constexpr std::array<FdBitrateEntry, 5> kFdBitrateTable = {{
+// FD data bitrate → SLCAN 'Y' command
+static constexpr std::array<RateEntry, 5> kFdBitrateTable = {{
     {1000000, "Y1"}, {2000000, "Y2"}, {3000000, "Y3"},
     {4000000, "Y4"}, {5000000, "Y5"},
 }};
@@ -266,6 +266,8 @@ void SLCANInterface::configureFdBitrate()
             return;
         }
     }
+    // Fallback: 2 Mbit/s
+    writePort("Y2\r");
 }
 
 
@@ -378,17 +380,17 @@ QByteArray SLCANInterface::encodeFrame(const BusMessage &msg)
 
     if (dataLen < 0 || dataLen > 64)
         return {};
+    if (isFd && isRtr) // CAN-FD has no RTR frames
+        return {};
 
     char typeChar;
     if (isFd)
+        // FD type chars are always lowercase regardless of ID length (firmware convention)
         typeChar = isBrs ? 'b' : 'd';
     else if (isRtr)
-        typeChar = 'r';
+        typeChar = isExtended ? 'R' : 'r';
     else
-        typeChar = 't';
-
-    if (isExtended)
-        typeChar = static_cast<char>(typeChar - 32); // to uppercase
+        typeChar = isExtended ? 'T' : 't';
 
     const int idLen = isExtended ? ExtIdLen : StdIdLen;
 
@@ -438,7 +440,6 @@ void SLCANInterface::drainTxQueue(QList<BusMessage> &msglist)
     {
         QMutexLocker lock(&_txMutex);
         toSend = std::move(_txQueue);
-        _txQueue.clear();
     }
 
     for (auto &entry : toSend)
@@ -632,7 +633,9 @@ bool SLCANInterface::readMessage(QList<BusMessage> &msglist, unsigned int timeou
         else if (c == '\x07')
         {
             // BEL = device NACK for a previously sent frame
-            if (!_noConfirm.load(std::memory_order_relaxed) && _rxLineBuffer.isEmpty())
+            if (!_rxLineBuffer.isEmpty())
+                _rxErrors.fetch_add(1, std::memory_order_relaxed); // partial RX frame discarded
+            else if (!_noConfirm.load(std::memory_order_relaxed))
                 handleTxConfirm(msglist, false);
             _rxLineBuffer.clear();
         }
