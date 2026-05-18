@@ -305,7 +305,7 @@ QVariant AggregatedTraceViewModel::data_TextColorRole(const QModelIndex &index, 
     qint64 now_ms = _fadeNowMs > 0 ? _fadeNowMs : QDateTime::currentMSecsSinceEpoch();
     double diff_sec = (now_ms - msg.getTimestamp_ms()) / 1000.0;
 
-    int alpha = 255 - static_cast<int>(diff_sec * 100);
+    int alpha = 255 - static_cast<int>(diff_sec * 58);
     alpha = qBound(80, alpha, 255);
 
     QColor color = msg.isErrorFrame()
