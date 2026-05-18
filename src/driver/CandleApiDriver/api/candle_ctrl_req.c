@@ -22,6 +22,8 @@
 #include "candle_ctrl_req.h"
 #include "ch_9.h"
 
+#include <stdarg.h>
+
 enum {
     CANDLE_BREQ_HOST_FORMAT    = 0,
     CANDLE_BREQ_BITTIMING      = 1,
@@ -33,6 +35,23 @@ enum {
     /* 7: IDENTIFY, 8: GET_USER_ID, 9: SET_USER_ID (not used here) */
     CANDLE_BREQ_DATA_BITTIMING = 10,
 };
+
+static void candle_ctrl_logf(const wchar_t *fmt, ...)
+{
+    if (candle_log_fn == NULL) {
+        return;
+    }
+
+    wchar_t buf[512];
+    va_list args;
+    va_start(args, fmt);
+    HRESULT hr = StringCchVPrintfW(buf, 512, fmt, args);
+    va_end(args);
+
+    if (SUCCEEDED(hr)) {
+        candle_log_fn(buf);
+    }
+}
 
 static bool usb_control_msg(WINUSB_INTERFACE_HANDLE hnd, uint8_t request, uint8_t requesttype, uint16_t value, uint16_t index, void *data, uint16_t size)
 {
@@ -46,7 +65,17 @@ static bool usb_control_msg(WINUSB_INTERFACE_HANDLE hnd, uint8_t request, uint8_
     packet.Length = size;
 
     unsigned long bytes_sent = 0;
-    return WinUsb_ControlTransfer(hnd, packet, (uint8_t*)data, size, &bytes_sent, 0);
+    BOOL rc = WinUsb_ControlTransfer(hnd, packet, (uint8_t*)data, size, &bytes_sent, 0);
+    candle_ctrl_logf(L"ctrl req=0x%02x type=0x%02x value=%u index=%u size=%u rc=%u transferred=%lu winerr=%lu",
+                     request,
+                     requesttype,
+                     value,
+                     index,
+                     size,
+                     rc ? 1 : 0,
+                     bytes_sent,
+                     rc ? 0 : GetLastError());
+    return rc;
 }
 
 bool candle_ctrl_set_host_format(candle_device_t *dev)

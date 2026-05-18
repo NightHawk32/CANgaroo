@@ -20,6 +20,9 @@
 */
 
 #include "candle.h"
+
+#include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "candle_defs.h"
@@ -29,6 +32,23 @@
 static bool candle_dev_interal_open(candle_handle hdev);
 
 candle_log_fn_t candle_log_fn = NULL;
+
+static void candle_logf(const wchar_t *fmt, ...)
+{
+    if (candle_log_fn == NULL) {
+        return;
+    }
+
+    wchar_t buf[512];
+    va_list args;
+    va_start(args, fmt);
+    HRESULT hr = StringCchVPrintfW(buf, 512, fmt, args);
+    va_end(args);
+
+    if (SUCCEEDED(hr)) {
+        candle_log_fn(buf);
+    }
+}
 
 static bool candle_read_di(HDEVINFO hdi, SP_DEVICE_INTERFACE_DATA interfaceData, candle_device_t *dev)
 {
@@ -376,6 +396,11 @@ static bool candle_dev_interal_open(candle_handle hdev)
     dev->interfaceNumber = ifaceDescriptor.bInterfaceNumber;
     bool has_in = false, has_out = false;
 
+    candle_logf(L"open path=%ls interface=%u endpoints=%u",
+                dev->path,
+                dev->interfaceNumber,
+                ifaceDescriptor.bNumEndpoints);
+
     for (uint8_t i=0; i<ifaceDescriptor.bNumEndpoints; i++) {
 
         WINUSB_PIPE_INFORMATION pipeInfo;
@@ -388,11 +413,19 @@ static bool candle_dev_interal_open(candle_handle hdev)
             if (!has_in) {
                 dev->bulkInPipe = pipeInfo.PipeId;
                 has_in = true;
+                candle_logf(L"selected bulk IN pipe=0x%02x maxPacket=%u interval=%u",
+                            pipeInfo.PipeId,
+                            pipeInfo.MaximumPacketSize,
+                            pipeInfo.Interval);
             }
         } else if (pipeInfo.PipeType == UsbdPipeTypeBulk && USB_ENDPOINT_DIRECTION_OUT(pipeInfo.PipeId)) {
             if (!has_out) {
                 dev->bulkOutPipe = pipeInfo.PipeId;
                 has_out = true;
+                candle_logf(L"selected bulk OUT pipe=0x%02x maxPacket=%u interval=%u",
+                            pipeInfo.PipeId,
+                            pipeInfo.MaximumPacketSize,
+                            pipeInfo.Interval);
             }
         }
 
@@ -416,11 +449,26 @@ static bool candle_dev_interal_open(candle_handle hdev)
     if (!candle_ctrl_get_config(dev, &dev->dconf)) {
         goto winusb_free;
     }
+    candle_logf(L"device config channels=%u sw=0x%08x hw=0x%08x",
+                dev->dconf.icount + 1,
+                dev->dconf.sw_version,
+                dev->dconf.hw_version);
 
         if (!candle_ctrl_get_capability(dev, 0, &dev->bt_const)) {
         dev->last_error = CANDLE_ERR_GET_BITTIMING_CONST;
         goto winusb_free;
     }
+    candle_logf(L"cap ch0 feature=0x%08x fclk=%u tseg1=%u..%u tseg2=%u..%u sjw=%u brp=%u..%u inc=%u",
+                dev->bt_const.feature,
+                dev->bt_const.fclk_can,
+                dev->bt_const.tseg1_min,
+                dev->bt_const.tseg1_max,
+                dev->bt_const.tseg2_min,
+                dev->bt_const.tseg2_max,
+                dev->bt_const.sjw_max,
+                dev->bt_const.brp_min,
+                dev->bt_const.brp_max,
+                dev->bt_const.brp_inc);
 
     /* Query capabilities for each channel on multi-channel devices */
     uint8_t num_channels = dev->dconf.icount + 1;
@@ -429,6 +477,12 @@ static bool candle_dev_interal_open(candle_handle hdev)
         if (!candle_ctrl_get_capability(dev, ch, &dev->ch_caps[ch])) {
             /* Fall back to channel 0 capabilities for this channel */
             memcpy(&dev->ch_caps[ch], &dev->bt_const, sizeof(candle_capability_t));
+            candle_logf(L"cap ch%u failed, falling back to ch0", ch);
+        } else {
+            candle_logf(L"cap ch%u feature=0x%08x fclk=%u",
+                        ch,
+                        dev->ch_caps[ch].feature,
+                        dev->ch_caps[ch].fclk_can);
         }
     }
 
@@ -494,6 +548,7 @@ static bool candle_prepare_read(candle_device_t *dev, unsigned urb_num)
         return true;
     }
 
+    candle_logf(L"prepare read urb=%u failed winerr=%lu", urb_num, err);
     dev->last_error = CANDLE_ERR_PREPARE_READ;
     return false;
 }
@@ -703,8 +758,21 @@ bool __stdcall DLL candle_channel_start(candle_handle hdev, uint8_t ch, uint32_t
 {
     // TODO ensure device is open, check channel count..
     candle_device_t *dev = (candle_device_t*)hdev;
-    flags |= CANDLE_MODE_HW_TIMESTAMP;
-    return candle_ctrl_set_device_mode(dev, ch, CANDLE_DEVMODE_START, flags);
+    candle_capability_t *cap = (ch < 8) ? &dev->ch_caps[ch] : &dev->bt_const;
+
+    if (cap->feature & CANDLE_FEATURE_HW_TIMESTAMP) {
+        flags |= CANDLE_MODE_HW_TIMESTAMP;
+    } else {
+        candle_logf(L"channel %u has no HW timestamp capability; starting without timestamp flag", ch);
+    }
+
+    bool rc = candle_ctrl_set_device_mode(dev, ch, CANDLE_DEVMODE_START, flags);
+    candle_logf(L"channel %u start flags=0x%08x result=%u err=%u",
+                ch,
+                flags,
+                rc ? 1 : 0,
+                dev->last_error);
+    return rc;
 }
 
 bool __stdcall DLL candle_channel_stop(candle_handle hdev, uint8_t ch)
@@ -776,12 +844,14 @@ bool __stdcall DLL candle_frame_read(candle_handle hdev, candle_frame_t *frame, 
     DWORD bytes_transfered;
 
     if (!WinUsb_GetOverlappedResult(dev->winUSBHandle, &dev->rxurbs[urb_num].ovl, &bytes_transfered, false)) {
-        if (GetLastError() == ERROR_IO_INCOMPLETE) {
+        DWORD err = GetLastError();
+        if (err == ERROR_IO_INCOMPLETE) {
             ResetEvent(dev->rxurbs[urb_num].ovl.hEvent);
         } else {
             dev->rxurbs[urb_num].pending = false;
             candle_prepare_read(dev, urb_num);
         }
+        candle_logf(L"classic read result failed urb=%u winerr=%lu", urb_num, err);
         dev->last_error = CANDLE_ERR_READ_RESULT;
         return false;
     }
@@ -789,6 +859,10 @@ bool __stdcall DLL candle_frame_read(candle_handle hdev, candle_frame_t *frame, 
 
     if (bytes_transfered < sizeof(*frame)-4) {
         candle_prepare_read(dev, urb_num);
+        candle_logf(L"classic read too small urb=%u bytes=%lu min=%u",
+                    urb_num,
+                    bytes_transfered,
+                    (unsigned)(sizeof(*frame) - 4));
         dev->last_error = CANDLE_ERR_READ_SIZE;
         return false;
     }
@@ -796,6 +870,15 @@ bool __stdcall DLL candle_frame_read(candle_handle hdev, candle_frame_t *frame, 
     memset(frame, 0, sizeof(*frame));
     DWORD copy_len = (bytes_transfered < sizeof(*frame)) ? bytes_transfered : sizeof(*frame);
     memcpy(frame, dev->rxurbs[urb_num].buf, copy_len);
+    candle_logf(L"classic read urb=%u bytes=%lu echo=0x%08x can_id=0x%08x dlc=%u ch=%u flags=0x%02x ts=%u",
+                urb_num,
+                bytes_transfered,
+                frame->echo_id,
+                frame->can_id,
+                frame->can_dlc,
+                frame->channel,
+                frame->flags,
+                frame->timestamp_us);
 
     return candle_prepare_read(dev, urb_num);
 }
@@ -880,12 +963,14 @@ bool __stdcall DLL candle_fd_frame_read(candle_handle hdev, candle_fd_frame_t *f
     DWORD bytes_transfered;
 
     if (!WinUsb_GetOverlappedResult(dev->winUSBHandle, &dev->rxurbs[urb_num].ovl, &bytes_transfered, false)) {
-        if (GetLastError() == ERROR_IO_INCOMPLETE) {
+        DWORD err = GetLastError();
+        if (err == ERROR_IO_INCOMPLETE) {
             ResetEvent(dev->rxurbs[urb_num].ovl.hEvent);
         } else {
             dev->rxurbs[urb_num].pending = false;
             candle_prepare_read(dev, urb_num);
         }
+        candle_logf(L"fd read result failed urb=%u winerr=%lu", urb_num, err);
         dev->last_error = CANDLE_ERR_READ_RESULT;
         return false;
     }
@@ -895,6 +980,10 @@ bool __stdcall DLL candle_fd_frame_read(candle_handle hdev, candle_fd_frame_t *f
     static const DWORD classic_min = sizeof(candle_frame_t) - 4;
     if (bytes_transfered < classic_min) {
         candle_prepare_read(dev, urb_num);
+        candle_logf(L"fd read too small urb=%u bytes=%lu min=%lu",
+                    urb_num,
+                    bytes_transfered,
+                    classic_min);
         dev->last_error = CANDLE_ERR_READ_SIZE;
         return false;
     }
@@ -912,6 +1001,11 @@ bool __stdcall DLL candle_fd_frame_read(candle_handle hdev, candle_fd_frame_t *f
         DWORD fd_min = sizeof(candle_fd_frame_t) - 4;
         if (bytes_transfered < fd_min) {
             candle_prepare_read(dev, urb_num);
+            candle_logf(L"fd read FD frame too small urb=%u bytes=%lu min=%lu flags=0x%02x",
+                        urb_num,
+                        bytes_transfered,
+                        fd_min,
+                        dev->rxurbs[urb_num].buf[10]);
             dev->last_error = CANDLE_ERR_READ_SIZE;
             return false;
         }
@@ -932,6 +1026,16 @@ bool __stdcall DLL candle_fd_frame_read(candle_handle hdev, candle_fd_frame_t *f
         memcpy(frame->data, classic.data, 8);
         frame->timestamp_us = (bytes_transfered >= sizeof(classic)) ? classic.timestamp_us : 0;
     }
+    candle_logf(L"fd read urb=%u bytes=%lu is_fd=%u echo=0x%08x can_id=0x%08x dlc=%u ch=%u flags=0x%02x ts=%u",
+                urb_num,
+                bytes_transfered,
+                is_fd_frame ? 1 : 0,
+                frame->echo_id,
+                frame->can_id,
+                frame->can_dlc,
+                frame->channel,
+                frame->flags,
+                frame->timestamp_us);
 
     return candle_prepare_read(dev, urb_num);
 }

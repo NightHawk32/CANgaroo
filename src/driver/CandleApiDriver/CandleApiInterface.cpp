@@ -70,19 +70,21 @@ CandleApiInterface::CandleApiInterface(CandleApiDriver *driver,
 
     _timings
         // Timings for 80MHz (CANnectivity)
-        << CandleApiTiming(80000000,   10000, 875, 80,  86, 13)
-        << CandleApiTiming(80000000,   20000, 875, 40,  86, 13)
-        << CandleApiTiming(80000000,   50000, 875, 16,  86, 13)
-        << CandleApiTiming(80000000,  100000, 875,  8,  86, 13)
-        << CandleApiTiming(80000000,  125000, 875,  6,  86, 13)
-        << CandleApiTiming(80000000,  250000, 875,  3,  86, 13)
-        << CandleApiTiming(80000000,  500000, 875,  1, 139, 20)
-        << CandleApiTiming(80000000,  800000, 875,  1,  86, 13)
-        << CandleApiTiming(80000000, 1000000, 875,  1,  69, 10)
-        << CandleApiTiming(80000000, 2000000, 875,  1,  34,  5)
-        << CandleApiTiming(80000000, 4000000, 850,  1,  16,  3)
-        << CandleApiTiming(80000000, 5000000, 875,  1,  13,  2)
-        << CandleApiTiming(80000000, 8000000, 800,  1,   7,  2);
+        // Formula: bitrate = 80MHz / (brp * (1 + prop_seg + phase_seg1 + phase_seg2))
+        //          prop_seg = 1 (fixed); SP = (1 + prop_seg + phase_seg1) / total_TQ
+        << CandleApiTiming(80000000,   10000, 870, 80,  85, 13)  // 80M/(80*100)  = 10k,  SP=87.0%
+        << CandleApiTiming(80000000,   20000, 870, 40,  85, 13)  // 80M/(40*100)  = 20k,  SP=87.0%
+        << CandleApiTiming(80000000,   50000, 870, 16,  85, 13)  // 80M/(16*100)  = 50k,  SP=87.0%
+        << CandleApiTiming(80000000,  100000, 870,  8,  85, 13)  // 80M/(8*100)   = 100k, SP=87.0%
+        << CandleApiTiming(80000000,  125000, 875,  5, 110, 16)  // 80M/(5*128)   = 125k, SP=87.5%
+        << CandleApiTiming(80000000,  250000, 875,  2, 138, 20)  // 80M/(2*160)   = 250k, SP=87.5%
+        << CandleApiTiming(80000000,  500000, 875,  1, 138, 20)  // 80M/(1*160)   = 500k, SP=87.5%
+        << CandleApiTiming(80000000,  800000, 870,  1,  85, 13)  // 80M/(1*100)   = 800k, SP=87.0%
+        << CandleApiTiming(80000000, 1000000, 875,  1,  68, 10)  // 80M/(1*80)    = 1M,   SP=87.5%
+        << CandleApiTiming(80000000, 2000000, 875,  1,  33,  5)  // 80M/(1*40)    = 2M,   SP=87.5%
+        << CandleApiTiming(80000000, 4000000, 850,  1,  15,  3)  // 80M/(1*20)    = 4M,   SP=85.0%
+        << CandleApiTiming(80000000, 5000000, 875,  1,  12,  2)  // 80M/(1*16)    = 5M,   SP=87.5%
+        << CandleApiTiming(80000000, 8000000, 800,  1,   6,  2); // 80M/(1*10)    = 8M,   SP=80.0%
 
     // Timings for 48MHz processors (CANable 0.X)
     _timings
@@ -438,7 +440,21 @@ void CandleApiInterface::open()
     _numTx = 0;
     _numTxErr = 0;
 
-    candle_channel_start(_sharedDev->handle, _channel, flags);
+    log_debug(tr("CandleApi::open(): starting channel=%1 flags=0x%2 firstOpen=%3")
+        .arg(_channel)
+        .arg(flags, 8, 16, QLatin1Char('0'))
+        .arg(firstOpen ? 1 : 0));
+
+    if (!candle_channel_start(_sharedDev->handle, _channel, flags)) {
+        log_info(tr("CandleApi::open(): channel start failed for channel=%1, last_error=%2")
+            .arg(_channel)
+            .arg(candle_dev_last_error(_sharedDev->handle)));
+        if (firstOpen) {
+            candle_dev_close(_sharedDev->handle);
+        }
+        _isOpen = false;
+        return;
+    }
 
     if (firstOpen) {
         uint32_t t_dev = 0;
@@ -572,13 +588,14 @@ bool CandleApiInterface::readMessage(QList<BusMessage> &msglist, unsigned int ti
         return hasTx;
     }
     candle_fd_frame_t frame = queuedFrame.frame;
+    const candle_frametype_t frameType = candle_fd_frame_type(&frame);
 
     _numRx++;
 
     BusMessage msg;
     msg.setInterfaceId(getId());
-    msg.setErrorFrame(false);
     msg.setId(candle_fd_frame_id(&frame));
+    msg.setErrorFrame(frameType == CANDLE_FRAMETYPE_ERROR);
     msg.setExtended(candle_fd_frame_is_extended_id(&frame));
     msg.setRTR(candle_fd_frame_is_rtr(&frame));
 

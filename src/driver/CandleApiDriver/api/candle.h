@@ -3,17 +3,17 @@
   Copyright (c) 2016 Hubert Denkmair <hubert@denkmair.de>
 
   This file is part of the candle windows API.
-  
+
   This library is free software: you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation, either
   version 3 of the License, or (at your option) any later version.
- 
+
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
- 
+
   You should have received a copy of the GNU Lesser General Public
   License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -51,21 +51,42 @@ enum {
 
 /* Feature flags reported in candle_capability_t.feature */
 enum {
-    CANDLE_FEATURE_LISTEN_ONLY     = 0x0001,
-    CANDLE_FEATURE_LOOP_BACK       = 0x0002,
-    CANDLE_FEATURE_TRIPLE_SAMPLE   = 0x0004,
-    CANDLE_FEATURE_ONE_SHOT        = 0x0008,
-    CANDLE_FEATURE_HW_TIMESTAMP    = 0x0010,
-    CANDLE_FEATURE_PAD_PKTS_TO_MAX = 0x0080,
-    CANDLE_FEATURE_FD              = 0x0100,
+    /** CAN channel supports listen-only mode, in which it is not allowed to send dominant bits. */
+    CANDLE_FEATURE_LISTEN_ONLY              = 0x0001,
+    /** CAN channel supports loopback mode, in which it receives own frames. */
+    CANDLE_FEATURE_LOOP_BACK                = 0x0002,
+    /** CAN channel supports triple sampling mode */
+    CANDLE_FEATURE_TRIPLE_SAMPLE            = 0x0004,
+    /** CAN channel supports not retransmitting in case of lost arbitration or missing ACK. */
+    CANDLE_FEATURE_ONE_SHOT                 = 0x0008,
+    /** CAN channel supports hardware timestamping of CAN frames. */
+    CANDLE_FEATURE_HW_TIMESTAMP             = 0x0010,
+    /** CAN channel supports visual identification. */
+    CANDLE_FEATURE_IDENTIFY                 = 0x0020,
+    /** CAN channel supports user IDs (unsupported). */
+    CANDLE_FEATURE_USER_ID                  = 0x0040,
+    /** CAN channel supports padding of host frames (unsupported). */
+    CANDLE_FEATURE_PAD_PKTS_TO_MAX          = 0x0080,
+    /** CAN channel supports transmitting/receiving CAN FD frames. */
+    CANDLE_FEATURE_FD                       = 0x0100,
+    /** CAN channel support LPC546xx specific quirks (Unused) */
+    CANDLE_FEATURE_REQ_USB_QUIRK_LPC546XX   = 0x0200,
+    /** CAN channel supports extended bit timing limits. */
+    CANDLE_FEATURE_BT_CONST_EXT             = 0x0400,
+    /** CAN channel supports configurable bus termination. */
+    CANDLE_FEATURE_TERMINATION              = 0x0800,
+    /** CAN channel supports bus error reporting (Unsupported, always enabled) */
+    CANDLE_FEATURE_BERR_REPORTING           = 0x1000,
+    /** CAN channel supports reporting of bus state. */
+    CANDLE_FEATURE_GET_STATE                = 0x2000,
 };
 
 /* Flags in the flags byte of received/transmitted frames */
 enum {
     CANDLE_FRAME_FLAG_OVERFLOW = 0x01,
-    CANDLE_FRAME_FLAG_FD       = 0x04,
-    CANDLE_FRAME_FLAG_BRS      = 0x08,
-    CANDLE_FRAME_FLAG_ESI      = 0x10,
+    CANDLE_FRAME_FLAG_FD       = 0x02,
+    CANDLE_FRAME_FLAG_BRS      = 0x04,
+    CANDLE_FRAME_FLAG_ESI      = 0x08,
 };
 
 typedef enum {
