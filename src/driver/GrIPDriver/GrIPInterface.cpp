@@ -375,6 +375,15 @@ void GrIPInterface::open()
                     msg.setId(entry.frameId);
                     msg.setLength(entry.dlc);
                     msg.setRX(isRX);
+
+                    const auto &defaults = _settings.linFrameDefaults();
+                    if (auto it = defaults.find(static_cast<uint8_t>(entry.frameId)); it != defaults.end())
+                    {
+                        const QByteArray &payload = it.value();
+                        for (int i = 0; i < payload.size() && i < entry.dlc; ++i)
+                            msg.setDataAt(static_cast<uint8_t>(i), static_cast<uint8_t>(payload[i]));
+                    }
+
                     m_GrIPHandler->LinAddFrame(_channel_idx, msg, entry.delayMs);
                 }
             }

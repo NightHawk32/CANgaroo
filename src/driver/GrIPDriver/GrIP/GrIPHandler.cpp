@@ -596,7 +596,7 @@ void GrIPHandler::LinAddFrame(uint8_t ch, const BusMessage &msg, uint8_t frame_t
 
     std::memcpy(frame.Data, msg.getData(), msg.getLength());
 
-    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&frame), sizeof(Protocol_LinConfig_t)};
+    GrIP_Pdu_t p = {reinterpret_cast<uint8_t *>(&frame), sizeof(Protocol_LinFrame_t)};
 
     std::unique_lock<std::mutex> lck(m_MutexSerial);
 

@@ -1021,25 +1021,49 @@ bool __stdcall DLL candle_fd_frame_read(candle_handle hdev, candle_fd_frame_t *f
 
     /*
      * Detect frame type from the flags byte (offset 10 in both structs).
-     * Classic CAN frames carry the timestamp right after 8 data bytes (offset 20).
-     * FD frames carry 64 data bytes, then timestamp at offset 76.
+     * Classic CAN frames: header(12) + data(8) + timestamp(4) = 24 bytes total.
+     *
+     * FD frames come in two wire formats:
+     *  - Legacy fixed (candleLight/CANable 1.x): always 80 bytes — header(12) +
+     *    data[64] + timestamp(4).  The timestamp is ALWAYS at offset 76, regardless
+     *    of the actual DLC.  Identified by bytes_transferred == sizeof(candle_fd_frame_t).
+     *  - Variable-length (CANnectivity/Zephyr): header(12) + actual_data(DLC) +
+     *    timestamp(4).  Identified by bytes_transferred < sizeof(candle_fd_frame_t).
      */
     bool is_fd_frame = (dev->rxurbs[urb_num].buf[10] & CANDLE_FRAME_FLAG_FD) != 0;
 
     if (is_fd_frame) {
-        DWORD fd_min = sizeof(candle_fd_frame_t) - 4;
-        if (bytes_transfered < fd_min) {
+        /* can_dlc is at byte offset 8 in both classic and FD wire frames. */
+        const uint8_t raw_dlc = dev->rxurbs[urb_num].buf[8];
+        const DWORD data_len  = candle_dlc_to_len(raw_dlc);
+        const DWORD min_size  = 12 + data_len; /* header + data, without timestamp */
+
+        if (bytes_transfered < min_size) {
             candle_prepare_read(dev, urb_num);
-            candle_logf(L"fd read FD frame too small urb=%u bytes=%lu min=%lu flags=0x%02x",
+            candle_logf(L"fd read FD frame too small urb=%u bytes=%lu min=%lu flags=0x%02x dlc=%u",
                         urb_num,
                         bytes_transfered,
-                        fd_min,
-                        dev->rxurbs[urb_num].buf[10]);
+                        min_size,
+                        dev->rxurbs[urb_num].buf[10],
+                        raw_dlc);
             dev->last_error = CANDLE_ERR_READ_SIZE;
             return false;
         }
-        DWORD copy_len = (bytes_transfered < sizeof(*frame)) ? bytes_transfered : sizeof(*frame);
-        memcpy(frame, dev->rxurbs[urb_num].buf, copy_len);
+
+        /* Copy the fixed 12-byte header (echo_id … reserved). */
+        memcpy(frame, dev->rxurbs[urb_num].buf, 12);
+        /* Copy data at offset 12 into the struct's data field. */
+        memcpy(frame->data, dev->rxurbs[urb_num].buf + 12, data_len);
+
+        /* Timestamp location depends on the wire format (see comment above). */
+        const DWORD fixed_ts_offset = (DWORD)(sizeof(candle_fd_frame_t) - sizeof(uint32_t)); /* = 76 */
+        const DWORD ts_offset = (bytes_transfered >= (DWORD)sizeof(candle_fd_frame_t))
+                                ? fixed_ts_offset
+                                : min_size;
+        if (bytes_transfered >= ts_offset + (DWORD)sizeof(uint32_t)) {
+            memcpy(&frame->timestamp_us, dev->rxurbs[urb_num].buf + ts_offset, sizeof(uint32_t));
+        }
+        /* else: timestamp stays zero from memset above */
     } else {
         /* Classic CAN frame — copy into FD struct, fixing the timestamp position */
         candle_frame_t classic;
